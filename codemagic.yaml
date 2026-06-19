@@ -1,0 +1,21 @@
+workflows:
+  ios-simulator-build:
+    name: iOS - Build de teste (sem assinatura)
+    max_build_duration: 30
+    instance_type: mac_mini_m2
+    environment:
+      node: 20
+    scripts:
+      - name: Instalar dependências
+        script: npm install
+      - name: Build do app web + sync com projeto iOS
+        script: npm run sync
+      - name: Compilar para o Simulador (sem assinatura)
+        script: |
+          cd ios/App
+          xcodebuild build \
+            -workspace App.xcworkspace \
+            -scheme App \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO
