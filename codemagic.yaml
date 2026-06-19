@@ -25,7 +25,7 @@ workflows:
     max_build_duration: 60
     instance_type: mac_mini_m2
     integrations:
-      app_store_connect: appstore_codemagic
+      app_store_connect: appstore_codemagic_admin
     environment:
       node: 22
       ios_signing:
