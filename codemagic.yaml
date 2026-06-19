@@ -19,3 +19,42 @@ workflows:
             -sdk iphonesimulator \
             -destination 'generic/platform=iOS Simulator' \
             CODE_SIGNING_ALLOWED=NO
+
+  ios-release:
+    name: iOS - Build assinado + TestFlight
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    integrations:
+      app_store_connect: appstore_codemagic
+    environment:
+      node: 22
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.sistemacmh.app
+      vars:
+        XCODE_PROJECT: "ios/App/App.xcodeproj"
+        XCODE_SCHEME: "App"
+    scripts:
+      - name: Instalar dependências
+        script: npm install
+      - name: Build do app web + sync com projeto iOS
+        script: npm run sync
+      - name: Configurar assinatura automática
+        script: xcode-project use-profiles
+      - name: Definir número de build único
+        script: |
+          cd ios/App
+          agvtool new-version -all $(date +%s)
+      - name: Gerar .ipa assinado
+        script: |
+          xcode-project build-ipa \
+            --project "$XCODE_PROJECT" \
+            --scheme "$XCODE_SCHEME"
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+    publishing:
+      app_store_connect:
+        auth: integration
+        integration: appstore_codemagic
+        submit_to_testflight: true
