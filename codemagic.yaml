@@ -56,5 +56,4 @@ workflows:
     publishing:
       app_store_connect:
         auth: integration
-        integration: appstore_codemagic
         submit_to_testflight: true
