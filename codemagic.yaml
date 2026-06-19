@@ -37,10 +37,8 @@ workflows:
         script: npm install
       - name: Build do app web + sync com projeto iOS
         script: npm run sync
-      - name: Criar certificado e perfil de distribuição (primeira vez)
+      - name: Criar/buscar certificado e perfil de distribuição
         script: |
-          openssl genrsa -out /tmp/dist_private_key.pem 2048
-          export CERTIFICATE_PRIVATE_KEY=$(cat /tmp/dist_private_key.pem)
           keychain initialize
           app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE --create
           keychain add-certificates
