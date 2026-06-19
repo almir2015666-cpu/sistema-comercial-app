@@ -1,0 +1,8 @@
+{
+  "appId": "com.sistemacmh.app",
+  "appName": "CMH Sistema",
+  "webDir": "www",
+  "ios": {
+    "contentInset": "automatic"
+  }
+}

@@ -1,0 +1,7 @@
+node_modules/
+.claude/
+ios/App/Pods/
+ios/App/build/
+ios/App/DerivedData/
+*.log
+.DS_Store
