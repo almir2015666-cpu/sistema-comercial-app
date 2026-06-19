@@ -28,6 +28,8 @@ workflows:
       app_store_connect: appstore_codemagic_admin
     environment:
       node: 22
+      groups:
+        - ios_signing
       vars:
         BUNDLE_ID: "com.sistemacmh.app"
         XCODE_PROJECT: "ios/App/App.xcodeproj"
