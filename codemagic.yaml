@@ -32,6 +32,7 @@ workflows:
         distribution_type: app_store
         bundle_identifier: com.sistemacmh.app
       vars:
+        BUNDLE_ID: "com.sistemacmh.app"
         XCODE_PROJECT: "ios/App/App.xcodeproj"
         XCODE_SCHEME: "App"
     scripts:
@@ -39,6 +40,11 @@ workflows:
         script: npm install
       - name: Build do app web + sync com projeto iOS
         script: npm run sync
+      - name: Criar certificado e perfil de distribuição (primeira vez)
+        script: |
+          keychain initialize
+          app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE --create
+          keychain add-certificates
       - name: Configurar assinatura automática
         script: xcode-project use-profiles
       - name: Definir número de build único
