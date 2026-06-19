@@ -56,6 +56,7 @@ html[data-theme="dark"]{
 }
 
 html{font-size:14px}
+html,body{overflow-x:hidden;max-width:100vw}
 body{
   font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,system-ui,sans-serif;
   background:var(--bg);color:var(--text);line-height:1.5;
@@ -262,7 +263,7 @@ body{
 .btn-logout:hover{background:rgba(185,28,28,.2)}
 
 /* ── MAIN ───────────────────────────────── */
-.main{margin-left:var(--side-w);flex:1;display:flex;flex-direction:column;min-height:100vh}
+.main{margin-left:var(--side-w);flex:1;display:flex;flex-direction:column;min-height:100vh;min-width:0}
 
 .topbar{
   height:var(--top-h);background:var(--white);border-bottom:1px solid var(--border);
@@ -555,6 +556,8 @@ tbody tr:hover td{background:#fafbfc}
   .g2,.g3,.g4,.g-60{grid-template-columns:1fr}
   .row-2,.row-3,.row-4{grid-template-columns:1fr}
   .meta-cols{grid-template-columns:1fr}
+  .g2>*,.g3>*,.g4>*,.g-60>*,.row-2>*,.row-3>*,.row-4>*,.meta-cols>*,.fg{min-width:0}
+  .fg input,.fg select,.fg textarea{max-width:100%}
   .tabs{width:100%;overflow-x:auto}
   .det-fields{flex-direction:column}
   .det-field{min-width:unset}
@@ -562,7 +565,8 @@ tbody tr:hover td{background:#fafbfc}
   .modal{width:100%;max-width:100vw;border-radius:16px 16px 0 0;position:fixed;bottom:0;margin:0;max-height:85vh}
   .overlay{align-items:flex-end}
   .card{padding:16px}
-  .topbar-title{font-size:14px}
+  .topbar-title{font-size:14px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .date-chip{display:none}
   .tab-bar{display:flex}
 }
 @media(min-width:769px){
