@@ -12,4 +12,10 @@ for (const file of ['index.html', 'logo.png', 'watermark.png']) {
   fs.copyFileSync(path.join(root, file), path.join(www, file));
 }
 
+// Copia o plugin de live update para www/ (necessário pois não há bundler)
+fs.copyFileSync(
+  path.join(root, 'node_modules/@capawesome/capacitor-live-update/dist/plugin.js'),
+  path.join(www, 'live-update-plugin.js')
+);
+
 console.log('www/ atualizado a partir de index.html, logo.png e watermark.png.');
