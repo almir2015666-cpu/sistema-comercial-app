@@ -175,6 +175,7 @@ async function generate() {
   for (const out of outPaths) {
     await sharp(buf)
       .resize(1024, 1024)
+      .flatten({ background: { r: 3, g: 12, b: 23 } }) // remove alpha channel (exigido pela App Store)
       .png()
       .toFile(out);
     console.log('Gerado:', out);
