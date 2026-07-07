@@ -1408,7 +1408,7 @@ tbody tr:hover td{background:#fafbfc}
       </div>
       <div class="nav-item" onclick="showPageFin('pagar')">
         <span class="nav-icon"><svg width="15" height="15" viewBox="0 0 15 15" fill="none"><circle cx="7.5" cy="7.5" r="6" stroke="currentColor" stroke-width="1.4"/><path d="M7.5 4v7M9.7 5.7c0-1-1-1.3-2.2-1.3-1.3 0-2.2.5-2.2 1.4 0 2 4.4 1 4.4 2.9 0 1-1 1.4-2.2 1.4-1.3 0-2.3-.4-2.3-1.4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></span>
-        Contas a Pagar
+        Pagamentos de Prestadores
       </div>
       <div class="nav-item" onclick="showPageFin('receber')">
         <span class="nav-icon"><svg width="15" height="15" viewBox="0 0 15 15" fill="none"><circle cx="7.5" cy="7.5" r="6" stroke="currentColor" stroke-width="1.4"/><path d="M7.5 4.5v6M5.3 5.6c0-1 .9-1.3 2.2-1.3M9.7 9.4c0 1-1 1.4-2.2 1.4-1.3 0-2.3-.4-2.3-1.4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></span>
@@ -1429,6 +1429,10 @@ tbody tr:hover td{background:#fafbfc}
         <span class="nav-icon"><svg width="15" height="15" viewBox="0 0 15 15" fill="none"><circle cx="7.5" cy="4.5" r="3" stroke="currentColor" stroke-width="1.4"/><path d="M2 13c0-3.314 2.462-5.5 5.5-5.5S13 9.686 13 13" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></span>
         Usuários
       </div>
+      <div class="nav-item hidden" id="fin-nav-prestadores" onclick="showPageFin('prestadores')">
+        <span class="nav-icon"><svg width="15" height="15" viewBox="0 0 15 15" fill="none"><circle cx="5" cy="5" r="2.5" stroke="currentColor" stroke-width="1.3"/><circle cx="10.5" cy="5" r="2.5" stroke="currentColor" stroke-width="1.3"/><path d="M1.3 13c0-2.5 1.8-4 3.7-4s3.7 1.5 3.7 4M7.3 13c0-2.5 1.5-4 3.2-4s3.2 1.5 3.2 4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></span>
+        Prestadores
+      </div>
     </nav>
 
     <div class="sb-foot">
@@ -1448,7 +1452,7 @@ tbody tr:hover td{background:#fafbfc}
     </button>
     <button class="tab-item" onclick="showPageFin('pagar')">
       <svg width="20" height="20" viewBox="0 0 15 15" fill="none"><circle cx="7.5" cy="7.5" r="6" stroke="currentColor" stroke-width="1.4"/><path d="M7.5 4v7M9.7 5.7c0-1-1-1.3-2.2-1.3-1.3 0-2.2.5-2.2 1.4 0 2 4.4 1 4.4 2.9 0 1-1 1.4-2.2 1.4-1.3 0-2.3-.4-2.3-1.4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
-      A Pagar
+      Pagamentos
     </button>
     <button class="tab-item" onclick="showPageFin('receber')">
       <svg width="20" height="20" viewBox="0 0 15 15" fill="none"><circle cx="7.5" cy="7.5" r="6" stroke="currentColor" stroke-width="1.4"/><path d="M7.5 4.5v6M5.3 5.6c0-1 .9-1.3 2.2-1.3M9.7 9.4c0 1-1 1.4-2.2 1.4-1.3 0-2.3-.4-2.3-1.4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
@@ -1469,6 +1473,7 @@ tbody tr:hover td{background:#fafbfc}
     <div class="modal" style="padding:14px">
       <div class="tab-sheet-item hidden" id="mais-fin-categorias" onclick="showPageFin('categorias');toggleMaisSheetFin()">Categorias</div>
       <div class="tab-sheet-item hidden" id="mais-fin-usuarios" onclick="showPageFin('usuarios');toggleMaisSheetFin()">Usuários</div>
+      <div class="tab-sheet-item hidden" id="mais-fin-prestadores" onclick="showPageFin('prestadores');toggleMaisSheetFin()">Prestadores</div>
       <div class="tab-sheet-item" style="color:var(--red)" onclick="toggleMaisSheetFin();doLogoutFin()">Sair do Sistema</div>
     </div>
   </div>
@@ -1506,11 +1511,17 @@ tbody tr:hover td{background:#fafbfc}
           </div>
           <div class="chart-box"><canvas id="ch-fin-cat"></canvas></div>
         </div>
-        <div class="card">
+        <div class="card mb20">
           <div class="card-hd">
-            <div><div class="card-title">Próximos Vencimentos</div><div class="card-sub">Contas a pagar e a receber, ordenadas por data</div></div>
+            <div><div class="card-title">Próximos Vencimentos</div><div class="card-sub">Pagamentos de prestadores e contas a receber, ordenados por data</div></div>
           </div>
           <div class="det-list" id="fin-db-vencimentos"></div>
+        </div>
+        <div class="card">
+          <div class="card-hd">
+            <div><div class="card-title">Vencimentos de Prestadores</div><div class="card-sub">Só pagamentos pendentes ligados a um prestador cadastrado</div></div>
+          </div>
+          <div class="det-list" id="fin-db-vencimentos-prestadores"></div>
         </div>
       </div>
 
@@ -1518,30 +1529,24 @@ tbody tr:hover td{background:#fafbfc}
       <div class="page" id="page-fin-pagar">
         <div class="card mb20">
           <div class="card-hd">
-            <div><div class="card-title">Nova Conta a Pagar</div><div class="card-sub">Despesas, fornecedores, contas fixas</div></div>
+            <div><div class="card-title">Novo Pagamento de Prestador</div><div class="card-sub">Selecione o prestador cadastrado — valor, categoria e vencimento vêm do cadastro dele (editáveis aqui)</div></div>
           </div>
           <div class="row-3 mb16">
-            <div class="fg" style="margin:0"><label>Descrição</label><input type="text" id="fp-desc" placeholder="Ex: Aluguel, salário, fornecedor"></div>
-            <div class="fg" style="margin:0"><label>Fornecedor</label><input type="text" id="fp-fornecedor" placeholder="Opcional"></div>
+            <div class="fg" style="margin:0"><label>Prestador</label><select id="fp-prestador" onchange="onFpPrestadorChange()"><option value="">Selecione...</option></select></div>
+            <div class="fg" style="margin:0"><label>Descrição</label><input type="text" id="fp-desc" placeholder="Ex: Pagamento mensal"></div>
             <div class="fg" style="margin:0"><label>Categoria</label><select id="fp-categoria"><option value="">Selecione...</option></select></div>
           </div>
           <div class="row-3 mb16">
             <div class="fg" style="margin:0"><label>Valor (R$)</label><input type="number" id="fp-valor" min="0" step="0.01" placeholder="0,00"></div>
             <div class="fg" style="margin:0"><label>Vencimento</label><input type="date" id="fp-vencimento"></div>
-            <div class="fg" style="margin:0;display:flex;align-items:flex-end;padding-bottom:10px">
-              <label style="display:flex;align-items:center;gap:8px;font-weight:400;text-transform:none;letter-spacing:normal;cursor:pointer">
-                <input type="checkbox" id="fp-recorrente" style="width:15px;height:15px;accent-color:var(--blue2);cursor:pointer">
-                Despesa recorrente (mensal)
-              </label>
-            </div>
           </div>
-          <button class="btn btn-ok" onclick="addContaPagar()">+ Lançar Conta a Pagar</button>
+          <button class="btn btn-ok" onclick="addContaPagar()">+ Lançar Pagamento</button>
         </div>
         <div class="card">
-          <div class="card-hd"><div class="card-title">Contas a Pagar</div></div>
+          <div class="card-hd"><div class="card-title">Pagamentos de Prestadores</div></div>
           <div class="tbl-wrap">
             <table>
-              <thead><tr><th>Vencimento</th><th>Descrição</th><th>Categoria</th><th>Valor</th><th>Status</th><th>Ações</th></tr></thead>
+              <thead><tr><th>Vencimento</th><th>Prestador</th><th>Categoria</th><th>Valor</th><th>Status</th><th>Ações</th></tr></thead>
               <tbody id="fp-tbody"></tbody>
             </table>
           </div>
@@ -1639,6 +1644,25 @@ tbody tr:hover td{background:#fafbfc}
         </div>
       </div>
 
+      <!-- PRESTADORES DE SERVIÇO -->
+      <div class="page" id="page-fin-prestadores">
+        <div class="card mb20">
+          <div class="card-hd">
+            <div><div class="card-title">Prestadores de Serviço</div><div class="card-sub">Médicos, psicólogos e outros prestadores recorrentes — cadastre uma vez, reaproveite todo mês</div></div>
+            <div class="flex gap6">
+              <button class="btn btn-ghost btn-sm" style="width:auto" onclick="gerarTodosPendentesDoMes()">Gerar pendentes do mês</button>
+              <button class="btn btn-ok btn-sm hidden" id="fpr-new-btn" style="width:auto" onclick="openAddFinPrestador()">+ Novo Prestador</button>
+            </div>
+          </div>
+          <div class="tbl-wrap">
+            <table>
+              <thead><tr><th>Nome</th><th>Tipo</th><th>Categoria</th><th>Valor Padrão</th><th>Dia Venc.</th><th>Status</th><th>Ações</th></tr></thead>
+              <tbody id="fpr-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
     </div>
   </main>
 </div>
@@ -1708,10 +1732,69 @@ tbody tr:hover td{background:#fafbfc}
     <div class="fg"><label>Nome Completo</label><input type="text" id="feu-name" placeholder="Nome"></div>
     <div class="fg"><label>E-mail</label><input type="email" id="feu-email" placeholder="email@clinica.com"></div>
     <div class="fg"><label>Redefinir Senha <span style="font-weight:400;color:var(--muted)">(preencha para enviar link por e-mail)</span></label><input type="password" id="feu-pass" placeholder="Digite algo para enviar link de reset"></div>
-    <div class="fg"><label>Perfil</label><select id="feu-role"><option value="colaborador">Colaborador</option><option value="gestor">Gestor</option></select></div>
+    <div class="fg"><label>Perfil</label><select id="feu-role" onchange="onFeuRoleChange()"><option value="colaborador">Colaborador</option><option value="gestor">Gestor</option></select></div>
+    <div class="fg" id="feu-perm-wrap">
+      <label style="display:flex;align-items:center;gap:8px;font-weight:400;text-transform:none;letter-spacing:normal;cursor:pointer">
+        <input type="checkbox" id="feu-perm-prestadores" style="width:15px;height:15px;accent-color:var(--blue2);cursor:pointer">
+        Pode gerenciar prestadores de serviço
+      </label>
+    </div>
     <div class="modal-ft">
       <button class="btn btn-ghost" onclick="closeModal('modal-fin-edit')">Cancelar</button>
       <button class="btn btn-ok" onclick="saveEditFinUser()">Salvar Alterações</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: NOVO/EDITAR PRESTADOR -->
+<div class="overlay" id="modal-fin-prestador">
+  <div class="modal">
+    <div class="modal-title" id="fpr-modal-title">Novo Prestador</div>
+    <input type="hidden" id="fpr-id">
+    <div class="row-3">
+      <div class="fg"><label>Nome</label><input type="text" id="fpr-nome" placeholder="Nome completo"></div>
+      <div class="fg"><label>Tipo</label><input type="text" id="fpr-tipo" placeholder="Ex: Médico(a), Psicólogo(a)"></div>
+      <div class="fg"><label>Documento</label><input type="text" id="fpr-documento" placeholder="CPF/CNPJ (opcional)"></div>
+    </div>
+    <div class="row-3">
+      <div class="fg"><label>Telefone</label><input type="text" id="fpr-telefone" placeholder="Opcional"></div>
+      <div class="fg"><label>E-mail</label><input type="email" id="fpr-email" placeholder="Opcional"></div>
+      <div class="fg"><label>Chave PIX</label><input type="text" id="fpr-chavepix" placeholder="Opcional"></div>
+    </div>
+    <div class="fg"><label>Dados Bancários</label><input type="text" id="fpr-dadosbancarios" placeholder="Banco / agência / conta (opcional)"></div>
+    <div class="row-3">
+      <div class="fg"><label>Categoria</label><select id="fpr-categoria"><option value="">Selecione...</option></select></div>
+      <div class="fg"><label>Valor Padrão (R$)</label><input type="number" id="fpr-valorpadrao" min="0" step="0.01" placeholder="0,00"></div>
+      <div class="fg"><label>Dia de Vencimento</label><input type="number" id="fpr-diavencimento" min="1" max="31" placeholder="Ex: 5"></div>
+    </div>
+    <div class="fg"><label>Observações</label><input type="text" id="fpr-observacoes" placeholder="Opcional"></div>
+    <div class="modal-ft">
+      <button class="btn btn-ghost" onclick="closeModal('modal-fin-prestador')">Cancelar</button>
+      <button class="btn btn-ok" id="fpr-save-btn" onclick="addFinPrestador()">Adicionar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: DAR BAIXA (CONTAS A PAGAR) -->
+<div class="overlay" id="modal-fin-baixa">
+  <div class="modal">
+    <div class="modal-title">Dar Baixa</div>
+    <input type="hidden" id="baixa-conta-id">
+    <div class="card-sub mb16" id="baixa-resumo" style="margin:0 0 16px"></div>
+    <div class="fg"><label>Forma de Pagamento</label>
+      <select id="baixa-forma">
+        <option value="">Selecione...</option>
+        <option value="Pix">Pix</option>
+        <option value="Transferência">Transferência</option>
+        <option value="Boleto">Boleto</option>
+        <option value="Dinheiro">Dinheiro</option>
+        <option value="Outro">Outro</option>
+      </select>
+    </div>
+    <div class="fg"><label>Data do Pagamento</label><input type="date" id="baixa-data"></div>
+    <div class="modal-ft">
+      <button class="btn btn-ghost" onclick="closeModal('modal-fin-baixa')">Cancelar</button>
+      <button class="btn btn-ok" onclick="confirmBaixa()">Confirmar Baixa</button>
     </div>
   </div>
 </div>
@@ -3545,7 +3628,7 @@ const _isConfirmLink = handleEmailConfirmation();
    SETOR FINANCEIRO — equipe e dados próprios, isolados do Comercial
 ══════════════════════════════════════════════════════════════ */
 let FU = null;
-let _fu = [], _fcat = [], _fp = [], _fr = [];
+let _fu = [], _fcat = [], _fp = [], _fr = [], _fpr = [];
 let chFinCat = null;
 let dreMonthOffset = 0;
 
@@ -3619,18 +3702,20 @@ function doLogoutFin() {
 async function loadFinData() {
   loading(true);
   try {
-    const [fuSnap, fcatSnap, fpSnap, frSnap, oSnap] = await Promise.all([
+    const [fuSnap, fcatSnap, fpSnap, frSnap, oSnap, fprSnap] = await Promise.all([
       db.collection('fin_usuarios').get(),
       db.collection('fin_categorias').get(),
       db.collection('fin_contas_pagar').get(),
       db.collection('fin_contas_receber').get(),
-      db.collection('orcamentos').get()
+      db.collection('orcamentos').get(),
+      db.collection('fin_prestadores').get()
     ]);
     _fu = fuSnap.docs.map(d=>{ const x=d.data(); delete x.password; x.id=Number(x.id); return x; });
     _fcat = fcatSnap.docs.map(d=>d.data());
     _fp = fpSnap.docs.map(d=>d.data());
     _fr = frSnap.docs.map(d=>d.data());
     _o = oSnap.docs.map(d=>d.data());
+    _fpr = fprSnap.docs.map(d=>d.data());
   } finally { loading(false); }
 }
 
@@ -3648,6 +3733,17 @@ function bootAppFin() {
   ['fin-nav-admin-sec','fin-nav-categorias','fin-nav-usuarios','mais-fin-categorias','mais-fin-usuarios'].forEach(id=>{
     const el=document.getElementById(id);
     if (el) isG?el.classList.remove('hidden'):el.classList.add('hidden');
+  });
+  // Prestadores usa um gate próprio: gestor sempre pode, mas o gestor também
+  // pode liberar colaboradores específicos via permPrestadores (tela de
+  // Usuários) - por isso não entra na lista fixa de "gestor-only" acima.
+  // "Administração" (o cabeçalho da seção) reaparece se qualquer uma das
+  // duas condições liberar algum item dentro dela.
+  const canPrestadores=isG||!!FU.permPrestadores;
+  if (canPrestadores) document.getElementById('fin-nav-admin-sec')?.classList.remove('hidden');
+  ['fin-nav-prestadores','mais-fin-prestadores'].forEach(id=>{
+    const el=document.getElementById(id);
+    if (el) canPrestadores?el.classList.remove('hidden'):el.classList.add('hidden');
   });
 
   fillFinSelects();
@@ -3669,14 +3765,15 @@ function showPageFin(name) {
     t.classList.toggle('active', !!t.getAttribute('onclick')?.includes(`showPageFin('${name}')`));
   });
   if(!document.querySelector('#tab-bar-fin .tab-item.active')) document.getElementById('tab-mais-fin')?.classList.add('active');
-  const titles={dashboard:'Dashboard',pagar:'Contas a Pagar',receber:'Contas a Receber',dre:'DRE',categorias:'Categorias',usuarios:'Usuários'};
+  const titles={dashboard:'Dashboard',pagar:'Pagamentos de Prestadores',receber:'Contas a Receber',dre:'DRE',categorias:'Categorias',usuarios:'Usuários',prestadores:'Prestadores'};
   document.getElementById('fin-page-title').textContent=titles[name]||name;
-  if(name==='dashboard')   renderFinDashboard();
-  if(name==='pagar')       renderContasPagar();
-  if(name==='receber')     renderContasReceber();
-  if(name==='dre')         renderDRE();
-  if(name==='categorias')  renderFinCategorias();
-  if(name==='usuarios')    renderFinUsuarios();
+  if(name==='dashboard')    renderFinDashboard();
+  if(name==='pagar')        renderContasPagar();
+  if(name==='receber')      renderContasReceber();
+  if(name==='dre')          renderDRE();
+  if(name==='categorias')   renderFinCategorias();
+  if(name==='usuarios')     renderFinUsuarios();
+  if(name==='prestadores')  renderFinPrestadores();
 }
 
 function toggleSidebarFin() {
@@ -3714,6 +3811,18 @@ function fillFinSelects() {
   document.getElementById('fp-categoria').innerHTML='<option value="">Selecione...</option>'+despesaCats.map(c=>`<option value="${c.name}">${c.name}</option>`).join('');
   document.getElementById('fr-categoria').innerHTML='<option value="">Selecione...</option>'+receitaCats.map(c=>`<option value="${c.name}">${c.name}</option>`).join('');
   document.getElementById('fr-orcamento').innerHTML='<option value="">Nenhum</option>'+_o.map(o=>`<option value="${o.id}">${o.paciente} — R$ ${(o.total||0).toFixed(2)}</option>`).join('');
+  document.getElementById('fp-prestador').innerHTML='<option value="">Selecione...</option>'+_fpr.filter(p=>p.ativo).map(p=>`<option value="${p.id}">${p.nome}</option>`).join('');
+  document.getElementById('fpr-categoria').innerHTML='<option value="">Selecione...</option>'+despesaCats.map(c=>`<option value="${c.name}">${c.name}</option>`).join('');
+}
+
+function onFpPrestadorChange() {
+  const id=Number(document.getElementById('fp-prestador').value);
+  const p=_fpr.find(p=>p.id===id);
+  if(!p) return;
+  document.getElementById('fp-desc').value=`Pagamento — ${p.nome}`;
+  document.getElementById('fp-categoria').value=p.categoria||'';
+  document.getElementById('fp-valor').value=p.valorPadrao||'';
+  document.getElementById('fp-vencimento').value=buildVencimento(mKey(new Date()), p.diaVencimentoPadrao);
 }
 
 function onFrOrcamentoChange() {
@@ -3733,12 +3842,18 @@ function renderFinDashboard() {
   const despesasMes=_fp.filter(c=>c.status==='pago'&&c.dataPagamento&&c.dataPagamento.startsWith(mk)).reduce((s,c)=>s+c.valor,0);
   const saldoMes=receitasMes-despesasMes;
   const vencHoje=[..._fp.filter(c=>c.status==='pendente'&&c.vencimento<=today),..._fr.filter(c=>c.status==='pendente'&&c.vencimento<=today)].length;
+  const prestadorPend=_fp.filter(c=>c.prestadorId&&c.status==='pendente');
+  const prestadorAtrasados=prestadorPend.filter(c=>c.vencimento<today).length;
+  const seteDias=new Date(now.getTime()+7*86400000).toISOString().split('T')[0];
+  const prestadorVencendoSemana=prestadorPend.filter(c=>c.vencimento>=today&&c.vencimento<=seteDias).length;
 
   document.getElementById('fin-db-metrics').innerHTML=`
     <div class="mc c3"><div class="mc-tag">RECEITAS</div><div class="mc-big">R$ ${receitasMes.toFixed(2)}</div><div class="mc-lbl">Receitas do mês</div></div>
     <div class="mc c4"><div class="mc-tag">DESPESAS</div><div class="mc-big">R$ ${despesasMes.toFixed(2)}</div><div class="mc-lbl">Despesas do mês</div></div>
     <div class="mc ${saldoMes>=0?'c3':'c4'}"><div class="mc-tag">SALDO</div><div class="mc-big" style="color:${saldoMes>=0?'var(--green)':'var(--red)'}">R$ ${saldoMes.toFixed(2)}</div><div class="mc-lbl">Resultado do mês</div></div>
     <div class="mc c2"><div class="mc-tag">VENCIMENTOS</div><div class="mc-big">${vencHoje}</div><div class="mc-lbl">A vencer hoje ou atrasados</div></div>
+    <div class="mc c4"><div class="mc-tag">PRESTADORES</div><div class="mc-big" style="color:var(--red)">${prestadorAtrasados}</div><div class="mc-lbl">Prestadores atrasados</div></div>
+    <div class="mc c2"><div class="mc-tag">PRESTADORES</div><div class="mc-big">${prestadorVencendoSemana}</div><div class="mc-lbl">Vencendo esta semana</div></div>
   `;
 
   const pendPagar=_fp.filter(c=>c.status==='pendente').map(c=>({...c,tipo:'pagar'}));
@@ -3755,6 +3870,16 @@ function renderFinDashboard() {
     </div>`;
   }).join(''):`<div style="text-align:center;color:var(--muted);padding:24px;font-size:13px">Nenhum vencimento pendente</div>`;
 
+  const vencPrestadores=[...prestadorPend].sort((a,b)=>a.vencimento.localeCompare(b.vencimento)).slice(0,10);
+  document.getElementById('fin-db-vencimentos-prestadores').innerHTML=vencPrestadores.length?vencPrestadores.map(c=>{
+    const atrasado=c.vencimento<today;
+    return `<div class="det-entry">
+      <div style="flex-shrink:0;width:100px;font-size:12.5px;font-weight:700;color:${atrasado?'var(--red)':'var(--black)'}">${fmt(c.vencimento)}</div>
+      <div class="det-body"><div class="det-pair"><span class="det-val">${c.prestadorNome}</span></div></div>
+      <div style="flex-shrink:0;font-weight:700">R$ ${c.valor.toFixed(2)}</div>
+    </div>`;
+  }).join(''):`<div style="text-align:center;color:var(--muted);padding:24px;font-size:13px">Nenhum pagamento de prestador pendente</div>`;
+
   const despesasPorCat={};
   _fp.filter(c=>c.status==='pago'&&c.dataPagamento&&c.dataPagamento.startsWith(mk)).forEach(c=>{
     despesasPorCat[c.categoria]=(despesasPorCat[c.categoria]||0)+c.valor;
@@ -3768,55 +3893,91 @@ function renderFinDashboard() {
     options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:11},boxWidth:10}}}}});
 }
 
-/* ── CONTAS A PAGAR ────────────────────────── */
+/* ── PAGAMENTOS DE PRESTADORES (ex-"Contas a Pagar" — agora só isso) ── */
+// classificação de status só de exibição (nada é gravado além de
+// 'pendente'/'pago' - "atrasado"/"vence em breve" são calculados na hora a
+// partir da data de vencimento, pra nunca ficar desatualizado)
+function statusPagarInfo(c, today) {
+  if (c.status==='pago') return {label:'Pago', html:'<span class="badge b-ok">Pago</span>'};
+  if (c.vencimento<today) return {label:'Atrasado', html:'<span class="badge b-gray" style="color:var(--red);background:rgba(185,28,28,.08)">Atrasado</span>'};
+  const diffDias=(new Date(c.vencimento)-new Date(today))/86400000;
+  if (diffDias<=7) return {label:'Vence em breve', html:'<span class="badge b-4">Vence em breve</span>'};
+  return {label:'Pendente', html:'<span class="badge b-2">Pendente</span>'};
+}
+
 function renderContasPagar() {
   const today=new Date().toISOString().split('T')[0];
   const sorted=[..._fp].sort((a,b)=>a.vencimento.localeCompare(b.vencimento));
   document.getElementById('fp-tbody').innerHTML=sorted.length?sorted.map(c=>{
-    const atrasado=c.status==='pendente'&&c.vencimento<today;
-    const statusBadge=c.status==='pago'?'<span class="badge b-ok">Pago</span>':atrasado?'<span class="badge b-gray" style="color:var(--red);background:rgba(185,28,28,.08)">Atrasado</span>':'<span class="badge b-2">Pendente</span>';
-    const acoes=c.status==='pendente'?`<button class="btn btn-ghost btn-xs" onclick="marcarPago(${c.id})">Marcar Pago</button>`:'';
+    const statusBadge=statusPagarInfo(c,today).html;
+    const acoes=c.status==='pendente'?`<button class="btn btn-ghost btn-xs" onclick="openBaixaModal(${c.id})">Dar Baixa</button>`:'';
     const del=FU.role==='gestor'?`<button class="btn-icon del" onclick="delContaPagar(${c.id})" title="Remover">×</button>`:'';
+    const rodape=c.status==='pago'
+      ? `<div style="font-size:11px;color:var(--muted)">Registrado por ${c.criadoPorNome} · Baixado por ${c.pagoPorNome||'—'}${c.formaPagamento?' via '+c.formaPagamento:''}</div>`
+      : `<div style="font-size:11px;color:var(--muted)">Registrado por ${c.criadoPorNome}</div>`;
     return `<tr>
       <td class="text-muted">${fmt(c.vencimento)}</td>
-      <td>${c.descricao}${c.fornecedor?`<div style="font-size:11px;color:var(--muted)">${c.fornecedor}</div>`:''}</td>
+      <td>${c.prestadorNome||c.fornecedor||c.descricao}<div style="font-size:11px;color:var(--muted)">${c.descricao}</div>${rodape}</td>
       <td>${c.categoria?`<span class="badge b-3">${c.categoria}</span>`:'—'}</td>
       <td><strong>R$ ${c.valor.toFixed(2)}</strong></td>
       <td>${statusBadge}</td>
       <td><div class="flex gap6">${acoes}${del}</div></td>
     </tr>`;
-  }).join(''):`<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:32px">Nenhuma conta a pagar lançada</td></tr>`;
+  }).join(''):`<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:32px">Nenhum pagamento lançado</td></tr>`;
 }
 
 async function addContaPagar() {
+  const prestadorId=Number(document.getElementById('fp-prestador').value)||null;
+  const prestador=prestadorId?_fpr.find(p=>p.id===prestadorId):null;
   const descricao=document.getElementById('fp-desc').value.trim();
-  const fornecedor=document.getElementById('fp-fornecedor').value.trim();
   const categoria=document.getElementById('fp-categoria').value;
   const valor=parseFloat(document.getElementById('fp-valor').value);
   const vencimento=document.getElementById('fp-vencimento').value;
-  const recorrente=document.getElementById('fp-recorrente').checked;
+  if(!prestador) return toast('Selecione o prestador.','err');
   if(!descricao) return toast('Informe a descrição.','err');
   if(!categoria) return toast('Selecione a categoria.','err');
   if(!valor||valor<=0) return toast('Informe um valor válido.','err');
   if(!vencimento) return toast('Informe o vencimento.','err');
-  const conta={id:newId(),descricao,fornecedor,categoria,valor,vencimento,status:'pendente',dataPagamento:null,recorrente,criadoPorId:FU.id,criadoPorNome:FU.name,createdAt:Date.now()};
+  const conta={
+    id:newId(), descricao, fornecedor:'', prestadorId:prestador.id, prestadorNome:prestador.nome,
+    categoria, valor, vencimento, mesReferencia:vencimento.slice(0,7),
+    status:'pendente', dataPagamento:null, pagoPorId:null, pagoPorNome:null, formaPagamento:null,
+    recorrente:false, criadoPorId:FU.id, criadoPorNome:FU.name, createdAt:Date.now()
+  };
   loading(true);
   try { await db.collection('fin_contas_pagar').doc(String(conta.id)).set(conta); _fp.push(conta); }
   finally { loading(false); }
-  ['fp-desc','fp-fornecedor','fp-valor','fp-vencimento'].forEach(id=>document.getElementById(id).value='');
+  ['fp-desc','fp-valor','fp-vencimento'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('fp-prestador').value='';
   document.getElementById('fp-categoria').value='';
-  document.getElementById('fp-recorrente').checked=false;
   renderContasPagar();
-  toast('Conta a pagar lançada.','ok');
+  toast('Pagamento lançado.','ok');
 }
 
-async function marcarPago(id) {
+function openBaixaModal(id) {
   const c=_fp.find(c=>c.id===id); if(!c) return;
-  const dataPagamento=new Date().toISOString().split('T')[0];
+  document.getElementById('baixa-conta-id').value=id;
+  document.getElementById('baixa-resumo').textContent=`${c.prestadorNome||c.fornecedor||c.descricao} — R$ ${c.valor.toFixed(2)} — vencimento ${fmt(c.vencimento)}`;
+  document.getElementById('baixa-forma').value='';
+  document.getElementById('baixa-data').value=new Date().toISOString().split('T')[0];
+  document.getElementById('modal-fin-baixa').classList.add('open');
+}
+
+async function confirmBaixa() {
+  const id=Number(document.getElementById('baixa-conta-id').value);
+  const c=_fp.find(c=>c.id===id); if(!c) return;
+  const formaPagamento=document.getElementById('baixa-forma').value;
+  const dataPagamento=document.getElementById('baixa-data').value;
+  if(!formaPagamento) return toast('Selecione a forma de pagamento.','err');
+  if(!dataPagamento) return toast('Informe a data do pagamento.','err');
   loading(true);
-  try { await db.collection('fin_contas_pagar').doc(String(id)).update({status:'pago',dataPagamento}); c.status='pago'; c.dataPagamento=dataPagamento; }
-  finally { loading(false); }
-  renderContasPagar(); toast('Conta marcada como paga.','ok');
+  try {
+    await db.collection('fin_contas_pagar').doc(String(id)).update({status:'pago',dataPagamento,formaPagamento,pagoPorId:FU.id,pagoPorNome:FU.name});
+    Object.assign(c,{status:'pago',dataPagamento,formaPagamento,pagoPorId:FU.id,pagoPorNome:FU.name});
+  } finally { loading(false); }
+  closeModal('modal-fin-baixa');
+  renderContasPagar(); renderFinDashboard();
+  toast('Pagamento baixado.','ok');
 }
 
 async function delContaPagar(id) {
@@ -3994,6 +4155,197 @@ async function delFinCategoria(id) {
   toast('Categoria removida.','info');
 }
 
+/* ── PRESTADORES DE SERVIÇO ────────────────── */
+function canManagePrestadores() { return FU.role==='gestor' || !!FU.permPrestadores; }
+
+// clampa o dia ao último dia do mês (ex: dia 31 num mês de 30 ou fevereiro)
+function buildVencimento(mesReferencia, dia) {
+  const [ano,mes]=mesReferencia.split('-').map(Number);
+  const ultimoDia=new Date(ano,mes,0).getDate();
+  const diaClamp=Math.min(Math.max(1,dia||1),ultimoDia);
+  return `${mesReferencia}-${String(diaClamp).padStart(2,'0')}`;
+}
+
+function renderFinPrestadores() {
+  const gerenciar=canManagePrestadores();
+  document.getElementById('fpr-new-btn').classList.toggle('hidden', !gerenciar);
+  const sorted=[..._fpr].sort((a,b)=>a.nome.localeCompare(b.nome));
+  document.getElementById('fpr-tbody').innerHTML=sorted.length?sorted.map(p=>{
+    const statusBadge=p.ativo===false?'<span class="badge b-gray">Inativo</span>':'<span class="badge b-ok">Ativo</span>';
+    const acoesGestor=gerenciar?`
+      <button class="btn btn-ghost btn-xs" onclick="openEditFinPrestador(${p.id})">Editar</button>
+      <button class="btn btn-ghost btn-xs" onclick="toggleAtivoPrestador(${p.id})">${p.ativo===false?'Ativar':'Desativar'}</button>`:'';
+    return `<tr>
+      <td><strong>${p.nome}</strong>${p.documento?`<div style="font-size:11px;color:var(--muted)">${p.documento}</div>`:''}</td>
+      <td>${p.tipo||'—'}</td>
+      <td>${p.categoria?`<span class="badge b-3">${p.categoria}</span>`:'—'}</td>
+      <td>R$ ${(p.valorPadrao||0).toFixed(2)}</td>
+      <td>${p.diaVencimentoPadrao||'—'}</td>
+      <td>${statusBadge}</td>
+      <td><div class="flex gap6">
+        <button class="btn btn-ok btn-xs" onclick="gerarProximoMes(${p.id})">Gerar próximo mês</button>
+        ${acoesGestor}
+      </div></td>
+    </tr>`;
+  }).join(''):`<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:32px">Nenhum prestador cadastrado</td></tr>`;
+}
+
+function readPrestadorForm() {
+  return {
+    nome: document.getElementById('fpr-nome').value.trim(),
+    tipo: document.getElementById('fpr-tipo').value.trim(),
+    documento: document.getElementById('fpr-documento').value.trim(),
+    telefone: document.getElementById('fpr-telefone').value.trim(),
+    email: document.getElementById('fpr-email').value.trim(),
+    chavePix: document.getElementById('fpr-chavepix').value.trim(),
+    dadosBancarios: document.getElementById('fpr-dadosbancarios').value.trim(),
+    categoria: document.getElementById('fpr-categoria').value,
+    valorPadrao: parseFloat(document.getElementById('fpr-valorpadrao').value),
+    diaVencimentoPadrao: parseInt(document.getElementById('fpr-diavencimento').value,10),
+    observacoes: document.getElementById('fpr-observacoes').value.trim(),
+  };
+}
+
+function validatePrestadorForm(f) {
+  if(!f.nome) return 'Informe o nome do prestador.';
+  if(!f.categoria) return 'Selecione a categoria.';
+  if(!f.valorPadrao||f.valorPadrao<=0) return 'Informe um valor padrão válido.';
+  if(!f.diaVencimentoPadrao||f.diaVencimentoPadrao<1||f.diaVencimentoPadrao>31) return 'Informe um dia de vencimento entre 1 e 31.';
+  return null;
+}
+
+function clearPrestadorForm() {
+  ['fpr-nome','fpr-tipo','fpr-documento','fpr-telefone','fpr-email','fpr-chavepix','fpr-dadosbancarios','fpr-valorpadrao','fpr-diavencimento','fpr-observacoes'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('fpr-categoria').value='';
+}
+
+function openAddFinPrestador() {
+  if(!canManagePrestadores()) return;
+  clearPrestadorForm();
+  document.getElementById('fpr-id').value='';
+  document.getElementById('fpr-modal-title').textContent='Novo Prestador';
+  document.getElementById('fpr-save-btn').textContent='Adicionar';
+  document.getElementById('fpr-save-btn').setAttribute('onclick','addFinPrestador()');
+  document.getElementById('modal-fin-prestador').classList.add('open');
+}
+
+async function addFinPrestador() {
+  const f=readPrestadorForm();
+  const erro=validatePrestadorForm(f);
+  if(erro) return toast(erro,'err');
+  const prestador={id:newId(),...f,ativo:true,criadoPorId:FU.id,criadoPorNome:FU.name,createdAt:Date.now()};
+  loading(true);
+  try { await db.collection('fin_prestadores').doc(String(prestador.id)).set(prestador); _fpr.push(prestador); }
+  finally { loading(false); }
+  closeModal('modal-fin-prestador');
+  renderFinPrestadores(); fillFinSelects();
+  toast('Prestador cadastrado.','ok');
+}
+
+function openEditFinPrestador(id) {
+  if(!canManagePrestadores()) return;
+  const p=_fpr.find(p=>p.id===id); if(!p) return;
+  document.getElementById('fpr-id').value=id;
+  document.getElementById('fpr-nome').value=p.nome;
+  document.getElementById('fpr-tipo').value=p.tipo||'';
+  document.getElementById('fpr-documento').value=p.documento||'';
+  document.getElementById('fpr-telefone').value=p.telefone||'';
+  document.getElementById('fpr-email').value=p.email||'';
+  document.getElementById('fpr-chavepix').value=p.chavePix||'';
+  document.getElementById('fpr-dadosbancarios').value=p.dadosBancarios||'';
+  document.getElementById('fpr-categoria').value=p.categoria||'';
+  document.getElementById('fpr-valorpadrao').value=p.valorPadrao||'';
+  document.getElementById('fpr-diavencimento').value=p.diaVencimentoPadrao||'';
+  document.getElementById('fpr-observacoes').value=p.observacoes||'';
+  document.getElementById('fpr-modal-title').textContent='Editar Prestador';
+  document.getElementById('fpr-save-btn').textContent='Salvar Alterações';
+  document.getElementById('fpr-save-btn').setAttribute('onclick','saveEditFinPrestador()');
+  document.getElementById('modal-fin-prestador').classList.add('open');
+}
+
+async function saveEditFinPrestador() {
+  const id=parseInt(document.getElementById('fpr-id').value);
+  const idx=_fpr.findIndex(p=>p.id===id); if(idx<0) return;
+  const f=readPrestadorForm();
+  const erro=validatePrestadorForm(f);
+  if(erro) return toast(erro,'err');
+  _fpr[idx]={..._fpr[idx],...f};
+  loading(true);
+  try { await db.collection('fin_prestadores').doc(String(id)).set(_fpr[idx]); }
+  finally { loading(false); }
+  closeModal('modal-fin-prestador');
+  renderFinPrestadores(); fillFinSelects();
+  toast('Prestador atualizado.','ok');
+}
+
+async function toggleAtivoPrestador(id) {
+  if(!canManagePrestadores()) return;
+  const p=_fpr.find(p=>p.id===id); if(!p) return;
+  const novoAtivo=!(p.ativo!==false);
+  loading(true);
+  try { await db.collection('fin_prestadores').doc(String(id)).update({ativo:novoAtivo}); p.ativo=novoAtivo; }
+  finally { loading(false); }
+  renderFinPrestadores(); fillFinSelects();
+  toast(novoAtivo?'Prestador ativado.':'Prestador desativado.','info');
+}
+
+// acha o mês seguinte ao último pagamento já lançado pra esse prestador
+// (ou o mês atual, se for o primeiro pagamento dele)
+function computeNextMesReferencia(prestadorId) {
+  const contas=_fp.filter(c=>c.prestadorId===prestadorId);
+  if(!contas.length) return mKey(new Date());
+  const meses=contas.map(c=>c.mesReferencia||c.vencimento.slice(0,7)).sort();
+  const [ano,mes]=meses[meses.length-1].split('-').map(Number);
+  const d=new Date(ano,mes-1,1); d.setMonth(d.getMonth()+1);
+  return mKey(d);
+}
+
+async function gerarProximoMes(prestadorId) {
+  const p=_fpr.find(p=>p.id===prestadorId); if(!p) return;
+  const nextMes=computeNextMesReferencia(prestadorId);
+  if(_fp.some(c=>c.prestadorId===prestadorId&&(c.mesReferencia||c.vencimento.slice(0,7))===nextMes)) {
+    return toast('Já existe um pagamento gerado para este mês.','err');
+  }
+  const conta={
+    id:newId(), descricao:`Pagamento — ${p.nome}`, fornecedor:'', prestadorId:p.id, prestadorNome:p.nome,
+    categoria:p.categoria, valor:p.valorPadrao, vencimento:buildVencimento(nextMes,p.diaVencimentoPadrao), mesReferencia:nextMes,
+    status:'pendente', dataPagamento:null, pagoPorId:null, pagoPorNome:null, formaPagamento:null,
+    recorrente:true, criadoPorId:FU.id, criadoPorNome:FU.name, createdAt:Date.now()
+  };
+  loading(true);
+  try { await db.collection('fin_contas_pagar').doc(String(conta.id)).set(conta); _fp.push(conta); }
+  finally { loading(false); }
+  renderContasPagar(); renderFinDashboard();
+  toast(`Pagamento de ${fmt(conta.vencimento)} gerado para ${p.nome}.`,'ok');
+}
+
+async function gerarTodosPendentesDoMes() {
+  const mesAtual=mKey(new Date());
+  const candidatos=_fpr.filter(p=>p.ativo!==false).filter(p=>computeNextMesReferencia(p.id)<=mesAtual);
+  if(!candidatos.length) return toast('Nenhum prestador com pagamento pendente de geração este mês.','info');
+  loading(true);
+  let gerados=0;
+  try {
+    const batch=db.batch();
+    candidatos.forEach(p=>{
+      const nextMes=computeNextMesReferencia(p.id);
+      if(_fp.some(c=>c.prestadorId===p.id&&(c.mesReferencia||c.vencimento.slice(0,7))===nextMes)) return;
+      const conta={
+        id:newId()+gerados, descricao:`Pagamento — ${p.nome}`, fornecedor:'', prestadorId:p.id, prestadorNome:p.nome,
+        categoria:p.categoria, valor:p.valorPadrao, vencimento:buildVencimento(nextMes,p.diaVencimentoPadrao), mesReferencia:nextMes,
+        status:'pendente', dataPagamento:null, pagoPorId:null, pagoPorNome:null, formaPagamento:null,
+        recorrente:true, criadoPorId:FU.id, criadoPorNome:FU.name, createdAt:Date.now()
+      };
+      batch.set(db.collection('fin_contas_pagar').doc(String(conta.id)),conta);
+      _fp.push(conta);
+      gerados++;
+    });
+    if(gerados) await batch.commit();
+  } finally { loading(false); }
+  renderContasPagar(); renderFinDashboard();
+  toast(gerados?`${gerados} pagamento(s) gerado(s).`:'Todos os prestadores já têm pagamento gerado este mês.', gerados?'ok':'info');
+}
+
 /* ── USUÁRIOS FINANCEIRO ───────────────────── */
 function renderFinUsuarios() {
   document.getElementById('fu-tbody').innerHTML=_fu.map(u=>`
@@ -4032,13 +4384,20 @@ async function addFinUser() {
     if (data.error && data.error.message!=='EMAIL_EXISTS') { toast('Erro: '+data.error.message,'err'); return; }
     await auth.sendPasswordResetEmail(email);
     const nid=_fu.length?Math.max(..._fu.map(u=>u.id))+1:1;
-    const nu={id:nid,name,email,role,photo:null,ativo:false};
+    const nu={id:nid,name,email,role,photo:null,ativo:false,permPrestadores:false};
     await db.collection('fin_usuarios').doc(String(nid)).set(nu);
     _fu.push(nu);
   } finally { loading(false); }
   closeModal('modal-fin-add');
   renderFinUsuarios(); fillFinSelects();
   toast('Colaborador adicionado. E-mail enviado para '+email+' definir a senha.','ok');
+}
+
+function onFeuRoleChange() {
+  // gestor já pode gerenciar prestadores por definição - o checkbox só faz
+  // sentido (e só aparece) pra quem é colaborador
+  const isGestor=document.getElementById('feu-role').value==='gestor';
+  document.getElementById('feu-perm-wrap').classList.toggle('hidden', isGestor);
 }
 
 function openEditFinUser(id) {
@@ -4048,6 +4407,8 @@ function openEditFinUser(id) {
   document.getElementById('feu-email').value=u.email;
   document.getElementById('feu-pass').value='';
   document.getElementById('feu-role').value=u.role;
+  document.getElementById('feu-perm-prestadores').checked=!!u.permPrestadores;
+  onFeuRoleChange();
   document.getElementById('modal-fin-edit').classList.add('open');
 }
 
@@ -4058,9 +4419,10 @@ async function saveEditFinUser() {
   const email=document.getElementById('feu-email').value.trim();
   const pass=document.getElementById('feu-pass').value;
   const role=document.getElementById('feu-role').value;
+  const permPrestadores=document.getElementById('feu-perm-prestadores').checked;
   if(!name||!email) return toast('Nome e e-mail são obrigatórios.','err');
   if(_fu.find(u=>u.email===email&&u.id!==id)) return toast('E-mail já utilizado.','err');
-  _fu[idx]={..._fu[idx],name,email,role};
+  _fu[idx]={..._fu[idx],name,email,role,permPrestadores};
   loading(true);
   try {
     await db.collection('fin_usuarios').doc(String(id)).set(_fu[idx]);
@@ -4166,6 +4528,20 @@ auth.onAuthStateChanged(async (fbUser) => {
   if(_authActionInProgress) { hideSplash(); return; }
   const se=localStorage.getItem('saved_email');
   const fse=localStorage.getItem('fin_saved_email');
+  // Autocorreção: o Firebase Auth pode manter uma sessão viva (fbUser) mesmo
+  // quando ninguém marcou "Manter sessão neste dispositivo" - dentro do
+  // WKWebView do app nativo (iOS) não existe um "fechar a aba" de verdade
+  // pra encerrar a persistência tipo SESSION como aconteceria num navegador
+  // normal, então a sessão às vezes sobrevive mesmo sem "lembrar" marcado
+  // (o F5 caía direto sem pedir senha). Se não há e-mail "lembrado" (nem no
+  // Comercial nem no Financeiro) batendo com essa sessão, ela não deveria
+  // existir - desloga e força tela de login, sem esperar pelo próximo login
+  // explícito pra corrigir sozinho.
+  if (fbUser && !(se && se===fbUser.email) && !(fse && fse===fbUser.email)) {
+    await auth.signOut();
+    hideSplash();
+    return;
+  }
   // O mesmo e-mail pode estar "lembrado" nos dois setores; usamos o último setor
   // acessado (active_sector) para decidir qual tentar primeiro ao restaurar a sessão.
   const finFirst = localStorage.getItem('active_sector')==='financeiro';
