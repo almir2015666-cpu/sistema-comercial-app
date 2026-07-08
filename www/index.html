@@ -277,11 +277,12 @@ body{
   font-size:12px;color:var(--muted);font-weight:500
 }
 
-.content{padding:28px 32px;flex:1}
+.content{padding:28px 32px;flex:1;display:flex;flex-direction:column;min-height:0}
 
 /* ── PAGES ──────────────────────────────── */
 .page{display:none}
 .page.active{display:block}
+#page-fin-chat.active{display:flex;flex-direction:column;flex:1;min-height:0}
 
 /* ── GRID ───────────────────────────────── */
 .g{display:grid;gap:16px}
@@ -297,11 +298,14 @@ body{
 /* ── CARD ───────────────────────────────── */
 .card{
   background:var(--white);border-radius:var(--r2);
-  border:1px solid var(--border);padding:24px
+  border:1px solid var(--border);padding:24px;
+  box-shadow:0 1px 2px rgba(0,0,0,.03),0 10px 24px -8px rgba(0,0,0,.06)
 }
+[data-theme="dark"] .card{box-shadow:0 1px 2px rgba(0,0,0,.2),0 10px 24px -8px rgba(0,0,0,.35)}
 .card-hd{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px}
 .card-title{font-size:13.5px;font-weight:700;color:var(--black)}
 .card-sub{font-size:12px;color:var(--muted);margin-top:2px}
+.month-label{font-size:14px;font-weight:700;color:var(--blue2);margin-top:2px;text-transform:capitalize}
 
 /* ── METRIC CARD ────────────────────────── */
 .mc{
@@ -475,6 +479,78 @@ tbody tr:hover td{background:#fafbfc}
 .det-pair{display:flex;gap:4px;align-items:center}
 .det-lbl{color:var(--muted)}
 .det-val{color:var(--black);font-weight:600}
+
+/* CHAT - visual inspirado no WhatsApp (lista + conversa lado a lado no
+   desktop, uma coluna por vez no celular via .chat-wrap.thread-open, sem
+   trocar de página de verdade) */
+.card-chat{padding:0;flex:1;display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.chat-wrap{
+  display:flex;gap:0;flex:1;min-height:460px;border-radius:var(--r2);
+  overflow:hidden;background:var(--white);box-shadow:0 1px 2px rgba(0,0,0,.03),0 16px 40px -12px rgba(0,0,0,.12)
+}
+[data-theme="dark"] .chat-wrap{box-shadow:0 1px 2px rgba(0,0,0,.25),0 16px 40px -12px rgba(0,0,0,.4)}
+.chat-list-col{width:336px;flex-shrink:0;display:flex;flex-direction:column;border-right:1px solid var(--border);background:var(--panel)}
+.chat-list-hd{padding:20px 20px 14px;font-weight:800;font-size:16px;color:var(--black);letter-spacing:-.2px;border-bottom:1px solid var(--border);background:var(--white)}
+.chat-list{flex:1;overflow-y:auto;padding:6px}
+.chat-row{display:flex;align-items:center;gap:12px;padding:11px 12px;cursor:pointer;border-radius:12px;transition:background .12s;margin-bottom:2px}
+.chat-row:hover{background:var(--bg)}
+.chat-row.active{background:rgba(37,99,235,.13)}
+.chat-row-body{flex:1;min-width:0}
+.chat-row-top{display:flex;justify-content:space-between;align-items:center;gap:6px}
+.chat-row-name{font-weight:700;font-size:13.5px;color:var(--black)}
+.chat-row-time{font-size:10.5px;color:var(--muted);flex-shrink:0}
+.chat-row-preview{font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;max-width:210px}
+.chat-badge{background:var(--green);color:#fff;font-size:10.5px;font-weight:800;min-width:19px;height:19px;border-radius:10px;display:flex;align-items:center;justify-content:center;padding:0 6px;flex-shrink:0;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.chat-thread{flex:1;display:flex;flex-direction:column;min-width:0;min-height:0;position:relative;background:var(--bg)}
+.chat-thread-hd{display:flex;align-items:center;gap:12px;padding:14px 22px;border-bottom:1px solid var(--border);background:var(--white);box-shadow:0 1px 2px rgba(0,0,0,.04);z-index:1;flex-shrink:0}
+.chat-thread-hd strong{color:var(--black);font-size:14.5px;line-height:1.25;letter-spacing:-.1px}
+.chat-thread-hd-sub{font-size:11.5px;color:var(--muted);margin-top:1px}
+.chat-back{display:none;background:none;border:none;font-size:20px;cursor:pointer;color:var(--black);padding:0 2px}
+.chat-messages{
+  flex:1;overflow-y:auto;min-height:0;padding:24px 28px;display:flex;flex-direction:column;gap:4px;
+  background:
+    radial-gradient(circle,rgba(37,99,235,.06) 1px,transparent 1.4px) 0 0/24px 24px,
+    var(--bg)
+}
+.chat-bubble{
+  max-width:66%;padding:9px 13px 9px;border-radius:17px;font-size:13.5px;line-height:1.48;
+  background:var(--white);color:var(--text);align-self:flex-start;border-bottom-left-radius:4px;
+  box-shadow:0 1px 3px rgba(0,0,0,.09);word-wrap:break-word;margin:3px 0
+}
+.chat-bubble.me{background:var(--blue2);color:#fff;align-self:flex-end;border-bottom-left-radius:17px;border-bottom-right-radius:4px;box-shadow:0 2px 8px rgba(37,99,235,.25)}
+.chat-bubble-time{display:block;font-size:10px;opacity:.6;margin-top:3px;text-align:right}
+.chat-bubble-from{font-size:10.5px;font-weight:700;opacity:.75;margin-bottom:3px}
+.chat-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:var(--muted);font-size:13.5px;text-align:center;padding:20px}
+.chat-empty::before{content:'💬';font-size:46px;opacity:.3}
+.chat-composer{display:flex;gap:10px;align-items:center;padding:14px 22px;border-top:1px solid var(--border);background:var(--white);flex-shrink:0}
+.chat-composer input{
+  flex:1;padding:12px 18px;border:1.5px solid var(--border);border-radius:24px;
+  font-size:13.5px;color:var(--text);background:var(--panel);outline:none;
+  font-family:inherit;transition:border-color .15s,background .15s;box-shadow:0 1px 2px rgba(0,0,0,.04)
+}
+.chat-composer input:focus{border-color:var(--blue2);background:var(--white)}
+.chat-composer input::placeholder{color:var(--muted)}
+.chat-attach-btn{
+  flex-shrink:0;width:40px;height:40px;border-radius:50%;border:none;
+  background:transparent;color:var(--soft);font-size:18px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;transition:background .1s,color .1s
+}
+.chat-attach-btn:hover{background:var(--bg);color:var(--blue2)}
+.chat-send-btn{
+  flex-shrink:0;width:40px;height:40px;border-radius:50%;border:none;cursor:pointer;
+  background:var(--blue2);color:#fff;font-size:16px;display:flex;align-items:center;justify-content:center;
+  box-shadow:0 2px 8px rgba(37,99,235,.4);transition:transform .1s
+}
+.chat-send-btn:active{transform:scale(.9)}
+.chat-bubble-img{max-width:100%;max-height:260px;border-radius:10px;display:block;margin-bottom:4px;cursor:pointer;object-fit:cover}
+.chat-bubble-file{display:flex;align-items:center;gap:8px;text-decoration:none;color:inherit;font-weight:600;font-size:12.5px;padding:2px 0}
+@media(max-width:768px){
+  .chat-list-col{width:100%;border-right:none}
+  .chat-thread{display:none}
+  .chat-back{display:block}
+  .chat-wrap.thread-open .chat-list-col{display:none}
+  .chat-wrap.thread-open .chat-thread{display:flex}
+}
 
 /* ── TABS ───────────────────────────────── */
 .tabs{
@@ -845,7 +921,7 @@ tbody tr:hover td{background:#fafbfc}
     <div class="lobby-card" onclick="enterSector('financeiro')">
       <div class="lobby-icon c-financeiro">&#128176;</div>
       <div class="lobby-title">Financeiro</div>
-      <div class="lobby-sub">Contas a pagar, a receber e DRE</div>
+      <div class="lobby-sub">Pagamentos de prestadores e conversas</div>
     </div>
   </div>
 </div>
@@ -890,7 +966,7 @@ tbody tr:hover td{background:#fafbfc}
       <div class="ltitle">CLÍNICA MEDICINA HUMANA</div>
       <div class="lsub">Sistema Financeiro Interno</div>
     </div>
-    <div class="fg"><label>E-mail</label><input type="email" id="finl-email" placeholder="seu@email.com"></div>
+    <div class="fg"><label>Usuário</label><input type="text" id="finl-usuario" placeholder="seu.usuario" autocapitalize="none"></div>
     <div class="fg"><label>Senha</label><div style="position:relative">
       <input type="password" id="finl-pass" placeholder="••••••••" style="width:100%;padding-right:40px">
       <button type="button" onclick="const i=document.getElementById('finl-pass');i.type=i.type==='password'?'text':'password';this.textContent=i.type==='password'?'👁':'🙈'" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:16px;padding:0">👁</button>
@@ -1410,14 +1486,14 @@ tbody tr:hover td{background:#fafbfc}
         <span class="nav-icon"><svg width="15" height="15" viewBox="0 0 15 15" fill="none"><circle cx="7.5" cy="7.5" r="6" stroke="currentColor" stroke-width="1.4"/><path d="M7.5 4v7M9.7 5.7c0-1-1-1.3-2.2-1.3-1.3 0-2.2.5-2.2 1.4 0 2 4.4 1 4.4 2.9 0 1-1 1.4-2.2 1.4-1.3 0-2.3-.4-2.3-1.4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></span>
         Pagamentos de Prestadores
       </div>
-      <div class="nav-item" onclick="showPageFin('receber')">
-        <span class="nav-icon"><svg width="15" height="15" viewBox="0 0 15 15" fill="none"><circle cx="7.5" cy="7.5" r="6" stroke="currentColor" stroke-width="1.4"/><path d="M7.5 4.5v6M5.3 5.6c0-1 .9-1.3 2.2-1.3M9.7 9.4c0 1-1 1.4-2.2 1.4-1.3 0-2.3-.4-2.3-1.4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></span>
-        Contas a Receber
+      <div class="nav-item" onclick="showPageFin('chat')">
+        <span class="nav-icon"><svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M2 3h11a1 1 0 011 1v6a1 1 0 01-1 1H6l-3 3v-3H2a1 1 0 01-1-1V4a1 1 0 011-1z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg></span>
+        Conversas
+        <span class="chat-badge hidden" id="fin-nav-chat-badge" style="margin-left:auto"></span>
       </div>
-      <div class="sb-sec">Análise</div>
-      <div class="nav-item" onclick="showPageFin('dre')">
-        <span class="nav-icon"><svg width="15" height="15" viewBox="0 0 15 15" fill="none"><rect x="2" y="1.5" width="11" height="12" rx="1.5" stroke="currentColor" stroke-width="1.4"/><path d="M5 5.5h5M5 8h5M5 10.5h3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></span>
-        DRE
+      <div class="nav-item" onclick="showPageFin('prestadores')">
+        <span class="nav-icon"><svg width="15" height="15" viewBox="0 0 15 15" fill="none"><circle cx="5" cy="5" r="2.5" stroke="currentColor" stroke-width="1.3"/><circle cx="10.5" cy="5" r="2.5" stroke="currentColor" stroke-width="1.3"/><path d="M1.3 13c0-2.5 1.8-4 3.7-4s3.7 1.5 3.7 4M7.3 13c0-2.5 1.5-4 3.2-4s3.2 1.5 3.2 4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></span>
+        Prestadores
       </div>
 
       <div class="sb-sec hidden" id="fin-nav-admin-sec">Administração</div>
@@ -1429,9 +1505,9 @@ tbody tr:hover td{background:#fafbfc}
         <span class="nav-icon"><svg width="15" height="15" viewBox="0 0 15 15" fill="none"><circle cx="7.5" cy="4.5" r="3" stroke="currentColor" stroke-width="1.4"/><path d="M2 13c0-3.314 2.462-5.5 5.5-5.5S13 9.686 13 13" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></span>
         Usuários
       </div>
-      <div class="nav-item hidden" id="fin-nav-prestadores" onclick="showPageFin('prestadores')">
-        <span class="nav-icon"><svg width="15" height="15" viewBox="0 0 15 15" fill="none"><circle cx="5" cy="5" r="2.5" stroke="currentColor" stroke-width="1.3"/><circle cx="10.5" cy="5" r="2.5" stroke="currentColor" stroke-width="1.3"/><path d="M1.3 13c0-2.5 1.8-4 3.7-4s3.7 1.5 3.7 4M7.3 13c0-2.5 1.5-4 3.2-4s3.2 1.5 3.2 4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></span>
-        Prestadores
+      <div class="nav-item hidden" id="fin-nav-log" onclick="showPageFin('log')">
+        <span class="nav-icon"><svg width="15" height="15" viewBox="0 0 15 15" fill="none"><rect x="2" y="1.5" width="11" height="12" rx="1.5" stroke="currentColor" stroke-width="1.4"/><path d="M5 5.5h5M5 8h5M5 10.5h3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></span>
+        Log de Auditoria
       </div>
     </nav>
 
@@ -1454,13 +1530,9 @@ tbody tr:hover td{background:#fafbfc}
       <svg width="20" height="20" viewBox="0 0 15 15" fill="none"><circle cx="7.5" cy="7.5" r="6" stroke="currentColor" stroke-width="1.4"/><path d="M7.5 4v7M9.7 5.7c0-1-1-1.3-2.2-1.3-1.3 0-2.2.5-2.2 1.4 0 2 4.4 1 4.4 2.9 0 1-1 1.4-2.2 1.4-1.3 0-2.3-.4-2.3-1.4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
       Pagamentos
     </button>
-    <button class="tab-item" onclick="showPageFin('receber')">
-      <svg width="20" height="20" viewBox="0 0 15 15" fill="none"><circle cx="7.5" cy="7.5" r="6" stroke="currentColor" stroke-width="1.4"/><path d="M7.5 4.5v6M5.3 5.6c0-1 .9-1.3 2.2-1.3M9.7 9.4c0 1-1 1.4-2.2 1.4-1.3 0-2.3-.4-2.3-1.4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
-      A Receber
-    </button>
-    <button class="tab-item" onclick="showPageFin('dre')">
-      <svg width="20" height="20" viewBox="0 0 15 15" fill="none"><rect x="2" y="1.5" width="11" height="12" rx="1.5" stroke="currentColor" stroke-width="1.4"/><path d="M5 5.5h5M5 8h5M5 10.5h3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
-      DRE
+    <button class="tab-item" onclick="showPageFin('prestadores')">
+      <svg width="20" height="20" viewBox="0 0 15 15" fill="none"><circle cx="5" cy="5" r="2.5" stroke="currentColor" stroke-width="1.3"/><circle cx="10.5" cy="5" r="2.5" stroke="currentColor" stroke-width="1.3"/><path d="M1.3 13c0-2.5 1.8-4 3.7-4s3.7 1.5 3.7 4M7.3 13c0-2.5 1.5-4 3.2-4s3.2 1.5 3.2 4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+      Prestadores
     </button>
     <button class="tab-item" id="tab-mais-fin" onclick="toggleMaisSheetFin()">
       <svg width="20" height="20" viewBox="0 0 15 15" fill="none"><circle cx="3" cy="7.5" r="1.3" fill="currentColor"/><circle cx="7.5" cy="7.5" r="1.3" fill="currentColor"/><circle cx="12" cy="7.5" r="1.3" fill="currentColor"/></svg>
@@ -1473,7 +1545,8 @@ tbody tr:hover td{background:#fafbfc}
     <div class="modal" style="padding:14px">
       <div class="tab-sheet-item hidden" id="mais-fin-categorias" onclick="showPageFin('categorias');toggleMaisSheetFin()">Categorias</div>
       <div class="tab-sheet-item hidden" id="mais-fin-usuarios" onclick="showPageFin('usuarios');toggleMaisSheetFin()">Usuários</div>
-      <div class="tab-sheet-item hidden" id="mais-fin-prestadores" onclick="showPageFin('prestadores');toggleMaisSheetFin()">Prestadores</div>
+      <div class="tab-sheet-item hidden" id="mais-fin-log" onclick="showPageFin('log');toggleMaisSheetFin()">Log de Auditoria</div>
+      <div class="tab-sheet-item" onclick="showPageFin('chat');toggleMaisSheetFin()">Conversas <span class="chat-badge hidden" id="mais-fin-chat-badge"></span></div>
       <div class="tab-sheet-item" style="color:var(--red)" onclick="toggleMaisSheetFin();doLogoutFin()">Sair do Sistema</div>
     </div>
   </div>
@@ -1511,89 +1584,53 @@ tbody tr:hover td{background:#fafbfc}
           </div>
           <div class="chart-box"><canvas id="ch-fin-cat"></canvas></div>
         </div>
-        <div class="card mb20">
-          <div class="card-hd">
-            <div><div class="card-title">Próximos Vencimentos</div><div class="card-sub">Pagamentos de prestadores e contas a receber, ordenados por data</div></div>
-          </div>
-          <div class="det-list" id="fin-db-vencimentos"></div>
-        </div>
         <div class="card">
           <div class="card-hd">
-            <div><div class="card-title">Vencimentos de Prestadores</div><div class="card-sub">Só pagamentos pendentes ligados a um prestador cadastrado</div></div>
+            <div><div class="card-title">Vencimentos de Prestadores</div><div class="card-sub">Pagamentos pendentes, ordenados por data</div></div>
           </div>
           <div class="det-list" id="fin-db-vencimentos-prestadores"></div>
         </div>
       </div>
 
-      <!-- CONTAS A PAGAR -->
+      <!-- PAGAMENTOS DE PRESTADORES -->
       <div class="page" id="page-fin-pagar">
         <div class="card mb20">
           <div class="card-hd">
-            <div><div class="card-title">Novo Pagamento de Prestador</div><div class="card-sub">Selecione o prestador cadastrado — valor, categoria e vencimento vêm do cadastro dele (editáveis aqui)</div></div>
+            <div><div class="card-title">Pagamentos de Prestadores</div><div class="month-label" id="fp-month-label"></div></div>
+            <div class="flex gap6">
+              <button class="btn-icon" onclick="changePagMonth(-1)" title="Mês anterior">‹</button>
+              <button class="btn btn-ghost btn-xs" onclick="goPagToday()">Hoje</button>
+              <button class="btn-icon" onclick="changePagMonth(1)" title="Próximo mês">›</button>
+            </div>
           </div>
-          <div class="row-3 mb16">
-            <div class="fg" style="margin:0"><label>Prestador</label><select id="fp-prestador" onchange="onFpPrestadorChange()"><option value="">Selecione...</option></select></div>
-            <div class="fg" style="margin:0"><label>Descrição</label><input type="text" id="fp-desc" placeholder="Ex: Pagamento mensal"></div>
-            <div class="fg" style="margin:0"><label>Categoria</label><select id="fp-categoria"><option value="">Selecione...</option></select></div>
-          </div>
-          <div class="row-3 mb16">
-            <div class="fg" style="margin:0"><label>Valor (R$)</label><input type="number" id="fp-valor" min="0" step="0.01" placeholder="0,00"></div>
-            <div class="fg" style="margin:0"><label>Vencimento</label><input type="date" id="fp-vencimento"></div>
-          </div>
-          <button class="btn btn-ok" onclick="addContaPagar()">+ Lançar Pagamento</button>
+          <div class="g g4" id="fp-month-metrics"></div>
         </div>
         <div class="card">
-          <div class="card-hd"><div class="card-title">Pagamentos de Prestadores</div></div>
+          <div class="card-hd">
+            <div><div class="card-title">Prestadores do mês</div><div class="card-sub">Lance, acompanhe e dê baixa nos pagamentos deste mês</div></div>
+            <button class="btn btn-ghost btn-sm" style="width:auto" onclick="lancarPendentesDoMes()">Lançar pendentes do mês</button>
+          </div>
+          <div class="row-3 mb16">
+            <div class="fg" style="margin:0;grid-column:span 2">
+              <input type="text" id="fp-busca" placeholder="Buscar prestador pelo nome..." oninput="renderContasPagar()">
+            </div>
+            <div class="fg" style="margin:0">
+              <select id="fp-filtro-status" onchange="renderContasPagar()">
+                <option value="">Todos os status</option>
+                <option value="pago">Pago</option>
+                <option value="pendente">Pendente</option>
+                <option value="atrasado">Atrasado</option>
+                <option value="vence-em-breve">Vence em breve</option>
+                <option value="nao-lancado">Não lançado</option>
+              </select>
+            </div>
+          </div>
           <div class="tbl-wrap">
             <table>
-              <thead><tr><th>Vencimento</th><th>Prestador</th><th>Categoria</th><th>Valor</th><th>Status</th><th>Ações</th></tr></thead>
+              <thead><tr><th>Prestador</th><th>Categoria</th><th>Valor</th><th>Vencimento</th><th>Status</th><th>Ações</th></tr></thead>
               <tbody id="fp-tbody"></tbody>
             </table>
           </div>
-        </div>
-      </div>
-
-      <!-- CONTAS A RECEBER -->
-      <div class="page" id="page-fin-receber">
-        <div class="card mb20">
-          <div class="card-hd">
-            <div><div class="card-title">Nova Conta a Receber</div><div class="card-sub">Recebimentos de clientes/convênios, com vínculo opcional a um orçamento do Comercial</div></div>
-          </div>
-          <div class="row-3 mb16">
-            <div class="fg" style="margin:0"><label>Descrição</label><input type="text" id="fr-desc" placeholder="Ex: Consulta, contrato, exame"></div>
-            <div class="fg" style="margin:0"><label>Cliente</label><input type="text" id="fr-cliente" placeholder="Nome do cliente/empresa"></div>
-            <div class="fg" style="margin:0"><label>Categoria</label><select id="fr-categoria"><option value="">Selecione...</option></select></div>
-          </div>
-          <div class="row-3 mb16">
-            <div class="fg" style="margin:0"><label>Valor (R$)</label><input type="number" id="fr-valor" min="0" step="0.01" placeholder="0,00"></div>
-            <div class="fg" style="margin:0"><label>Vencimento</label><input type="date" id="fr-vencimento"></div>
-            <div class="fg" style="margin:0"><label>Vincular a Orçamento</label><select id="fr-orcamento" onchange="onFrOrcamentoChange()"><option value="">Nenhum</option></select></div>
-          </div>
-          <button class="btn btn-ok" onclick="addContaReceber()">+ Lançar Conta a Receber</button>
-        </div>
-        <div class="card">
-          <div class="card-hd"><div class="card-title">Contas a Receber</div></div>
-          <div class="tbl-wrap">
-            <table>
-              <thead><tr><th>Vencimento</th><th>Descrição</th><th>Cliente</th><th>Categoria</th><th>Valor</th><th>Status</th><th>Ações</th></tr></thead>
-              <tbody id="fr-tbody"></tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      <!-- DRE -->
-      <div class="page" id="page-fin-dre">
-        <div class="card mb20">
-          <div class="card-hd">
-            <div><div class="card-title">Demonstrativo de Resultado</div><div class="card-sub" id="dre-month-label"></div></div>
-            <div class="flex gap6">
-              <button class="btn-icon" onclick="changeDreMonth(-1)" title="Mês anterior">‹</button>
-              <button class="btn btn-ghost btn-xs" onclick="goDreToday()">Hoje</button>
-              <button class="btn-icon" onclick="changeDreMonth(1)" title="Próximo mês">›</button>
-            </div>
-          </div>
-          <div id="dre-content"></div>
         </div>
       </div>
 
@@ -1637,8 +1674,23 @@ tbody tr:hover td{background:#fafbfc}
           </div>
           <div class="tbl-wrap">
             <table>
-              <thead><tr><th>Nome</th><th>E-mail</th><th>Perfil</th><th>Status</th><th>Ações</th></tr></thead>
+              <thead><tr><th>Nome</th><th>Usuário</th><th>Perfil</th><th>Status</th><th>Ações</th></tr></thead>
               <tbody id="fu-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- LOG DE AUDITORIA -->
+      <div class="page" id="page-fin-log">
+        <div class="card">
+          <div class="card-hd">
+            <div><div class="card-title">Log de Auditoria</div><div class="card-sub">O que foi criado, editado ou removido, por quem e quando</div></div>
+          </div>
+          <div class="tbl-wrap">
+            <table>
+              <thead><tr><th>Data/Hora</th><th>Ação</th><th>Item</th><th>Por</th></tr></thead>
+              <tbody id="flog-tbody"></tbody>
             </table>
           </div>
         </div>
@@ -1650,8 +1702,7 @@ tbody tr:hover td{background:#fafbfc}
           <div class="card-hd">
             <div><div class="card-title">Prestadores de Serviço</div><div class="card-sub">Médicos, psicólogos e outros prestadores recorrentes — cadastre uma vez, reaproveite todo mês</div></div>
             <div class="flex gap6">
-              <button class="btn btn-ghost btn-sm" style="width:auto" onclick="gerarTodosPendentesDoMes()">Gerar pendentes do mês</button>
-              <button class="btn btn-ok btn-sm hidden" id="fpr-new-btn" style="width:auto" onclick="openAddFinPrestador()">+ Novo Prestador</button>
+              <button class="btn btn-ok btn-sm" id="fpr-new-btn" style="width:auto" onclick="openAddFinPrestador()">+ Novo Prestador</button>
             </div>
           </div>
           <div class="tbl-wrap">
@@ -1659,6 +1710,21 @@ tbody tr:hover td{background:#fafbfc}
               <thead><tr><th>Nome</th><th>Tipo</th><th>Categoria</th><th>Valor Padrão</th><th>Dia Venc.</th><th>Status</th><th>Ações</th></tr></thead>
               <tbody id="fpr-tbody"></tbody>
             </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- CHAT -->
+      <div class="page" id="page-fin-chat">
+        <div class="card card-chat">
+          <div class="chat-wrap" id="chat-wrap">
+            <div class="chat-list-col">
+              <div class="chat-list-hd">Conversas</div>
+              <div class="chat-list" id="chat-list"></div>
+            </div>
+            <div class="chat-thread" id="chat-thread">
+              <div class="chat-empty" id="chat-empty">Selecione uma conversa pra começar</div>
+            </div>
           </div>
         </div>
       </div>
@@ -1715,7 +1781,8 @@ tbody tr:hover td{background:#fafbfc}
   <div class="modal">
     <div class="modal-title">Novo Colaborador (Financeiro)</div>
     <div class="fg"><label>Nome Completo</label><input type="text" id="fnu-name" placeholder="Nome"></div>
-    <div class="fg"><label>E-mail</label><input type="email" id="fnu-email" placeholder="email@clinica.com"></div>
+    <div class="fg"><label>Usuário (login) <span style="font-weight:400;color:var(--muted)">(minúsculo, sem espaço - ex: joao.silva)</span></label><input type="text" id="fnu-usuario" placeholder="joao.silva" autocapitalize="none"></div>
+    <div class="fg"><label>Senha</label><input type="text" id="fnu-pass" placeholder="Mínimo 6 caracteres"></div>
     <div class="fg"><label>Perfil</label><select id="fnu-role"><option value="colaborador">Colaborador</option><option value="gestor">Gestor</option></select></div>
     <div class="modal-ft">
       <button class="btn btn-ghost" onclick="closeModal('modal-fin-add')">Cancelar</button>
@@ -1730,8 +1797,8 @@ tbody tr:hover td{background:#fafbfc}
     <div class="modal-title">Editar Colaborador (Financeiro)</div>
     <input type="hidden" id="feu-id">
     <div class="fg"><label>Nome Completo</label><input type="text" id="feu-name" placeholder="Nome"></div>
-    <div class="fg"><label>E-mail</label><input type="email" id="feu-email" placeholder="email@clinica.com"></div>
-    <div class="fg"><label>Redefinir Senha <span style="font-weight:400;color:var(--muted)">(preencha para enviar link por e-mail)</span></label><input type="password" id="feu-pass" placeholder="Digite algo para enviar link de reset"></div>
+    <div class="fg"><label>Usuário (login)</label><input type="text" id="feu-usuario" disabled style="opacity:.65;cursor:not-allowed"></div>
+    <div class="fg" style="font-size:11.5px;color:var(--muted);margin-top:-8px">O usuário de login não pode ser alterado depois de criado. Não é possível redefinir a senha de um colaborador já existente (sem e-mail cadastrado para isso) - se precisar trocar, remova e cadastre novamente com uma senha nova.</div>
     <div class="fg"><label>Perfil</label><select id="feu-role" onchange="onFeuRoleChange()"><option value="colaborador">Colaborador</option><option value="gestor">Gestor</option></select></div>
     <div class="fg" id="feu-perm-wrap">
       <label style="display:flex;align-items:center;gap:8px;font-weight:400;text-transform:none;letter-spacing:normal;cursor:pointer">
@@ -1761,7 +1828,11 @@ tbody tr:hover td{background:#fafbfc}
       <div class="fg"><label>E-mail</label><input type="email" id="fpr-email" placeholder="Opcional"></div>
       <div class="fg"><label>Chave PIX</label><input type="text" id="fpr-chavepix" placeholder="Opcional"></div>
     </div>
-    <div class="fg"><label>Dados Bancários</label><input type="text" id="fpr-dadosbancarios" placeholder="Banco / agência / conta (opcional)"></div>
+    <div class="row-3">
+      <div class="fg" style="margin:0"><label>Banco</label><input type="text" id="fpr-banco" placeholder="Ex: Banco do Brasil (opcional)"></div>
+      <div class="fg" style="margin:0"><label>Agência</label><input type="text" id="fpr-agencia" placeholder="Opcional"></div>
+      <div class="fg" style="margin:0"><label>Conta</label><input type="text" id="fpr-conta" placeholder="Opcional"></div>
+    </div>
     <div class="row-3">
       <div class="fg"><label>Categoria</label><select id="fpr-categoria"><option value="">Selecione...</option></select></div>
       <div class="fg"><label>Valor Padrão (R$)</label><input type="number" id="fpr-valorpadrao" min="0" step="0.01" placeholder="0,00"></div>
@@ -1792,9 +1863,30 @@ tbody tr:hover td{background:#fafbfc}
       </select>
     </div>
     <div class="fg"><label>Data do Pagamento</label><input type="date" id="baixa-data"></div>
+    <div class="fg">
+      <label>Nota Fiscal (PDF) <span style="font-weight:400;color:var(--red)">obrigatório</span></label>
+      <input type="file" id="baixa-nf" accept="application/pdf">
+      <div id="baixa-nf-status" style="font-size:11.5px;color:var(--muted);margin-top:4px"></div>
+    </div>
     <div class="modal-ft">
       <button class="btn btn-ghost" onclick="closeModal('modal-fin-baixa')">Cancelar</button>
-      <button class="btn btn-ok" onclick="confirmBaixa()">Confirmar Baixa</button>
+      <button class="btn btn-ok" id="baixa-confirm-btn" onclick="confirmBaixa()">Confirmar Baixa</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: VALOR DO PAGAMENTO (definido por mês) -->
+<div class="overlay" id="modal-fin-valor">
+  <div class="modal">
+    <div class="modal-title">Valor do pagamento</div>
+    <input type="hidden" id="valor-prestador-id">
+    <input type="hidden" id="valor-mes-ref">
+    <input type="hidden" id="valor-conta-id">
+    <div class="card-sub mb16" id="valor-resumo" style="margin:0 0 16px"></div>
+    <div class="fg"><label>Valor deste mês (R$)</label><input type="number" id="valor-input" min="0" step="0.01" placeholder="0,00"></div>
+    <div class="modal-ft">
+      <button class="btn btn-ghost" onclick="closeModal('modal-fin-valor')">Cancelar</button>
+      <button class="btn btn-ok" onclick="confirmValorPagamento()">Confirmar</button>
     </div>
   </div>
 </div>
@@ -1865,6 +1957,25 @@ firebase.initializeApp({
 const db = firebase.firestore();
 const auth = firebase.auth();
 const FB_API_KEY = 'AIzaSyBQ4yvQfXJvX3oEph4n2W35MiOnb8747Kk';
+
+// Cloudinary - guarda os PDFs de Nota Fiscal e os anexos do chat (fotos/
+// documentos). Usado no lugar do Firebase Storage porque o Google passou a
+// exigir o plano pago (Blaze) até pra cota gratuita do Storage - Cloudinary
+// tem plano grátis de verdade, sem cartão, com upload direto do navegador
+// via "unsigned upload preset" (não precisa de chave secreta exposta aqui)
+const CLOUDINARY_CLOUD_NAME = 'lfi4elhr';
+const CLOUDINARY_UPLOAD_PRESET = 'cmhsistema';
+async function uploadToCloudinary(file) {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+  const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/auto/upload`, {
+    method: 'POST', body: formData
+  });
+  const data = await res.json();
+  if (data.error) throw new Error(data.error.message);
+  return data.secure_url;
+}
 
 /* ══════════════════════════════════════════════
    EMAILJS — aviso por e-mail dos compromissos da Agenda
@@ -3628,13 +3739,30 @@ const _isConfirmLink = handleEmailConfirmation();
    SETOR FINANCEIRO — equipe e dados próprios, isolados do Comercial
 ══════════════════════════════════════════════════════════════ */
 let FU = null;
-let _fu = [], _fcat = [], _fp = [], _fr = [], _fpr = [];
+let _fu = [], _fcat = [], _fp = [], _fr = [], _fpr = [], _flog = [];
 let chFinCat = null;
-let dreMonthOffset = 0;
+let _chatMsgs = [];
+let _chatListUnsub = null;
+let _chatThreadUnsub = null;
+let _chatOpenWith = null;
+let _chatSuperviseIds = null;
+let _chatMarkedReadOnce = false;
+let pagMonthOffset = 0;
+
+// login do Financeiro é por usuário (ex: "joao.silva"), não e-mail de
+// verdade - o Firebase Auth exige formato de e-mail pro provedor de
+// senha, então usamos um domínio interno fixo só pra isso por baixo dos
+// panos; ninguém envia e-mail pra esse domínio (não existe caixa real),
+// então também não dá mais pra usar "esqueci minha senha" por e-mail
+// pra quem já existe - decisão consciente, aceita ao trocar pra usuário
+function finSyntheticEmail(usuario) {
+  return usuario.trim().toLowerCase() + '@fin.sistemacmh.local';
+}
 
 /* ── AUTH ──────────────────────────────────── */
 async function doLoginFin() {
-  const email=document.getElementById('finl-email').value.trim();
+  const usuario=document.getElementById('finl-usuario').value.trim().toLowerCase();
+  const email=finSyntheticEmail(usuario);
   const pass=document.getElementById('finl-pass').value;
   const remember=document.getElementById('finl-remember').checked;
   document.getElementById('finl-err').textContent='';
@@ -3647,7 +3775,7 @@ async function doLoginFin() {
     } catch(signInErr) {
       // Conta ainda não existe no Firebase Auth. Só cria automaticamente se ainda não
       // houver nenhum gestor financeiro (primeiro acesso) — senão, é senha errada mesmo.
-      if (!pass) throw signInErr;
+      if (!pass || !usuario) throw signInErr;
       let fuCheck;
       try { fuCheck = await db.collection('fin_usuarios').where('role','==','gestor').limit(1).get(); }
       catch(_) { throw signInErr; }
@@ -3661,62 +3789,75 @@ async function doLoginFin() {
       const data=await res.json();
       if (data.error && data.error.message!=='EMAIL_EXISTS') throw signInErr;
       await auth.signInWithEmailAndPassword(email, pass);
-      await db.collection('fin_usuarios').doc('1').set({id:1,name,email,role:'gestor',photo:null,ativo:true});
+      await db.collection('fin_usuarios').doc('1').set({id:1,name,usuario,role:'gestor',photo:null,ativo:true});
     }
     await loadFinData();
-    let u=_fu.find(u=>u.email===email);
+    let u=_fu.find(u=>u.usuario===usuario);
     if (!u && !_fu.some(x=>x.role==='gestor')) {
-      // Login válido (Firebase Auth já reconheceu o e-mail/senha), mas ainda não existe
+      // Login válido (Firebase Auth já reconheceu o usuário/senha), mas ainda não existe
       // nenhum gestor financeiro cadastrado — trata como primeiro acesso e cria o perfil agora.
       const name=prompt('Nenhum gestor financeiro cadastrado ainda. Confirme seu nome completo para criar o primeiro acesso (gestor):');
       if (name) {
-        u={id:1,name,email,role:'gestor',photo:null,ativo:true};
+        u={id:1,name,usuario,role:'gestor',photo:null,ativo:true};
         await db.collection('fin_usuarios').doc('1').set(u);
         _fu.push(u);
       }
     }
     if (!u) { await auth.signOut(); document.getElementById('finl-err').textContent='Perfil não encontrado no setor Financeiro.'; return; }
     if (u.ativo===false) { await auth.signOut(); document.getElementById('finl-err').textContent='Acesso ainda não liberado. Aguarde o gestor financeiro.'; return; }
-    if (remember) localStorage.setItem('fin_saved_email',email);
-    else          localStorage.removeItem('fin_saved_email');
+    if (remember) localStorage.setItem('fin_saved_usuario',usuario);
+    else          localStorage.removeItem('fin_saved_usuario');
     localStorage.setItem('active_sector','financeiro');
     FU=u;
     showOnly('app-fin');
     bootAppFin();
   } catch(e) {
-    document.getElementById('finl-err').textContent='E-mail ou senha incorretos.';
+    document.getElementById('finl-err').textContent='Usuário ou senha incorretos.';
   } finally { loading(false); _authActionInProgress = false; }
 }
 
 function doLogoutFin() {
   auth.signOut();
+  detachChatListListener();
+  if (_chatThreadUnsub) { _chatThreadUnsub(); _chatThreadUnsub=null; }
+  _chatOpenWith=null;
+  _chatSuperviseIds=null;
   FU=null;
   showOnly('login-screen-fin');
-  const fse=localStorage.getItem('fin_saved_email');
-  document.getElementById('finl-email').value=fse||'';
+  const fsu=localStorage.getItem('fin_saved_usuario');
+  document.getElementById('finl-usuario').value=fsu||'';
   document.getElementById('finl-pass').value='';
-  document.getElementById('finl-remember').checked=!!fse;
+  document.getElementById('finl-remember').checked=!!fsu;
 }
 
 /* ── DADOS ─────────────────────────────────── */
 async function loadFinData() {
   loading(true);
   try {
-    const [fuSnap, fcatSnap, fpSnap, frSnap, oSnap, fprSnap] = await Promise.all([
+    const [fuSnap, fcatSnap, fpSnap, fprSnap, flogSnap] = await Promise.all([
       db.collection('fin_usuarios').get(),
       db.collection('fin_categorias').get(),
       db.collection('fin_contas_pagar').get(),
-      db.collection('fin_contas_receber').get(),
-      db.collection('orcamentos').get(),
-      db.collection('fin_prestadores').get()
+      db.collection('fin_prestadores').get(),
+      db.collection('fin_log').get()
     ]);
     _fu = fuSnap.docs.map(d=>{ const x=d.data(); delete x.password; x.id=Number(x.id); return x; });
     _fcat = fcatSnap.docs.map(d=>d.data());
     _fp = fpSnap.docs.map(d=>d.data());
-    _fr = frSnap.docs.map(d=>d.data());
-    _o = oSnap.docs.map(d=>d.data());
     _fpr = fprSnap.docs.map(d=>d.data());
+    _flog = flogSnap.docs.map(d=>d.data());
   } finally { loading(false); }
+}
+
+// grava uma linha no log de auditoria - quem fez o quê e quando. Nunca
+// deve travar a ação principal se a gravação do log falhar (por isso o
+// try/catch engolindo erro aqui, diferente das outras escritas do app)
+async function logAcao(acao, entidade, entidadeId, descricao) {
+  try {
+    const entry={id:newId(), acao, entidade, entidadeId, descricao, porId:FU.id, porNome:FU.name, createdAt:Date.now()};
+    await db.collection('fin_log').doc(String(entry.id)).set(entry);
+    _flog.push(entry);
+  } catch(e) { /* auditoria não deve bloquear a ação principal */ }
 }
 
 /* ── BOOT / ROUTER ─────────────────────────── */
@@ -3730,29 +3871,27 @@ function bootAppFin() {
   document.getElementById('fin-top-date').textContent=now.toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
 
   const isG=FU.role==='gestor';
-  ['fin-nav-admin-sec','fin-nav-categorias','fin-nav-usuarios','mais-fin-categorias','mais-fin-usuarios'].forEach(id=>{
+  ['fin-nav-admin-sec','fin-nav-categorias','fin-nav-usuarios','fin-nav-log','mais-fin-categorias','mais-fin-usuarios','mais-fin-log'].forEach(id=>{
     const el=document.getElementById(id);
     if (el) isG?el.classList.remove('hidden'):el.classList.add('hidden');
   });
-  // Prestadores usa um gate próprio: gestor sempre pode, mas o gestor também
-  // pode liberar colaboradores específicos via permPrestadores (tela de
-  // Usuários) - por isso não entra na lista fixa de "gestor-only" acima.
-  // "Administração" (o cabeçalho da seção) reaparece se qualquer uma das
-  // duas condições liberar algum item dentro dela.
-  const canPrestadores=isG||!!FU.permPrestadores;
-  if (canPrestadores) document.getElementById('fin-nav-admin-sec')?.classList.remove('hidden');
-  ['fin-nav-prestadores','mais-fin-prestadores'].forEach(id=>{
-    const el=document.getElementById(id);
-    if (el) canPrestadores?el.classList.remove('hidden'):el.classList.add('hidden');
-  });
+  // Prestadores agora é aberto pra qualquer colaborador cadastrar (só
+  // editar/desativar um prestador já existente continua restrito a gestor
+  // ou quem tem permPrestadores - ver canManagePrestadores()), por isso
+  // não entra mais nessa lista de itens de nav escondidos por padrão.
 
   fillFinSelects();
-  dreMonthOffset=0;
+  pagMonthOffset=0;
+  attachChatListListener();
 
   showPageFin('dashboard');
 }
 
 function showPageFin(name) {
+  // conversa aberta só faz sentido dentro da própria tela de chat - sair
+  // pra qualquer outra página desliga o listener da conversa (o da lista
+  // geral continua ativo a sessão inteira, esse aqui não)
+  if (name!=='chat' && _chatThreadUnsub) { _chatThreadUnsub(); _chatThreadUnsub=null; _chatOpenWith=null; _chatSuperviseIds=null; }
   document.querySelectorAll('#app-fin .page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('#app-fin .nav-item').forEach(n=>n.classList.remove('active'));
   document.getElementById('page-fin-'+name).classList.add('active');
@@ -3765,12 +3904,12 @@ function showPageFin(name) {
     t.classList.toggle('active', !!t.getAttribute('onclick')?.includes(`showPageFin('${name}')`));
   });
   if(!document.querySelector('#tab-bar-fin .tab-item.active')) document.getElementById('tab-mais-fin')?.classList.add('active');
-  const titles={dashboard:'Dashboard',pagar:'Pagamentos de Prestadores',receber:'Contas a Receber',dre:'DRE',categorias:'Categorias',usuarios:'Usuários',prestadores:'Prestadores'};
+  const titles={dashboard:'Dashboard',pagar:'Pagamentos de Prestadores',categorias:'Categorias',usuarios:'Usuários',prestadores:'Prestadores',chat:'Conversas',log:'Log de Auditoria'};
   document.getElementById('fin-page-title').textContent=titles[name]||name;
   if(name==='dashboard')    renderFinDashboard();
   if(name==='pagar')        renderContasPagar();
-  if(name==='receber')      renderContasReceber();
-  if(name==='dre')          renderDRE();
+  if(name==='chat')         renderFinChat();
+  if(name==='log')          renderFinLog();
   if(name==='categorias')   renderFinCategorias();
   if(name==='usuarios')     renderFinUsuarios();
   if(name==='prestadores')  renderFinPrestadores();
@@ -3807,68 +3946,23 @@ function mobilizeTables(root) {
 
 function fillFinSelects() {
   const despesaCats=_fcat.filter(c=>c.tipo==='despesa');
-  const receitaCats=_fcat.filter(c=>c.tipo==='receita');
-  document.getElementById('fp-categoria').innerHTML='<option value="">Selecione...</option>'+despesaCats.map(c=>`<option value="${c.name}">${c.name}</option>`).join('');
-  document.getElementById('fr-categoria').innerHTML='<option value="">Selecione...</option>'+receitaCats.map(c=>`<option value="${c.name}">${c.name}</option>`).join('');
-  document.getElementById('fr-orcamento').innerHTML='<option value="">Nenhum</option>'+_o.map(o=>`<option value="${o.id}">${o.paciente} — R$ ${(o.total||0).toFixed(2)}</option>`).join('');
-  document.getElementById('fp-prestador').innerHTML='<option value="">Selecione...</option>'+_fpr.filter(p=>p.ativo).map(p=>`<option value="${p.id}">${p.nome}</option>`).join('');
   document.getElementById('fpr-categoria').innerHTML='<option value="">Selecione...</option>'+despesaCats.map(c=>`<option value="${c.name}">${c.name}</option>`).join('');
-}
-
-function onFpPrestadorChange() {
-  const id=Number(document.getElementById('fp-prestador').value);
-  const p=_fpr.find(p=>p.id===id);
-  if(!p) return;
-  document.getElementById('fp-desc').value=`Pagamento — ${p.nome}`;
-  document.getElementById('fp-categoria').value=p.categoria||'';
-  document.getElementById('fp-valor').value=p.valorPadrao||'';
-  document.getElementById('fp-vencimento').value=buildVencimento(mKey(new Date()), p.diaVencimentoPadrao);
-}
-
-function onFrOrcamentoChange() {
-  const id=document.getElementById('fr-orcamento').value;
-  if(!id) return;
-  const o=_o.find(o=>String(o.id)===id);
-  if(!o) return;
-  document.getElementById('fr-cliente').value=o.paciente||'';
-  document.getElementById('fr-valor').value=o.total||0;
-  document.getElementById('fr-desc').value=`Orçamento${o.convenio?' — '+o.convenio:''}`;
 }
 
 /* ── DASHBOARD ─────────────────────────────── */
 function renderFinDashboard() {
   const now=new Date(); const today=now.toISOString().split('T')[0]; const mk=mKey(now);
-  const receitasMes=_fr.filter(c=>c.status==='recebido'&&c.dataRecebimento&&c.dataRecebimento.startsWith(mk)).reduce((s,c)=>s+c.valor,0);
   const despesasMes=_fp.filter(c=>c.status==='pago'&&c.dataPagamento&&c.dataPagamento.startsWith(mk)).reduce((s,c)=>s+c.valor,0);
-  const saldoMes=receitasMes-despesasMes;
-  const vencHoje=[..._fp.filter(c=>c.status==='pendente'&&c.vencimento<=today),..._fr.filter(c=>c.status==='pendente'&&c.vencimento<=today)].length;
   const prestadorPend=_fp.filter(c=>c.prestadorId&&c.status==='pendente');
   const prestadorAtrasados=prestadorPend.filter(c=>c.vencimento<today).length;
   const seteDias=new Date(now.getTime()+7*86400000).toISOString().split('T')[0];
   const prestadorVencendoSemana=prestadorPend.filter(c=>c.vencimento>=today&&c.vencimento<=seteDias).length;
 
   document.getElementById('fin-db-metrics').innerHTML=`
-    <div class="mc c3"><div class="mc-tag">RECEITAS</div><div class="mc-big">R$ ${receitasMes.toFixed(2)}</div><div class="mc-lbl">Receitas do mês</div></div>
-    <div class="mc c4"><div class="mc-tag">DESPESAS</div><div class="mc-big">R$ ${despesasMes.toFixed(2)}</div><div class="mc-lbl">Despesas do mês</div></div>
-    <div class="mc ${saldoMes>=0?'c3':'c4'}"><div class="mc-tag">SALDO</div><div class="mc-big" style="color:${saldoMes>=0?'var(--green)':'var(--red)'}">R$ ${saldoMes.toFixed(2)}</div><div class="mc-lbl">Resultado do mês</div></div>
-    <div class="mc c2"><div class="mc-tag">VENCIMENTOS</div><div class="mc-big">${vencHoje}</div><div class="mc-lbl">A vencer hoje ou atrasados</div></div>
+    <div class="mc c4"><div class="mc-tag">DESPESAS</div><div class="mc-big">R$ ${despesasMes.toFixed(2)}</div><div class="mc-lbl">Pagamentos de prestadores este mês</div></div>
     <div class="mc c4"><div class="mc-tag">PRESTADORES</div><div class="mc-big" style="color:var(--red)">${prestadorAtrasados}</div><div class="mc-lbl">Prestadores atrasados</div></div>
     <div class="mc c2"><div class="mc-tag">PRESTADORES</div><div class="mc-big">${prestadorVencendoSemana}</div><div class="mc-lbl">Vencendo esta semana</div></div>
   `;
-
-  const pendPagar=_fp.filter(c=>c.status==='pendente').map(c=>({...c,tipo:'pagar'}));
-  const pendReceber=_fr.filter(c=>c.status==='pendente').map(c=>({...c,tipo:'receber'}));
-  const venc=[...pendPagar,...pendReceber].sort((a,b)=>a.vencimento.localeCompare(b.vencimento)).slice(0,12);
-  document.getElementById('fin-db-vencimentos').innerHTML=venc.length?venc.map(c=>{
-    const atrasado=c.vencimento<today;
-    const tipoBadge=c.tipo==='pagar'?'<span class="badge b-4">A Pagar</span>':'<span class="badge b-3">A Receber</span>';
-    return `<div class="det-entry">
-      <div style="flex-shrink:0;width:100px;font-size:12.5px;font-weight:700;color:${atrasado?'var(--red)':'var(--black)'}">${fmt(c.vencimento)}</div>
-      <div style="flex-shrink:0">${tipoBadge}</div>
-      <div class="det-body"><div class="det-pair"><span class="det-val">${c.descricao}</span></div></div>
-      <div style="flex-shrink:0;font-weight:700">R$ ${c.valor.toFixed(2)}</div>
-    </div>`;
-  }).join(''):`<div style="text-align:center;color:var(--muted);padding:24px;font-size:13px">Nenhum vencimento pendente</div>`;
 
   const vencPrestadores=[...prestadorPend].sort((a,b)=>a.vencimento.localeCompare(b.vencimento)).slice(0,10);
   document.getElementById('fin-db-vencimentos-prestadores').innerHTML=vencPrestadores.length?vencPrestadores.map(c=>{
@@ -3898,60 +3992,205 @@ function renderFinDashboard() {
 // 'pendente'/'pago' - "atrasado"/"vence em breve" são calculados na hora a
 // partir da data de vencimento, pra nunca ficar desatualizado)
 function statusPagarInfo(c, today) {
-  if (c.status==='pago') return {label:'Pago', html:'<span class="badge b-ok">Pago</span>'};
-  if (c.vencimento<today) return {label:'Atrasado', html:'<span class="badge b-gray" style="color:var(--red);background:rgba(185,28,28,.08)">Atrasado</span>'};
+  if (c.status==='pago') return {key:'pago', label:'Pago', html:'<span class="badge b-ok">Pago</span>'};
+  if (c.vencimento<today) return {key:'atrasado', label:'Atrasado', html:'<span class="badge b-gray" style="color:var(--red);background:rgba(185,28,28,.08)">Atrasado</span>'};
   const diffDias=(new Date(c.vencimento)-new Date(today))/86400000;
-  if (diffDias<=7) return {label:'Vence em breve', html:'<span class="badge b-4">Vence em breve</span>'};
-  return {label:'Pendente', html:'<span class="badge b-2">Pendente</span>'};
+  if (diffDias<=7) return {key:'vence-em-breve', label:'Vence em breve', html:'<span class="badge b-4">Vence em breve</span>'};
+  return {key:'pendente', label:'Pendente', html:'<span class="badge b-2">Pendente</span>'};
 }
 
+// mês de referência de uma conta - usa o campo dedicado, com fallback pro
+// vencimento (contas antigas, lançadas antes desse campo existir)
+function contaMes(c) { return c.mesReferencia || (c.vencimento ? c.vencimento.slice(0,7) : null); }
+
+function pagMonthTarget() {
+  const now=new Date();
+  return new Date(now.getFullYear(), now.getMonth()+pagMonthOffset, 1);
+}
+
+function changePagMonth(delta) { pagMonthOffset+=delta; renderContasPagar(); }
+function goPagToday() { pagMonthOffset=0; renderContasPagar(); }
+
+// visão mensal: uma linha por prestador (não só por conta já lançada), pra
+// dar pra ver de cara quem já foi pago, quem tá pendente e quem nem foi
+// lançado ainda esse mês - e lançar o pagamento direto dali, sem precisar
+// ir pra tela de cadastro de Prestadores
 function renderContasPagar() {
+  const target=pagMonthTarget();
+  const mk=mKey(target);
+  document.getElementById('fp-month-label').textContent=target.toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
   const today=new Date().toISOString().split('T')[0];
-  const sorted=[..._fp].sort((a,b)=>a.vencimento.localeCompare(b.vencimento));
-  document.getElementById('fp-tbody').innerHTML=sorted.length?sorted.map(c=>{
+
+  const contasDoMes=_fp.filter(c=>c.prestadorId&&contaMes(c)===mk);
+  const idsComConta=new Set(contasDoMes.map(c=>c.prestadorId));
+  // prestadores ativos sempre aparecem (lançado ou não); inativos só aparecem
+  // se já tiverem pagamento lançado nesse mês, pra não perder o histórico
+  const linhas=_fpr.filter(p=>p.ativo!==false||idsComConta.has(p.id)).sort((a,b)=>a.nome.localeCompare(b.nome));
+
+  // monta cada linha com sua chave de status ANTES de filtrar/buscar, pra
+  // os cards de métricas em cima sempre refletirem o mês inteiro - a busca
+  // e o filtro de status só decidem o que aparece na tabela embaixo
+  const busca=document.getElementById('fp-busca').value.trim().toLowerCase();
+  const filtroStatus=document.getElementById('fp-filtro-status').value;
+  let pagos=0, pendentes=0, naoLancados=0, totalPago=0, totalPendente=0;
+  const linhasComStatus=linhas.map(p=>{
+    const c=contasDoMes.find(c=>c.prestadorId===p.id);
+    if (!c) { naoLancados++; return {p,c:null,statusKey:'nao-lancado'}; }
+    if (c.status==='pago') { pagos++; totalPago+=c.valor; } else { pendentes++; totalPendente+=c.valor; }
+    return {p,c,statusKey:statusPagarInfo(c,today).key};
+  });
+
+  const linhasFiltradas=linhasComStatus.filter(({p,statusKey})=>
+    (!busca||p.nome.toLowerCase().includes(busca)) &&
+    (!filtroStatus||filtroStatus===statusKey)
+  );
+
+  document.getElementById('fp-tbody').innerHTML=linhasFiltradas.length?linhasFiltradas.map(({p,c})=>{
+    if (!c) {
+      const podeLancar=p.ativo!==false;
+      return `<tr>
+        <td><strong>${p.nome}</strong></td>
+        <td>${p.categoria?`<span class="badge b-3">${p.categoria}</span>`:'—'}</td>
+        <td>R$ ${(p.valorPadrao||0).toFixed(2)}</td>
+        <td class="text-muted">${fmt(buildVencimento(mk,p.diaVencimentoPadrao))}</td>
+        <td><span class="badge b-gray">Não lançado</span></td>
+        <td>${podeLancar?`<button class="btn btn-ok btn-xs" onclick="openValorModal(${p.id},'${mk}')">Lançar</button>`:''}</td>
+      </tr>`;
+    }
     const statusBadge=statusPagarInfo(c,today).html;
-    const acoes=c.status==='pendente'?`<button class="btn btn-ghost btn-xs" onclick="openBaixaModal(${c.id})">Dar Baixa</button>`:'';
+    const acoes=c.status==='pendente'?`<button class="btn btn-ghost btn-xs" onclick="openValorModal(${c.prestadorId},'${contaMes(c)}',${c.id})">Editar valor</button><button class="btn btn-ghost btn-xs" onclick="openBaixaModal(${c.id})">Dar Baixa</button>`:'';
     const del=FU.role==='gestor'?`<button class="btn-icon del" onclick="delContaPagar(${c.id})" title="Remover">×</button>`:'';
     const rodape=c.status==='pago'
-      ? `<div style="font-size:11px;color:var(--muted)">Registrado por ${c.criadoPorNome} · Baixado por ${c.pagoPorNome||'—'}${c.formaPagamento?' via '+c.formaPagamento:''}</div>`
+      ? `<div style="font-size:11px;color:var(--muted)">Registrado por ${c.criadoPorNome} · Baixado por ${c.pagoPorNome||'—'}${c.formaPagamento?' via '+c.formaPagamento:''}${c.notaFiscalUrl?` · <a href="${c.notaFiscalUrl}" target="_blank" rel="noopener" style="color:var(--blue2)">Ver NF</a>`:''}</div>`
       : `<div style="font-size:11px;color:var(--muted)">Registrado por ${c.criadoPorNome}</div>`;
     return `<tr>
-      <td class="text-muted">${fmt(c.vencimento)}</td>
-      <td>${c.prestadorNome||c.fornecedor||c.descricao}<div style="font-size:11px;color:var(--muted)">${c.descricao}</div>${rodape}</td>
+      <td><strong>${p.nome}</strong>${rodape}</td>
       <td>${c.categoria?`<span class="badge b-3">${c.categoria}</span>`:'—'}</td>
       <td><strong>R$ ${c.valor.toFixed(2)}</strong></td>
+      <td class="text-muted">${fmt(c.vencimento)}</td>
       <td>${statusBadge}</td>
       <td><div class="flex gap6">${acoes}${del}</div></td>
     </tr>`;
-  }).join(''):`<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:32px">Nenhum pagamento lançado</td></tr>`;
+  }).join(''):`<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:32px">Nenhum prestador encontrado</td></tr>`;
+
+  document.getElementById('fp-month-metrics').innerHTML=`
+    <div class="mc c3"><div class="mc-tag">TOTAL PAGO</div><div class="mc-big">R$ ${totalPago.toFixed(2)}</div><div class="mc-lbl">${pagos} prestador(es) pago(s)</div></div>
+    <div class="mc c4"><div class="mc-tag">TOTAL PENDENTE</div><div class="mc-big">R$ ${totalPendente.toFixed(2)}</div><div class="mc-lbl">${pendentes} aguardando baixa</div></div>
+    <div class="mc c3"><div class="mc-tag">PAGOS</div><div class="mc-big">${pagos}</div><div class="mc-lbl">Prestadores pagos este mês</div></div>
+    <div class="mc c2"><div class="mc-tag">NÃO LANÇADOS</div><div class="mc-big">${naoLancados}</div><div class="mc-lbl">Ainda sem pagamento lançado</div></div>
+  `;
 }
 
-async function addContaPagar() {
-  const prestadorId=Number(document.getElementById('fp-prestador').value)||null;
-  const prestador=prestadorId?_fpr.find(p=>p.id===prestadorId):null;
-  const descricao=document.getElementById('fp-desc').value.trim();
-  const categoria=document.getElementById('fp-categoria').value;
-  const valor=parseFloat(document.getElementById('fp-valor').value);
-  const vencimento=document.getElementById('fp-vencimento').value;
-  if(!prestador) return toast('Selecione o prestador.','err');
-  if(!descricao) return toast('Informe a descrição.','err');
-  if(!categoria) return toast('Selecione a categoria.','err');
-  if(!valor||valor<=0) return toast('Informe um valor válido.','err');
-  if(!vencimento) return toast('Informe o vencimento.','err');
+async function lancarPagamentoMes(prestadorId, mesReferencia) {
+  const p=_fpr.find(p=>p.id===prestadorId); if(!p) return;
+  if (_fp.some(c=>c.prestadorId===prestadorId&&contaMes(c)===mesReferencia)) {
+    return toast('Já existe um pagamento lançado para este mês.','err');
+  }
   const conta={
-    id:newId(), descricao, fornecedor:'', prestadorId:prestador.id, prestadorNome:prestador.nome,
-    categoria, valor, vencimento, mesReferencia:vencimento.slice(0,7),
+    id:newId(), descricao:`Pagamento — ${p.nome}`, fornecedor:'', prestadorId:p.id, prestadorNome:p.nome,
+    categoria:p.categoria, valor:p.valorPadrao, vencimento:buildVencimento(mesReferencia,p.diaVencimentoPadrao), mesReferencia,
     status:'pendente', dataPagamento:null, pagoPorId:null, pagoPorNome:null, formaPagamento:null,
-    recorrente:false, criadoPorId:FU.id, criadoPorNome:FU.name, createdAt:Date.now()
+    recorrente:true, criadoPorId:FU.id, criadoPorNome:FU.name, createdAt:Date.now()
   };
   loading(true);
   try { await db.collection('fin_contas_pagar').doc(String(conta.id)).set(conta); _fp.push(conta); }
   finally { loading(false); }
-  ['fp-desc','fp-valor','fp-vencimento'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('fp-prestador').value='';
-  document.getElementById('fp-categoria').value='';
-  renderContasPagar();
-  toast('Pagamento lançado.','ok');
+  logAcao('criou','pagamento',conta.id,`Pagamento ${p.nome} — ${mesReferencia} — R$ ${conta.valor.toFixed(2)}`);
+  renderContasPagar(); renderFinDashboard();
+  toast(`Pagamento de ${p.nome} lançado.`,'ok');
+}
+
+// rótulo amigável do mês (ex: "julho de 2026") a partir do "YYYY-MM"
+function mesLabel(mk) {
+  const [ano,mes]=mk.split('-').map(Number);
+  return new Date(ano,mes-1,1).toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
+}
+
+// abre o modal para definir o valor DAQUELE mês.
+// contaId vazio  -> lançar um novo pagamento (valor começa com o padrão como sugestão)
+// contaId preenchido -> editar o valor de um pagamento já lançado neste mês
+function openValorModal(prestadorId, mesReferencia, contaId) {
+  const p=_fpr.find(p=>p.id===prestadorId); if(!p) return;
+  document.getElementById('valor-prestador-id').value=prestadorId;
+  document.getElementById('valor-mes-ref').value=mesReferencia;
+  document.getElementById('valor-conta-id').value=contaId||'';
+  let sugestao;
+  if (contaId) {
+    const c=_fp.find(c=>c.id===contaId);
+    sugestao=c?c.valor:(p.valorPadrao||0);
+    document.getElementById('valor-resumo').textContent=`${p.nome} — editar valor de ${mesLabel(mesReferencia)}`;
+  } else {
+    sugestao=p.valorPadrao||0;
+    document.getElementById('valor-resumo').textContent=`${p.nome} — informe o valor de ${mesLabel(mesReferencia)}`;
+  }
+  document.getElementById('valor-input').value=sugestao||'';
+  document.getElementById('modal-fin-valor').classList.add('open');
+  setTimeout(()=>{ const el=document.getElementById('valor-input'); if(el){ el.focus(); el.select(); } },50);
+}
+
+async function confirmValorPagamento() {
+  const prestadorId=Number(document.getElementById('valor-prestador-id').value);
+  const mesReferencia=document.getElementById('valor-mes-ref').value;
+  const contaIdRaw=document.getElementById('valor-conta-id').value;
+  const valor=parseFloat(String(document.getElementById('valor-input').value).replace(',','.'));
+  if(!valor||valor<=0) return toast('Informe um valor válido.','err');
+
+  if (contaIdRaw) {
+    // editar valor de um pagamento já lançado
+    const id=Number(contaIdRaw);
+    const c=_fp.find(c=>c.id===id); if(!c) { closeModal('modal-fin-valor'); return; }
+    loading(true);
+    try { await db.collection('fin_contas_pagar').doc(String(c.id)).update({valor}); c.valor=valor; }
+    finally { loading(false); }
+    logAcao('editou','pagamento',c.id,`Valor de ${c.prestadorNome} (${mesReferencia}) alterado para R$ ${valor.toFixed(2)}`);
+    closeModal('modal-fin-valor'); renderContasPagar(); renderFinDashboard();
+    return toast('Valor atualizado.','ok');
+  }
+
+  // lançar um novo pagamento com o valor informado para este mês
+  const p=_fpr.find(p=>p.id===prestadorId); if(!p) { closeModal('modal-fin-valor'); return; }
+  if (_fp.some(c=>c.prestadorId===prestadorId&&contaMes(c)===mesReferencia)) {
+    closeModal('modal-fin-valor');
+    return toast('Já existe um pagamento lançado para este mês.','err');
+  }
+  const conta={
+    id:newId(), descricao:`Pagamento — ${p.nome}`, fornecedor:'', prestadorId:p.id, prestadorNome:p.nome,
+    categoria:p.categoria, valor, vencimento:buildVencimento(mesReferencia,p.diaVencimentoPadrao), mesReferencia,
+    status:'pendente', dataPagamento:null, pagoPorId:null, pagoPorNome:null, formaPagamento:null,
+    recorrente:true, criadoPorId:FU.id, criadoPorNome:FU.name, createdAt:Date.now()
+  };
+  loading(true);
+  try { await db.collection('fin_contas_pagar').doc(String(conta.id)).set(conta); _fp.push(conta); }
+  finally { loading(false); }
+  logAcao('criou','pagamento',conta.id,`Pagamento ${p.nome} — ${mesReferencia} — R$ ${conta.valor.toFixed(2)}`);
+  closeModal('modal-fin-valor'); renderContasPagar(); renderFinDashboard();
+  toast(`Pagamento de ${p.nome} lançado.`,'ok');
+}
+
+async function lancarPendentesDoMes() {
+  const mk=mKey(pagMonthTarget());
+  const candidatos=_fpr.filter(p=>p.ativo!==false&&!_fp.some(c=>c.prestadorId===p.id&&contaMes(c)===mk));
+  if(!candidatos.length) return toast('Todos os prestadores já têm pagamento lançado neste mês.','info');
+  loading(true);
+  let gerados=0;
+  try {
+    const batch=db.batch();
+    candidatos.forEach(p=>{
+      const conta={
+        id:newId()+gerados, descricao:`Pagamento — ${p.nome}`, fornecedor:'', prestadorId:p.id, prestadorNome:p.nome,
+        categoria:p.categoria, valor:p.valorPadrao, vencimento:buildVencimento(mk,p.diaVencimentoPadrao), mesReferencia:mk,
+        status:'pendente', dataPagamento:null, pagoPorId:null, pagoPorNome:null, formaPagamento:null,
+        recorrente:true, criadoPorId:FU.id, criadoPorNome:FU.name, createdAt:Date.now()
+      };
+      batch.set(db.collection('fin_contas_pagar').doc(String(conta.id)),conta);
+      _fp.push(conta);
+      gerados++;
+    });
+    await batch.commit();
+  } finally { loading(false); }
+  if (gerados) logAcao('criou','pagamento',null,`${gerados} pagamento(s) lançado(s) em lote — ${mk}`);
+  renderContasPagar(); renderFinDashboard();
+  toast(`${gerados} pagamento(s) lançado(s).`,'ok');
 }
 
 function openBaixaModal(id) {
@@ -3960,6 +4199,8 @@ function openBaixaModal(id) {
   document.getElementById('baixa-resumo').textContent=`${c.prestadorNome||c.fornecedor||c.descricao} — R$ ${c.valor.toFixed(2)} — vencimento ${fmt(c.vencimento)}`;
   document.getElementById('baixa-forma').value='';
   document.getElementById('baixa-data').value=new Date().toISOString().split('T')[0];
+  document.getElementById('baixa-nf').value='';
+  document.getElementById('baixa-nf-status').textContent='';
   document.getElementById('modal-fin-baixa').classList.add('open');
 }
 
@@ -3968,128 +4209,41 @@ async function confirmBaixa() {
   const c=_fp.find(c=>c.id===id); if(!c) return;
   const formaPagamento=document.getElementById('baixa-forma').value;
   const dataPagamento=document.getElementById('baixa-data').value;
+  const arquivo=document.getElementById('baixa-nf').files[0];
   if(!formaPagamento) return toast('Selecione a forma de pagamento.','err');
   if(!dataPagamento) return toast('Informe a data do pagamento.','err');
+  if(!arquivo) return toast('Anexe o PDF da Nota Fiscal.','err');
+  if(arquivo.type!=='application/pdf') return toast('O arquivo precisa ser um PDF.','err');
   loading(true);
   try {
-    await db.collection('fin_contas_pagar').doc(String(id)).update({status:'pago',dataPagamento,formaPagamento,pagoPorId:FU.id,pagoPorNome:FU.name});
-    Object.assign(c,{status:'pago',dataPagamento,formaPagamento,pagoPorId:FU.id,pagoPorNome:FU.name});
+    const statusEl=document.getElementById('baixa-nf-status');
+    statusEl.textContent='Enviando PDF...';
+    const notaFiscalUrl=await uploadToCloudinary(arquivo);
+    statusEl.textContent='';
+    await db.collection('fin_contas_pagar').doc(String(id)).update({status:'pago',dataPagamento,formaPagamento,pagoPorId:FU.id,pagoPorNome:FU.name,notaFiscalUrl});
+    Object.assign(c,{status:'pago',dataPagamento,formaPagamento,pagoPorId:FU.id,pagoPorNome:FU.name,notaFiscalUrl});
+  } catch(e) {
+    toast('Erro ao enviar o PDF: '+e.message,'err');
+    return;
   } finally { loading(false); }
+  logAcao('pagou','pagamento',id,`Baixa — ${c.prestadorNome||c.fornecedor||c.descricao} — R$ ${c.valor.toFixed(2)} via ${formaPagamento}`);
   closeModal('modal-fin-baixa');
   renderContasPagar(); renderFinDashboard();
   toast('Pagamento baixado.','ok');
 }
 
 async function delContaPagar(id) {
+  // o botão já só aparece pra gestor na tela, mas a checagem tem que estar
+  // aqui dentro também - senão dá pra chamar essa função direto pelo
+  // console do navegador e pular a restrição da interface
+  if(FU.role!=='gestor') return;
   if(!confirm('Remover esta conta a pagar?')) return;
+  const c=_fp.find(c=>c.id===id);
   loading(true);
   try { await db.collection('fin_contas_pagar').doc(String(id)).delete(); _fp=_fp.filter(c=>c.id!==id); }
   finally { loading(false); }
+  logAcao('removeu','pagamento',id,`Pagamento ${c?(c.prestadorNome||c.fornecedor||c.descricao):id} — R$ ${c?c.valor.toFixed(2):'?'}`);
   renderContasPagar(); toast('Conta removida.','info');
-}
-
-/* ── CONTAS A RECEBER ──────────────────────── */
-function renderContasReceber() {
-  const today=new Date().toISOString().split('T')[0];
-  const sorted=[..._fr].sort((a,b)=>a.vencimento.localeCompare(b.vencimento));
-  document.getElementById('fr-tbody').innerHTML=sorted.length?sorted.map(c=>{
-    const atrasado=c.status==='pendente'&&c.vencimento<today;
-    const statusBadge=c.status==='recebido'?'<span class="badge b-ok">Recebido</span>':atrasado?'<span class="badge b-gray" style="color:var(--red);background:rgba(185,28,28,.08)">Atrasado</span>':'<span class="badge b-2">Pendente</span>';
-    const acoes=c.status==='pendente'?`<button class="btn btn-ghost btn-xs" onclick="marcarRecebido(${c.id})">Marcar Recebido</button>`:'';
-    const del=FU.role==='gestor'?`<button class="btn-icon del" onclick="delContaReceber(${c.id})" title="Remover">×</button>`:'';
-    return `<tr>
-      <td class="text-muted">${fmt(c.vencimento)}</td>
-      <td>${c.descricao}${c.orcamentoId?'<div style="font-size:11px;color:var(--muted)">Vinculado a orçamento</div>':''}</td>
-      <td>${c.cliente||'—'}</td>
-      <td>${c.categoria?`<span class="badge b-3">${c.categoria}</span>`:'—'}</td>
-      <td><strong>R$ ${c.valor.toFixed(2)}</strong></td>
-      <td>${statusBadge}</td>
-      <td><div class="flex gap6">${acoes}${del}</div></td>
-    </tr>`;
-  }).join(''):`<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:32px">Nenhuma conta a receber lançada</td></tr>`;
-}
-
-async function addContaReceber() {
-  const descricao=document.getElementById('fr-desc').value.trim();
-  const cliente=document.getElementById('fr-cliente').value.trim();
-  const categoria=document.getElementById('fr-categoria').value;
-  const valor=parseFloat(document.getElementById('fr-valor').value);
-  const vencimento=document.getElementById('fr-vencimento').value;
-  const orcamentoId=document.getElementById('fr-orcamento').value||null;
-  if(!descricao) return toast('Informe a descrição.','err');
-  if(!cliente) return toast('Informe o cliente.','err');
-  if(!categoria) return toast('Selecione a categoria.','err');
-  if(!valor||valor<=0) return toast('Informe um valor válido.','err');
-  if(!vencimento) return toast('Informe o vencimento.','err');
-  const conta={id:newId(),descricao,cliente,categoria,valor,vencimento,status:'pendente',dataRecebimento:null,orcamentoId,criadoPorId:FU.id,criadoPorNome:FU.name,createdAt:Date.now()};
-  loading(true);
-  try { await db.collection('fin_contas_receber').doc(String(conta.id)).set(conta); _fr.push(conta); }
-  finally { loading(false); }
-  ['fr-desc','fr-cliente','fr-valor','fr-vencimento'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('fr-categoria').value=''; document.getElementById('fr-orcamento').value='';
-  renderContasReceber();
-  toast('Conta a receber lançada.','ok');
-}
-
-async function marcarRecebido(id) {
-  const c=_fr.find(c=>c.id===id); if(!c) return;
-  const dataRecebimento=new Date().toISOString().split('T')[0];
-  loading(true);
-  try { await db.collection('fin_contas_receber').doc(String(id)).update({status:'recebido',dataRecebimento}); c.status='recebido'; c.dataRecebimento=dataRecebimento; }
-  finally { loading(false); }
-  renderContasReceber(); toast('Conta marcada como recebida.','ok');
-}
-
-async function delContaReceber(id) {
-  if(!confirm('Remover esta conta a receber?')) return;
-  loading(true);
-  try { await db.collection('fin_contas_receber').doc(String(id)).delete(); _fr=_fr.filter(c=>c.id!==id); }
-  finally { loading(false); }
-  renderContasReceber(); toast('Conta removida.','info');
-}
-
-
-/* ── DRE ───────────────────────────────────── */
-function changeDreMonth(delta) { dreMonthOffset+=delta; renderDRE(); }
-function goDreToday() { dreMonthOffset=0; renderDRE(); }
-
-function renderDRE() {
-  const now=new Date();
-  const target=new Date(now.getFullYear(), now.getMonth()+dreMonthOffset, 1);
-  const mk=mKey(target);
-  document.getElementById('dre-month-label').textContent=target.toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
-
-  const receitas={}; const despesas={};
-  _fr.filter(c=>c.status==='recebido'&&c.dataRecebimento&&c.dataRecebimento.startsWith(mk)).forEach(c=>{ receitas[c.categoria]=(receitas[c.categoria]||0)+c.valor; });
-  _fp.filter(c=>c.status==='pago'&&c.dataPagamento&&c.dataPagamento.startsWith(mk)).forEach(c=>{ despesas[c.categoria]=(despesas[c.categoria]||0)+c.valor; });
-  const totalReceitas=Object.values(receitas).reduce((s,v)=>s+v,0);
-  const totalDespesas=Object.values(despesas).reduce((s,v)=>s+v,0);
-  const resultado=totalReceitas-totalDespesas;
-
-  const rowsHtml=(obj,color)=>{
-    const entries=Object.entries(obj).sort((a,b)=>b[1]-a[1]);
-    if(!entries.length) return `<div style="font-size:12.5px;color:var(--muted);padding:6px 0">Nenhum lançamento</div>`;
-    return entries.map(([cat,val])=>`<div class="prog-row" style="margin:0 0 8px"><span>${cat}</span><span class="fw7" style="color:${color}">R$ ${val.toFixed(2)}</span></div>`).join('');
-  };
-
-  document.getElementById('dre-content').innerHTML=`
-    <div class="meta-block">
-      <div class="meta-block-hd"><div style="font-weight:700;font-size:13.5px;color:var(--green)">Receitas</div></div>
-      ${rowsHtml(receitas,'var(--green)')}
-      <div style="border-top:1px solid var(--border);margin-top:8px;padding-top:8px;display:flex;justify-content:space-between"><span class="fw8">Total de Receitas</span><span class="fw8" style="color:var(--green)">R$ ${totalReceitas.toFixed(2)}</span></div>
-    </div>
-    <div class="meta-block">
-      <div class="meta-block-hd"><div style="font-weight:700;font-size:13.5px;color:var(--red)">Despesas</div></div>
-      ${rowsHtml(despesas,'var(--red)')}
-      <div style="border-top:1px solid var(--border);margin-top:8px;padding-top:8px;display:flex;justify-content:space-between"><span class="fw8">Total de Despesas</span><span class="fw8" style="color:var(--red)">R$ ${totalDespesas.toFixed(2)}</span></div>
-    </div>
-    <div class="meta-block" style="background:${resultado>=0?'rgba(21,128,61,.06)':'rgba(185,28,28,.06)'};border-color:${resultado>=0?'#86efac':'#fca5a5'}">
-      <div style="display:flex;justify-content:space-between;align-items:center">
-        <span class="fw8" style="font-size:15px">Resultado do Período</span>
-        <span class="fw8" style="font-size:22px;color:${resultado>=0?'var(--green)':'var(--red)'}">R$ ${resultado.toFixed(2)}</span>
-      </div>
-    </div>
-  `;
 }
 
 /* ── CATEGORIAS ────────────────────────────── */
@@ -4110,6 +4264,7 @@ async function addFinCategoria() {
   loading(true);
   try { await db.collection('fin_categorias').doc(String(cat.id)).set(cat); _fcat.push(cat); }
   finally { loading(false); }
+  logAcao('criou','categoria',cat.id,`Categoria ${cat.name} (${cat.tipo})`);
   document.getElementById('fc-nome').value='';
   renderFinCategorias(); fillFinSelects();
   toast('Categoria adicionada.','ok');
@@ -4148,9 +4303,11 @@ async function seedDefaultFinCategorias() {
 async function delFinCategoria(id) {
   if(FU.role!=='gestor') return;
   if(!confirm('Remover esta categoria?')) return;
+  const cat=_fcat.find(c=>c.id===id);
   loading(true);
   try { await db.collection('fin_categorias').doc(String(id)).delete(); _fcat=_fcat.filter(c=>c.id!==id); }
   finally { loading(false); }
+  logAcao('removeu','categoria',id,`Categoria ${cat?cat.name:id}`);
   renderFinCategorias(); fillFinSelects();
   toast('Categoria removida.','info');
 }
@@ -4167,8 +4324,9 @@ function buildVencimento(mesReferencia, dia) {
 }
 
 function renderFinPrestadores() {
+  // qualquer colaborador pode cadastrar prestador novo agora - só
+  // editar/desativar um já existente continua restrito
   const gerenciar=canManagePrestadores();
-  document.getElementById('fpr-new-btn').classList.toggle('hidden', !gerenciar);
   const sorted=[..._fpr].sort((a,b)=>a.nome.localeCompare(b.nome));
   document.getElementById('fpr-tbody').innerHTML=sorted.length?sorted.map(p=>{
     const statusBadge=p.ativo===false?'<span class="badge b-gray">Inativo</span>':'<span class="badge b-ok">Ativo</span>';
@@ -4182,10 +4340,7 @@ function renderFinPrestadores() {
       <td>R$ ${(p.valorPadrao||0).toFixed(2)}</td>
       <td>${p.diaVencimentoPadrao||'—'}</td>
       <td>${statusBadge}</td>
-      <td><div class="flex gap6">
-        <button class="btn btn-ok btn-xs" onclick="gerarProximoMes(${p.id})">Gerar próximo mês</button>
-        ${acoesGestor}
-      </div></td>
+      <td><div class="flex gap6">${acoesGestor}</div></td>
     </tr>`;
   }).join(''):`<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:32px">Nenhum prestador cadastrado</td></tr>`;
 }
@@ -4198,7 +4353,9 @@ function readPrestadorForm() {
     telefone: document.getElementById('fpr-telefone').value.trim(),
     email: document.getElementById('fpr-email').value.trim(),
     chavePix: document.getElementById('fpr-chavepix').value.trim(),
-    dadosBancarios: document.getElementById('fpr-dadosbancarios').value.trim(),
+    banco: document.getElementById('fpr-banco').value.trim(),
+    agencia: document.getElementById('fpr-agencia').value.trim(),
+    conta: document.getElementById('fpr-conta').value.trim(),
     categoria: document.getElementById('fpr-categoria').value,
     valorPadrao: parseFloat(document.getElementById('fpr-valorpadrao').value),
     diaVencimentoPadrao: parseInt(document.getElementById('fpr-diavencimento').value,10),
@@ -4215,12 +4372,11 @@ function validatePrestadorForm(f) {
 }
 
 function clearPrestadorForm() {
-  ['fpr-nome','fpr-tipo','fpr-documento','fpr-telefone','fpr-email','fpr-chavepix','fpr-dadosbancarios','fpr-valorpadrao','fpr-diavencimento','fpr-observacoes'].forEach(id=>document.getElementById(id).value='');
+  ['fpr-nome','fpr-tipo','fpr-documento','fpr-telefone','fpr-email','fpr-chavepix','fpr-banco','fpr-agencia','fpr-conta','fpr-valorpadrao','fpr-diavencimento','fpr-observacoes'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('fpr-categoria').value='';
 }
 
 function openAddFinPrestador() {
-  if(!canManagePrestadores()) return;
   clearPrestadorForm();
   document.getElementById('fpr-id').value='';
   document.getElementById('fpr-modal-title').textContent='Novo Prestador';
@@ -4237,6 +4393,7 @@ async function addFinPrestador() {
   loading(true);
   try { await db.collection('fin_prestadores').doc(String(prestador.id)).set(prestador); _fpr.push(prestador); }
   finally { loading(false); }
+  logAcao('criou','prestador',prestador.id,`Prestador ${prestador.nome}`);
   closeModal('modal-fin-prestador');
   renderFinPrestadores(); fillFinSelects();
   toast('Prestador cadastrado.','ok');
@@ -4252,7 +4409,9 @@ function openEditFinPrestador(id) {
   document.getElementById('fpr-telefone').value=p.telefone||'';
   document.getElementById('fpr-email').value=p.email||'';
   document.getElementById('fpr-chavepix').value=p.chavePix||'';
-  document.getElementById('fpr-dadosbancarios').value=p.dadosBancarios||'';
+  document.getElementById('fpr-banco').value=p.banco||'';
+  document.getElementById('fpr-agencia').value=p.agencia||'';
+  document.getElementById('fpr-conta').value=p.conta||'';
   document.getElementById('fpr-categoria').value=p.categoria||'';
   document.getElementById('fpr-valorpadrao').value=p.valorPadrao||'';
   document.getElementById('fpr-diavencimento').value=p.diaVencimentoPadrao||'';
@@ -4273,6 +4432,7 @@ async function saveEditFinPrestador() {
   loading(true);
   try { await db.collection('fin_prestadores').doc(String(id)).set(_fpr[idx]); }
   finally { loading(false); }
+  logAcao('editou','prestador',id,`Prestador ${_fpr[idx].nome}`);
   closeModal('modal-fin-prestador');
   renderFinPrestadores(); fillFinSelects();
   toast('Prestador atualizado.','ok');
@@ -4285,65 +4445,315 @@ async function toggleAtivoPrestador(id) {
   loading(true);
   try { await db.collection('fin_prestadores').doc(String(id)).update({ativo:novoAtivo}); p.ativo=novoAtivo; }
   finally { loading(false); }
+  logAcao(novoAtivo?'ativou':'desativou','prestador',id,`Prestador ${p.nome}`);
   renderFinPrestadores(); fillFinSelects();
   toast(novoAtivo?'Prestador ativado.':'Prestador desativado.','info');
 }
 
-// acha o mês seguinte ao último pagamento já lançado pra esse prestador
-// (ou o mês atual, se for o primeiro pagamento dele)
-function computeNextMesReferencia(prestadorId) {
-  const contas=_fp.filter(c=>c.prestadorId===prestadorId);
-  if(!contas.length) return mKey(new Date());
-  const meses=contas.map(c=>c.mesReferencia||c.vencimento.slice(0,7)).sort();
-  const [ano,mes]=meses[meses.length-1].split('-').map(Number);
-  const d=new Date(ano,mes-1,1); d.setMonth(d.getMonth()+1);
-  return mKey(d);
+// lançar/gerar pagamento de prestador agora é feito na própria tela de
+// Pagamentos de Prestadores (lancarPagamentoMes/lancarPendentesDoMes),
+// escolhendo o mês ali - não mais daqui do cadastro
+
+/* ── CHAT (conversas privadas 1-a-1) ───────── */
+// primeira funcionalidade em tempo real do sistema (onSnapshot) - todo o
+// resto do app é busca única + atualização manual depois de escrever.
+// Por isso o cuidado extra com abrir/fechar os listeners no lugar certo,
+// pra não vazar conexão aberta: o da lista (fin-nav-chat-badge etc) fica
+// ligado a sessão inteira desde o login; o da conversa aberta só existe
+// enquanto a tela de chat está com uma conversa selecionada, e é desligado
+// automaticamente assim que showPageFin() navega pra qualquer outro lugar.
+
+function conversaIdFor(id1, id2) {
+  return [Number(id1), Number(id2)].sort((a,b)=>a-b).join('_');
 }
 
-async function gerarProximoMes(prestadorId) {
-  const p=_fpr.find(p=>p.id===prestadorId); if(!p) return;
-  const nextMes=computeNextMesReferencia(prestadorId);
-  if(_fp.some(c=>c.prestadorId===prestadorId&&(c.mesReferencia||c.vencimento.slice(0,7))===nextMes)) {
-    return toast('Já existe um pagamento gerado para este mês.','err');
+function escapeHtml(str) {
+  const div=document.createElement('div');
+  div.textContent = str==null ? '' : String(str);
+  return div.innerHTML;
+}
+
+function attachChatListListener() {
+  if (_chatListUnsub) return;
+  // gestor tem supervisão: vê a conversa de qualquer pessoa com qualquer
+  // pessoa (por isso a query não filtra por participante nesse caso).
+  // Colaborador só vê as próprias conversas, como sempre foi.
+  const query = FU.role==='gestor'
+    ? db.collection('fin_chat_mensagens')
+    : db.collection('fin_chat_mensagens').where('participantes','array-contains', FU.id);
+  let primeiroSnapshot=true;
+  _chatListUnsub = query.onSnapshot(snap => {
+    if (!primeiroSnapshot) {
+      // notificação só pra mensagem de verdade nova (não pro carregamento
+      // inicial, que traria o histórico inteiro como "novo")
+      snap.docChanges().forEach(change => {
+        if (change.type!=='added') return;
+        const m=change.doc.data();
+        const conversaAberta=_chatOpenWith?conversaIdFor(FU.id,_chatOpenWith):null;
+        if (m.paraId===FU.id && m.deId!==FU.id && m.conversaId!==conversaAberta) {
+          const preview=m.texto?(m.texto.length>44?m.texto.slice(0,44)+'…':m.texto):'[anexo]';
+          toast(`💬 ${m.deNome}: ${preview}`,'info');
+        }
+      });
+    }
+    primeiroSnapshot=false;
+    _chatMsgs = snap.docs.map(d=>d.data());
+    renderChatBadges();
+    if (document.getElementById('page-fin-chat')?.classList.contains('active')) renderChatList();
+  });
+}
+
+function detachChatListListener() {
+  if (_chatListUnsub) { _chatListUnsub(); _chatListUnsub=null; }
+  _chatMsgs=[];
+}
+
+function renderChatBadges() {
+  const total=_chatMsgs.filter(m=>m.paraId===FU.id && !m.lida).length;
+  ['fin-nav-chat-badge','mais-fin-chat-badge'].forEach(id=>{
+    const el=document.getElementById(id); if(!el) return;
+    if (total>0) { el.textContent = total>99?'99+':String(total); el.classList.remove('hidden'); }
+    else el.classList.add('hidden');
+  });
+}
+
+function renderFinChat() {
+  renderChatList();
+  document.getElementById('chat-thread').innerHTML='<div class="chat-empty" id="chat-empty">Selecione uma conversa</div>';
+  document.getElementById('chat-wrap').classList.remove('thread-open');
+}
+
+// uma linha por colega do Financeiro - ativos sempre aparecem (mesmo sem
+// nenhuma mensagem ainda, pra dar pra começar a conversa), inativos só se
+// já existir histórico de conversa com eles, pra não perder o que já foi
+// dito mas também não oferecer começar papo novo com quem já saiu
+function renderChatList() {
+  const container=document.getElementById('chat-list');
+  if (!container) return;
+  const idsComConversa=new Set(_chatMsgs.map(m=>m.participantes.find(id=>id!==FU.id)));
+  const candidatos=_fu.filter(u=>u.id!==FU.id && (u.ativo!==false || idsComConversa.has(u.id)));
+  const linhas=candidatos.map(u=>{
+    const cid=conversaIdFor(FU.id,u.id);
+    const msgs=_chatMsgs.filter(m=>m.conversaId===cid).sort((a,b)=>a.createdAt-b.createdAt);
+    const last=msgs[msgs.length-1]||null;
+    const unread=msgs.filter(m=>m.paraId===FU.id && !m.lida).length;
+    return {u,last,unread};
+  });
+  linhas.sort((a,b)=>{
+    if(!a.last && !b.last) return a.u.name.localeCompare(b.u.name);
+    if(!a.last) return 1;
+    if(!b.last) return -1;
+    return b.last.createdAt-a.last.createdAt;
+  });
+  let html=linhas.length?linhas.map(({u,last,unread})=>`
+    <div class="chat-row ${(!_chatSuperviseIds && _chatOpenWith===u.id)?'active':''}" onclick="openChatWith(${u.id})">
+      ${avatarEl(u,'av-38')}
+      <div class="chat-row-body">
+        <div class="chat-row-top">
+          <div class="chat-row-name">${escapeHtml(u.name)}</div>
+          ${last?`<div class="chat-row-time">${fmtTime(last.createdAt)}</div>`:''}
+        </div>
+        <div class="chat-row-preview">${last?(last.deId===FU.id?'Você: ':'')+(last.texto?escapeHtml(last.texto):'📎 anexo'):'Nenhuma mensagem ainda'}</div>
+      </div>
+      ${unread>0?`<span class="chat-badge">${unread>99?'99+':unread}</span>`:''}
+    </div>
+  `).join(''):'<div class="chat-empty">Nenhum colega disponível pra conversar</div>';
+
+  // supervisão do gestor: toda conversa entre DUAS OUTRAS pessoas (o
+  // gestor não é participante) aparece numa seção à parte, só leitura
+  if (FU.role==='gestor') {
+    const paresVistos=new Set();
+    const pares=[];
+    _chatMsgs.forEach(m=>{
+      if (m.participantes.includes(FU.id) || paresVistos.has(m.conversaId)) return;
+      paresVistos.add(m.conversaId);
+      const msgsPar=_chatMsgs.filter(x=>x.conversaId===m.conversaId).sort((a,b)=>a.createdAt-b.createdAt);
+      const last=msgsPar[msgsPar.length-1];
+      const [idA,idB]=m.participantes;
+      const uA=_fu.find(u=>u.id===idA), uB=_fu.find(u=>u.id===idB);
+      pares.push({idA,idB,nomeA:uA?uA.name:'?',nomeB:uB?uB.name:'?',last});
+    });
+    pares.sort((a,b)=>b.last.createdAt-a.last.createdAt);
+    if (pares.length) {
+      html+=`<div style="padding:10px 14px 4px;font-size:10.5px;font-weight:800;letter-spacing:.5px;color:var(--muted);text-transform:uppercase;border-top:1px solid var(--border);margin-top:6px">Supervisão — outras conversas</div>`;
+      html+=pares.map(({idA,idB,nomeA,nomeB,last})=>`
+        <div class="chat-row ${_chatSuperviseIds&&_chatSuperviseIds[0]===idA&&_chatSuperviseIds[1]===idB?'active':''}" onclick="openChatSupervise(${idA},${idB})">
+          <div class="chat-row-body">
+            <div class="chat-row-top">
+              <div class="chat-row-name">${escapeHtml(nomeA)} ↔ ${escapeHtml(nomeB)}</div>
+              <div class="chat-row-time">${fmtTime(last.createdAt)}</div>
+            </div>
+            <div class="chat-row-preview">${escapeHtml(last.deNome)}: ${last.texto?escapeHtml(last.texto):'📎 anexo'}</div>
+          </div>
+        </div>
+      `).join('');
+    }
   }
-  const conta={
-    id:newId(), descricao:`Pagamento — ${p.nome}`, fornecedor:'', prestadorId:p.id, prestadorNome:p.nome,
-    categoria:p.categoria, valor:p.valorPadrao, vencimento:buildVencimento(nextMes,p.diaVencimentoPadrao), mesReferencia:nextMes,
-    status:'pendente', dataPagamento:null, pagoPorId:null, pagoPorNome:null, formaPagamento:null,
-    recorrente:true, criadoPorId:FU.id, criadoPorNome:FU.name, createdAt:Date.now()
-  };
-  loading(true);
-  try { await db.collection('fin_contas_pagar').doc(String(conta.id)).set(conta); _fp.push(conta); }
-  finally { loading(false); }
-  renderContasPagar(); renderFinDashboard();
-  toast(`Pagamento de ${fmt(conta.vencimento)} gerado para ${p.nome}.`,'ok');
+  container.innerHTML=html;
 }
 
-async function gerarTodosPendentesDoMes() {
-  const mesAtual=mKey(new Date());
-  const candidatos=_fpr.filter(p=>p.ativo!==false).filter(p=>computeNextMesReferencia(p.id)<=mesAtual);
-  if(!candidatos.length) return toast('Nenhum prestador com pagamento pendente de geração este mês.','info');
-  loading(true);
-  let gerados=0;
+function openChatWith(userId) {
+  if (_chatThreadUnsub) { _chatThreadUnsub(); _chatThreadUnsub=null; }
+  _chatOpenWith=userId;
+  _chatSuperviseIds=null;
+  _chatMarkedReadOnce=false;
+  const other=_fu.find(u=>u.id===userId);
+  document.getElementById('chat-wrap').classList.add('thread-open');
+  document.getElementById('chat-thread').innerHTML=`
+    <div class="chat-thread-hd">
+      <button class="chat-back" onclick="closeChatThread()">←</button>
+      ${avatarEl(other,'av-38')}
+      <div>
+        <strong>${other?escapeHtml(other.name):''}</strong>
+        <div class="chat-thread-hd-sub">Setor Financeiro</div>
+      </div>
+    </div>
+    <div class="chat-messages" id="chat-messages"></div>
+    <div class="chat-composer">
+      <button type="button" class="chat-attach-btn" onclick="document.getElementById('chat-file-input').click()" title="Anexar foto ou documento">📎</button>
+      <input type="file" id="chat-file-input" style="display:none" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx" onchange="sendChatFile(this)">
+      <input type="text" id="chat-input" placeholder="Digite uma mensagem..." onkeydown="if(event.key==='Enter'){event.preventDefault();sendChatMessage();}">
+      <button type="button" class="chat-send-btn" onclick="sendChatMessage()" title="Enviar">➤</button>
+    </div>
+  `;
+  const cid=conversaIdFor(FU.id,userId);
+  _chatThreadUnsub = db.collection('fin_chat_mensagens')
+    .where('conversaId','==',cid)
+    .orderBy('createdAt')
+    .onSnapshot(snap => {
+      const msgs=snap.docs.map(d=>d.data());
+      renderChatThreadMessages(msgs,false);
+      if (!_chatMarkedReadOnce) { _chatMarkedReadOnce=true; markChatThreadRead(msgs); }
+    });
+  renderChatList();
+}
+
+// gestor abre a conversa de DUAS OUTRAS pessoas, só leitura - sem
+// composer, sem marcar como lida (isso é só do destinatário de verdade)
+function openChatSupervise(idA, idB) {
+  if (_chatThreadUnsub) { _chatThreadUnsub(); _chatThreadUnsub=null; }
+  _chatOpenWith=null;
+  _chatSuperviseIds=[idA,idB];
+  const uA=_fu.find(u=>u.id===idA), uB=_fu.find(u=>u.id===idB);
+  document.getElementById('chat-wrap').classList.add('thread-open');
+  document.getElementById('chat-thread').innerHTML=`
+    <div class="chat-thread-hd">
+      <button class="chat-back" onclick="closeChatThread()">←</button>
+      <div>
+        <strong>${uA?escapeHtml(uA.name):'?'} ↔ ${uB?escapeHtml(uB.name):'?'}</strong>
+        <div class="chat-thread-hd-sub">Modo supervisão · só leitura</div>
+      </div>
+    </div>
+    <div class="chat-messages" id="chat-messages"></div>
+  `;
+  const cid=conversaIdFor(idA,idB);
+  _chatThreadUnsub = db.collection('fin_chat_mensagens')
+    .where('conversaId','==',cid)
+    .orderBy('createdAt')
+    .onSnapshot(snap => renderChatThreadMessages(snap.docs.map(d=>d.data()), true));
+  renderChatList();
+}
+
+function renderChatAttachment(m) {
+  if (!m.anexoUrl) return '';
+  if (m.anexoTipo==='imagem') {
+    return `<a href="${m.anexoUrl}" target="_blank" rel="noopener"><img class="chat-bubble-img" src="${m.anexoUrl}" alt="${escapeHtml(m.anexoNome||'imagem')}"></a>`;
+  }
+  return `<a class="chat-bubble-file" href="${m.anexoUrl}" target="_blank" rel="noopener">📄 ${escapeHtml(m.anexoNome||'arquivo')}</a>`;
+}
+
+function renderChatThreadMessages(msgs, supervise) {
+  const el=document.getElementById('chat-messages');
+  if (!el) return;
+  el.innerHTML=msgs.length?msgs.map(m=>{
+    const minha=!supervise && m.deId===FU.id;
+    return `
+    <div class="chat-bubble ${minha?'me':''}">
+      ${supervise?`<div class="chat-bubble-from">${escapeHtml(m.deNome)}</div>`:''}
+      ${renderChatAttachment(m)}
+      ${m.texto?escapeHtml(m.texto):''}
+      <span class="chat-bubble-time">${fmtTime(m.createdAt)}</span>
+    </div>`;
+  }).join(''):'<div class="chat-empty">Nenhuma mensagem ainda - diga oi!</div>';
+  el.scrollTop=el.scrollHeight;
+}
+
+async function markChatThreadRead(msgs) {
+  const pendentes=msgs.filter(m=>m.paraId===FU.id && !m.lida);
+  if (!pendentes.length) return;
   try {
     const batch=db.batch();
-    candidatos.forEach(p=>{
-      const nextMes=computeNextMesReferencia(p.id);
-      if(_fp.some(c=>c.prestadorId===p.id&&(c.mesReferencia||c.vencimento.slice(0,7))===nextMes)) return;
-      const conta={
-        id:newId()+gerados, descricao:`Pagamento — ${p.nome}`, fornecedor:'', prestadorId:p.id, prestadorNome:p.nome,
-        categoria:p.categoria, valor:p.valorPadrao, vencimento:buildVencimento(nextMes,p.diaVencimentoPadrao), mesReferencia:nextMes,
-        status:'pendente', dataPagamento:null, pagoPorId:null, pagoPorNome:null, formaPagamento:null,
-        recorrente:true, criadoPorId:FU.id, criadoPorNome:FU.name, createdAt:Date.now()
-      };
-      batch.set(db.collection('fin_contas_pagar').doc(String(conta.id)),conta);
-      _fp.push(conta);
-      gerados++;
-    });
-    if(gerados) await batch.commit();
-  } finally { loading(false); }
-  renderContasPagar(); renderFinDashboard();
-  toast(gerados?`${gerados} pagamento(s) gerado(s).`:'Todos os prestadores já têm pagamento gerado este mês.', gerados?'ok':'info');
+    pendentes.forEach(m=>batch.update(db.collection('fin_chat_mensagens').doc(String(m.id)),{lida:true}));
+    await batch.commit();
+  } catch(e) { /* não crítico - só afeta o contador de não lidas, tenta de novo na próxima abertura */ }
+}
+
+async function sendChatMessage() {
+  const input=document.getElementById('chat-input');
+  if (!input || !_chatOpenWith) return;
+  const texto=input.value.trim();
+  if (!texto) return;
+  input.value='';
+  const other=_fu.find(u=>u.id===_chatOpenWith);
+  const msg={
+    id:newId(),
+    conversaId:conversaIdFor(FU.id,_chatOpenWith),
+    participantes:[FU.id,_chatOpenWith].sort((a,b)=>a-b),
+    deId:FU.id, deNome:FU.name,
+    paraId:_chatOpenWith, paraNome:other?other.name:'',
+    texto, anexoUrl:null, anexoNome:null, anexoTipo:null,
+    createdAt:Date.now(), lida:false
+  };
+  try { await db.collection('fin_chat_mensagens').doc(String(msg.id)).set(msg); }
+  catch(e) { toast('Erro ao enviar mensagem: '+e.message,'err'); }
+}
+
+async function sendChatFile(inputEl) {
+  const file=inputEl.files[0];
+  inputEl.value='';
+  if (!file || !_chatOpenWith) return;
+  if (file.size > 10*1024*1024) return toast('Arquivo muito grande (máximo 10MB).','err');
+  const other=_fu.find(u=>u.id===_chatOpenWith);
+  const isImagem=file.type.startsWith('image/');
+  loading(true);
+  try {
+    const anexoUrl=await uploadToCloudinary(file);
+    const msg={
+      id:newId(),
+      conversaId:conversaIdFor(FU.id,_chatOpenWith),
+      participantes:[FU.id,_chatOpenWith].sort((a,b)=>a-b),
+      deId:FU.id, deNome:FU.name,
+      paraId:_chatOpenWith, paraNome:other?other.name:'',
+      texto:'', anexoUrl, anexoNome:file.name, anexoTipo:isImagem?'imagem':'arquivo',
+      createdAt:Date.now(), lida:false
+    };
+    await db.collection('fin_chat_mensagens').doc(String(msg.id)).set(msg);
+  } catch(e) { toast('Erro ao enviar arquivo: '+e.message,'err'); }
+  finally { loading(false); }
+}
+
+function closeChatThread() {
+  if (_chatThreadUnsub) { _chatThreadUnsub(); _chatThreadUnsub=null; }
+  _chatOpenWith=null;
+  _chatSuperviseIds=null;
+  document.getElementById('chat-wrap').classList.remove('thread-open');
+  document.getElementById('chat-thread').innerHTML='<div class="chat-empty" id="chat-empty">Selecione uma conversa</div>';
+  renderChatList();
+}
+
+/* ── LOG DE AUDITORIA ──────────────────────── */
+const LOG_ACAO_LABEL={criou:'Criou',editou:'Editou',removeu:'Removeu',ativou:'Ativou',desativou:'Desativou',pagou:'Deu baixa'};
+const LOG_ACAO_BADGE={criou:'b-ok',editou:'b-2',removeu:'b-gray',ativou:'b-ok',desativou:'b-gray',pagou:'b-3'};
+function renderFinLog() {
+  const ordenado=[..._flog].sort((a,b)=>b.createdAt-a.createdAt);
+  document.getElementById('flog-tbody').innerHTML=ordenado.length?ordenado.map(l=>`
+    <tr>
+      <td class="text-muted">${fmt(new Date(l.createdAt).toISOString().split('T')[0])} ${fmtTime(l.createdAt)}</td>
+      <td><span class="badge ${LOG_ACAO_BADGE[l.acao]||'b-2'}">${LOG_ACAO_LABEL[l.acao]||l.acao}</span></td>
+      <td>${escapeHtml(l.descricao)}</td>
+      <td class="text-muted">${escapeHtml(l.porNome)}</td>
+    </tr>
+  `).join(''):`<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:32px">Nenhum registro ainda</td></tr>`;
 }
 
 /* ── USUÁRIOS FINANCEIRO ───────────────────── */
@@ -4351,7 +4761,7 @@ function renderFinUsuarios() {
   document.getElementById('fu-tbody').innerHTML=_fu.map(u=>`
   <tr>
     <td><div class="flex items-c gap8">${avatarEl(u,'av-32')} <strong>${u.name}</strong></div></td>
-    <td class="text-muted">${u.email}</td>
+    <td class="text-muted">${u.usuario}</td>
     <td><span class="badge ${u.role==='gestor'?'b-1':'b-ok'}">${u.role==='gestor'?'Gestor':'Colaborador'}</span></td>
     <td>${u.ativo===false?'<span class="badge b-2">Pendente</span>':'<span class="badge b-ok">Ativo</span>'}</td>
     <td><div class="flex gap6">
@@ -4363,34 +4773,49 @@ function renderFinUsuarios() {
 }
 
 function openAddFinUser() {
-  ['fnu-name','fnu-email'].forEach(id=>document.getElementById(id).value='');
+  ['fnu-name','fnu-usuario','fnu-pass'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('modal-fin-add').classList.add('open');
 }
 
 async function addFinUser() {
   const name=document.getElementById('fnu-name').value.trim();
-  const email=document.getElementById('fnu-email').value.trim();
+  const usuario=document.getElementById('fnu-usuario').value.trim().toLowerCase();
+  const pass=document.getElementById('fnu-pass').value;
   const role=document.getElementById('fnu-role').value;
-  if(!name||!email) return toast('Preencha todos os campos.','err');
-  if(_fu.find(u=>u.email===email)) return toast('E-mail já cadastrado.','err');
+  if(!name||!usuario||!pass) return toast('Preencha todos os campos.','err');
+  if(!/^[a-z0-9._-]{3,30}$/.test(usuario)) return toast('Usuário inválido: use só letras minúsculas, números, ponto, traço ou underline (3-30 caracteres).','err');
+  if(pass.length<6) return toast('A senha precisa ter pelo menos 6 caracteres.','err');
+  if(_fu.find(u=>u.usuario===usuario)) return toast('Esse usuário já existe.','err');
+  const email=finSyntheticEmail(usuario);
   loading(true);
   try {
-    const tempPass=Math.random().toString(36).slice(-10)+'A1!';
+    // a senha é a que o gestor escolheu aqui mesmo - não gera senha
+    // aleatória nem depende de e-mail de redefinição pro primeiro acesso
     const res=await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${FB_API_KEY}`,{
       method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({email, password:tempPass, returnSecureToken:false})
+      body: JSON.stringify({email, password:pass, returnSecureToken:false})
     });
     const data=await res.json();
-    if (data.error && data.error.message!=='EMAIL_EXISTS') { toast('Erro: '+data.error.message,'err'); return; }
-    await auth.sendPasswordResetEmail(email);
+    if (data.error) {
+      // EMAIL_EXISTS aqui não deveria acontecer na prática (o e-mail sintético
+      // é derivado do usuário, e usuário duplicado já foi barrado acima) -
+      // mas se acontecer mesmo assim, a senha digitada não foi aplicada de
+      // verdade, então é importante não seguir calado
+      const msg=data.error.message==='EMAIL_EXISTS'
+        ? 'Esse usuário já tem uma conta interna com outra senha. Tente um usuário diferente.'
+        : 'Erro: '+data.error.message;
+      toast(msg,'err');
+      return;
+    }
     const nid=_fu.length?Math.max(..._fu.map(u=>u.id))+1:1;
-    const nu={id:nid,name,email,role,photo:null,ativo:false,permPrestadores:false};
+    const nu={id:nid,name,usuario,role,photo:null,ativo:false,permPrestadores:false};
     await db.collection('fin_usuarios').doc(String(nid)).set(nu);
     _fu.push(nu);
   } finally { loading(false); }
+  logAcao('criou','usuario',nid,`Colaborador ${name} (${usuario})`);
   closeModal('modal-fin-add');
   renderFinUsuarios(); fillFinSelects();
-  toast('Colaborador adicionado. E-mail enviado para '+email+' definir a senha.','ok');
+  toast('Colaborador adicionado com a senha definida.','ok');
 }
 
 function onFeuRoleChange() {
@@ -4404,8 +4829,7 @@ function openEditFinUser(id) {
   const u=_fu.find(u=>u.id===id); if(!u) return;
   document.getElementById('feu-id').value=id;
   document.getElementById('feu-name').value=u.name;
-  document.getElementById('feu-email').value=u.email;
-  document.getElementById('feu-pass').value='';
+  document.getElementById('feu-usuario').value=u.usuario;
   document.getElementById('feu-role').value=u.role;
   document.getElementById('feu-perm-prestadores').checked=!!u.permPrestadores;
   onFeuRoleChange();
@@ -4416,18 +4840,18 @@ async function saveEditFinUser() {
   const id=parseInt(document.getElementById('feu-id').value);
   const idx=_fu.findIndex(u=>u.id===id); if(idx<0) return;
   const name=document.getElementById('feu-name').value.trim();
-  const email=document.getElementById('feu-email').value.trim();
-  const pass=document.getElementById('feu-pass').value;
   const role=document.getElementById('feu-role').value;
   const permPrestadores=document.getElementById('feu-perm-prestadores').checked;
-  if(!name||!email) return toast('Nome e e-mail são obrigatórios.','err');
-  if(_fu.find(u=>u.email===email&&u.id!==id)) return toast('E-mail já utilizado.','err');
-  _fu[idx]={..._fu[idx],name,email,role,permPrestadores};
+  if(!name) return toast('Nome é obrigatório.','err');
+  // usuário (login) não é editável aqui de propósito - mudar exigiria trocar
+  // o e-mail sintético no Firebase Auth, e sem Admin SDK isso não é seguro
+  // de fazer só pelo front-end
+  _fu[idx]={..._fu[idx],name,role,permPrestadores};
   loading(true);
   try {
     await db.collection('fin_usuarios').doc(String(id)).set(_fu[idx]);
-    if(pass) await auth.sendPasswordResetEmail(email);
     if(id===FU.id){ FU={...FU,..._fu[idx]}; document.getElementById('finsb-name').textContent=FU.name; document.getElementById('finsb-role').textContent=FU.role==='gestor'?'Gestor':'Colaborador'; }
+    logAcao('editou','usuario',id,`Colaborador ${_fu[idx].name}`);
     closeModal('modal-fin-edit');
     renderFinUsuarios();
     toast('Dados atualizados.','ok');
@@ -4449,10 +4873,15 @@ async function ativarFinUser(id) {
 }
 
 async function removeFinUser(id) {
+  // mesma lógica de delContaPagar/delFinCategoria: a checagem tem que
+  // estar aqui dentro, não só escondendo o botão na tela
+  if(FU.role!=='gestor') return;
   if(!confirm('Remover este usuário?')) return;
+  const u=_fu.find(u=>u.id===id);
   loading(true);
   try { await db.collection('fin_usuarios').doc(String(id)).delete(); _fu=_fu.filter(u=>u.id!==id); }
   finally { loading(false); }
+  logAcao('removeu','usuario',id,`Colaborador ${u?u.name:id}`);
   renderFinUsuarios();
   toast('Usuário removido.','info');
 }
@@ -4470,12 +4899,12 @@ async function tryAutoLoginComercial(fbUser, se) {
   return false;
 }
 
-async function tryAutoLoginFin(fbUser, fse) {
-  if(!(fbUser && fse && fse===fbUser.email)) return false;
+async function tryAutoLoginFin(fbUser, fsu) {
+  if(!(fbUser && fsu && finSyntheticEmail(fsu)===fbUser.email)) return false;
   loading(true);
   try {
     await loadFinData();
-    const u=_fu.find(u=>u.email===fbUser.email);
+    const u=_fu.find(u=>u.usuario===fsu);
     if(u){ FU=u; showOnly('app-fin'); bootAppFin(); return true; }
   } catch(e) { /* sessão válida mas dados não carregaram, mostra login */ }
   finally { loading(false); }
@@ -4503,14 +4932,21 @@ function typeSplash() {
     })(); }
   })();
 }
-typeSplash();
+// se já existe um e-mail/usuário "lembrado" salvo (login anterior com
+// "manter sessão" marcado), é bem provável que o auto-login abaixo funcione
+// direto - nesse caso pula a animação de digitação e o tempo mínimo de
+// apresentação, indo pro app assim que a sessão for confirmada, em vez de
+// segurar quem já tá logado numa tela de marca a cada F5
+const _hasSavedSession = !!(localStorage.getItem('saved_email') || localStorage.getItem('fin_saved_usuario'));
+if (!_hasSavedSession) typeSplash();
 
 const _splashStart = Date.now();
 let _splashHidden = false;
 function hideSplash() {
   if (_splashHidden) return;
   _splashHidden = true;
-  const wait = Math.max(0, 2200 - (Date.now() - _splashStart));
+  const minWait = _hasSavedSession ? 0 : 2200;
+  const wait = Math.max(0, minWait - (Date.now() - _splashStart));
   setTimeout(() => {
     const el = document.getElementById('splash-screen');
     if (!el) return;
@@ -4527,17 +4963,18 @@ auth.onAuthStateChanged(async (fbUser) => {
   // #app e #app-fin visíveis ao mesmo tempo (telas misturadas).
   if(_authActionInProgress) { hideSplash(); return; }
   const se=localStorage.getItem('saved_email');
-  const fse=localStorage.getItem('fin_saved_email');
+  const fsu=localStorage.getItem('fin_saved_usuario');
+  const fseEsperado=fsu?finSyntheticEmail(fsu):null;
   // Autocorreção: o Firebase Auth pode manter uma sessão viva (fbUser) mesmo
   // quando ninguém marcou "Manter sessão neste dispositivo" - dentro do
   // WKWebView do app nativo (iOS) não existe um "fechar a aba" de verdade
   // pra encerrar a persistência tipo SESSION como aconteceria num navegador
   // normal, então a sessão às vezes sobrevive mesmo sem "lembrar" marcado
-  // (o F5 caía direto sem pedir senha). Se não há e-mail "lembrado" (nem no
-  // Comercial nem no Financeiro) batendo com essa sessão, ela não deveria
-  // existir - desloga e força tela de login, sem esperar pelo próximo login
-  // explícito pra corrigir sozinho.
-  if (fbUser && !(se && se===fbUser.email) && !(fse && fse===fbUser.email)) {
+  // (o F5 caía direto sem pedir senha). Se não há e-mail/usuário "lembrado"
+  // (nem no Comercial nem no Financeiro) batendo com essa sessão, ela não
+  // deveria existir - desloga e força tela de login, sem esperar pelo
+  // próximo login explícito pra corrigir sozinho.
+  if (fbUser && !(se && se===fbUser.email) && !(fseEsperado && fseEsperado===fbUser.email)) {
     await auth.signOut();
     hideSplash();
     return;
@@ -4546,12 +4983,12 @@ auth.onAuthStateChanged(async (fbUser) => {
   // acessado (active_sector) para decidir qual tentar primeiro ao restaurar a sessão.
   const finFirst = localStorage.getItem('active_sector')==='financeiro';
   const done = finFirst
-    ? (await tryAutoLoginFin(fbUser,fse)) || (await tryAutoLoginComercial(fbUser,se))
-    : (await tryAutoLoginComercial(fbUser,se)) || (await tryAutoLoginFin(fbUser,fse));
+    ? (await tryAutoLoginFin(fbUser,fsu)) || (await tryAutoLoginComercial(fbUser,se))
+    : (await tryAutoLoginComercial(fbUser,se)) || (await tryAutoLoginFin(fbUser,fsu));
   hideSplash();
   if(done) return;
   if(se){ document.getElementById('l-email').value=se; document.getElementById('l-remember').checked=true; }
-  if(fse){ document.getElementById('finl-email').value=fse; document.getElementById('finl-remember').checked=true; }
+  if(fsu){ document.getElementById('finl-usuario').value=fsu; document.getElementById('finl-remember').checked=true; }
 });
 </script>
 </body>
