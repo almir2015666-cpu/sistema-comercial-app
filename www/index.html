@@ -1856,6 +1856,21 @@ tbody tr:hover td{background:var(--bg)}
   </div>
 </div>
 
+<!-- MODAL: REDEFINIR SENHA DE COLABORADOR (só gestor) -->
+<div class="overlay" id="modal-fin-reset-senha">
+  <div class="modal">
+    <div class="modal-title">Redefinir Senha</div>
+    <input type="hidden" id="rs-usuario">
+    <div class="card-sub mb16" id="rs-resumo" style="margin:0 0 16px"></div>
+    <div class="fg"><label>Nova Senha</label><input type="password" id="rs-senha-nova" placeholder="Mínimo 6 caracteres"></div>
+    <div class="fg"><label>Confirmar Nova Senha</label><input type="password" id="rs-senha-confirma" placeholder="Repita a nova senha"></div>
+    <div class="modal-ft">
+      <button class="btn btn-ghost" onclick="closeModal('modal-fin-reset-senha')">Cancelar</button>
+      <button class="btn btn-ok" onclick="confirmarResetSenhaFin()">Redefinir</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL: NOVO/EDITAR PRESTADOR -->
 <div class="overlay" id="modal-fin-prestador">
   <div class="modal">
@@ -3987,6 +4002,44 @@ async function confirmarTrocaSenhaFin() {
   toast('Senha alterada com sucesso.','ok');
 }
 
+// Só o gestor vê esse botão (a página de Usuários já é gestor-only) e, além
+// disso, a função no servidor confere de novo o papel de quem chama antes
+// de trocar qualquer coisa - o navegador sozinho não tem esse poder, por
+// isso existe a Netlify Function com a chave de administrador do Firebase
+function openResetSenhaFin(id) {
+  const u=_fu.find(u=>u.id===id); if(!u) return;
+  document.getElementById('rs-usuario').value=u.usuario;
+  document.getElementById('rs-resumo').textContent=`Defina uma nova senha pra ${u.name} (usuário: ${u.usuario}).`;
+  document.getElementById('rs-senha-nova').value='';
+  document.getElementById('rs-senha-confirma').value='';
+  document.getElementById('modal-fin-reset-senha').classList.add('open');
+}
+
+async function confirmarResetSenhaFin() {
+  const usuarioAlvo=document.getElementById('rs-usuario').value;
+  const nova=document.getElementById('rs-senha-nova').value;
+  const confirma=document.getElementById('rs-senha-confirma').value;
+  if(nova.length<6) return toast('A nova senha precisa ter pelo menos 6 caracteres.','err');
+  if(nova!==confirma) return toast('As senhas não coincidem.','err');
+  loading(true);
+  try {
+    const idToken=await auth.currentUser.getIdToken();
+    const res=await fetch('/.netlify/functions/reset-password',{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({idToken, usuarioAlvo, novaSenha:nova})
+    });
+    const data=await res.json();
+    if(!res.ok) throw new Error(data.error||'Erro ao redefinir senha.');
+  } catch(e) {
+    loading(false);
+    return toast(e.message,'err');
+  }
+  loading(false);
+  logAcao('redefiniu_senha','usuario',null,`Senha redefinida para ${usuarioAlvo}`);
+  closeModal('modal-fin-reset-senha');
+  toast('Senha redefinida com sucesso.','ok');
+}
+
 /* ── DADOS ─────────────────────────────────── */
 async function loadFinData() {
   loading(true);
@@ -5392,8 +5445,8 @@ function closeChatThread() {
 }
 
 /* ── LOG DE AUDITORIA ──────────────────────── */
-const LOG_ACAO_LABEL={criou:'Criou',editou:'Editou',removeu:'Removeu',ativou:'Ativou',desativou:'Desativou',pagou:'Deu baixa'};
-const LOG_ACAO_BADGE={criou:'b-ok',editou:'b-2',removeu:'b-gray',ativou:'b-ok',desativou:'b-gray',pagou:'b-3'};
+const LOG_ACAO_LABEL={criou:'Criou',editou:'Editou',removeu:'Removeu',ativou:'Ativou',desativou:'Desativou',pagou:'Deu baixa',redefiniu_senha:'Redefiniu senha'};
+const LOG_ACAO_BADGE={criou:'b-ok',editou:'b-2',removeu:'b-gray',ativou:'b-ok',desativou:'b-gray',pagou:'b-3',redefiniu_senha:'b-4'};
 function renderFinLog() {
   const ordenado=[..._flog].sort((a,b)=>b.createdAt-a.createdAt);
   document.getElementById('flog-tbody').innerHTML=ordenado.length?ordenado.map(l=>`
@@ -5417,6 +5470,7 @@ function renderFinUsuarios() {
     <td><div class="flex gap6">
       ${u.ativo===false?`<button class="btn btn-ok btn-xs" onclick="ativarFinUser(${u.id})">Liberar</button>`:''}
       <button class="btn btn-ghost btn-xs" onclick="openEditFinUser(${u.id})">Editar</button>
+      ${u.id!==FU.id?`<button class="btn btn-ghost btn-xs" onclick="openResetSenhaFin(${u.id})">Redefinir Senha</button>`:''}
       ${u.id!==1?`<button class="btn btn-danger btn-xs" onclick="removeFinUser(${u.id})">Remover</button>`:''}
     </div></td>
   </tr>`).join('');
