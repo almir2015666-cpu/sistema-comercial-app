@@ -4233,11 +4233,13 @@ function renderFinDashboard() {
   const prestadorAtrasados=prestadorPend.filter(c=>c.vencimento<today).length;
   const seteDias=new Date(now.getTime()+7*86400000).toISOString().split('T')[0];
   const prestadorVencendoSemana=prestadorPend.filter(c=>c.vencimento>=today&&c.vencimento<=seteDias).length;
-  const acordosParcelasPend=_facordosParcelas.filter(p=>p.status==='pendente');
   // igual o card DESPESAS, escopado no mês atual - não é uma contagem geral
-  // de atrasados/em-andamento, é "quanto de acordo vence esse mês"
+  // de atrasados/em-andamento, é "quanto de acordo vence esse mês". Sem esse
+  // recorte, um acordo de várias parcelas sozinho lota a lista de vencimentos
+  // com os próprios meses futuros dele, escondendo tudo mais
   const acordosParcelasMes=_facordosParcelas.filter(p=>p.mesReferencia===mk);
   const acordosValorMes=acordosParcelasMes.reduce((s,p)=>s+p.valor,0);
+  const acordosPendMes=acordosParcelasMes.filter(p=>p.status==='pendente');
 
   document.getElementById('fin-db-metrics').innerHTML=`
     <div class="mc c4"><div class="mc-tag">DESPESAS</div><div class="mc-big">R$ ${despesasMes.toFixed(2)}</div><div class="mc-lbl">Prestadores + acordos pagos este mês</div></div>
@@ -4247,7 +4249,7 @@ function renderFinDashboard() {
   `;
 
   const vencPrestadores=prestadorPend.map(c=>({vencimento:c.vencimento,nome:c.prestadorNome,valor:c.valor}));
-  const vencAcordos=acordosParcelasPend.map(p=>({vencimento:p.vencimento,nome:`${p.acordoNome} (${p.parcelaNum}/${p.totalParcelas})`,valor:p.valor,acordo:true}));
+  const vencAcordos=acordosPendMes.map(p=>({vencimento:p.vencimento,nome:`${p.acordoNome} (${p.parcelaNum}/${p.totalParcelas})`,valor:p.valor,acordo:true}));
   const vencimentos=[...vencPrestadores,...vencAcordos].sort((a,b)=>a.vencimento.localeCompare(b.vencimento)).slice(0,10);
   document.getElementById('fin-db-vencimentos-prestadores').innerHTML=vencimentos.length?vencimentos.map(c=>{
     const atrasado=c.vencimento<today;
