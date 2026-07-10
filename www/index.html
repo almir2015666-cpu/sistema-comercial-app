@@ -1509,6 +1509,10 @@ tbody tr:hover td{background:var(--bg)}
         <span class="nav-icon"><svg width="15" height="15" viewBox="0 0 15 15" fill="none"><circle cx="5" cy="5" r="2.5" stroke="currentColor" stroke-width="1.3"/><circle cx="10.5" cy="5" r="2.5" stroke="currentColor" stroke-width="1.3"/><path d="M1.3 13c0-2.5 1.8-4 3.7-4s3.7 1.5 3.7 4M7.3 13c0-2.5 1.5-4 3.2-4s3.2 1.5 3.2 4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></span>
         Prestadores
       </div>
+      <div class="nav-item" onclick="showPageFin('acordos')">
+        <span class="nav-icon"><svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M2 7.5h4M9 7.5h4M6 4l-2 3.5L6 11M9 4l2 3.5L9 11" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        Acordos
+      </div>
 
       <div class="sb-sec hidden" id="fin-nav-admin-sec">Administração</div>
       <div class="nav-item hidden" id="fin-nav-categorias" onclick="showPageFin('categorias')">
@@ -1561,6 +1565,7 @@ tbody tr:hover td{background:var(--bg)}
       <div class="tab-sheet-item hidden" id="mais-fin-usuarios" onclick="showPageFin('usuarios');toggleMaisSheetFin()">Usuários</div>
       <div class="tab-sheet-item hidden" id="mais-fin-log" onclick="showPageFin('log');toggleMaisSheetFin()">Log de Auditoria</div>
       <div class="tab-sheet-item" onclick="showPageFin('chat');toggleMaisSheetFin()">Conversas <span class="chat-badge hidden" id="mais-fin-chat-badge"></span></div>
+      <div class="tab-sheet-item" onclick="showPageFin('acordos');toggleMaisSheetFin()">Acordos</div>
       <div class="tab-sheet-item" style="color:var(--red)" onclick="toggleMaisSheetFin();doLogoutFin()">Sair do Sistema</div>
     </div>
   </div>
@@ -1600,7 +1605,7 @@ tbody tr:hover td{background:var(--bg)}
         </div>
         <div class="card">
           <div class="card-hd">
-            <div><div class="card-title">Vencimentos de Prestadores</div><div class="card-sub">Pagamentos pendentes, ordenados por data</div></div>
+            <div><div class="card-title">Próximos Vencimentos</div><div class="card-sub">Prestadores e parcelas de acordo, ordenados por data</div></div>
           </div>
           <div class="det-list" id="fin-db-vencimentos-prestadores"></div>
         </div>
@@ -1731,6 +1736,22 @@ tbody tr:hover td{background:var(--bg)}
             <table>
               <thead><tr><th>Nome</th><th>Tipo</th><th>Categoria</th><th>Valor Padrão</th><th>Dia Venc.</th><th>Status</th><th>Ações</th></tr></thead>
               <tbody id="fpr-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ACORDOS -->
+      <div class="page" id="page-fin-acordos">
+        <div class="card">
+          <div class="card-hd">
+            <div><div class="card-title">Acordos</div><div class="card-sub">Dívidas negociadas, pagas em parcelas mensais com nota fiscal</div></div>
+            <button class="btn btn-ok btn-sm" style="width:auto" onclick="openAddAcordo()">+ Novo Acordo</button>
+          </div>
+          <div class="tbl-wrap">
+            <table>
+              <thead><tr><th>Credor / Descrição</th><th>Categoria</th><th>Valor Total</th><th>Parcelas</th><th>Status</th><th>Ações</th></tr></thead>
+              <tbody id="fac-tbody"></tbody>
             </table>
           </div>
         </div>
@@ -1931,11 +1952,47 @@ tbody tr:hover td{background:var(--bg)}
   </div>
 </div>
 
-<!-- MODAL: DAR BAIXA (CONTAS A PAGAR) -->
+<!-- MODAL: NOVO ACORDO -->
+<div class="overlay" id="modal-fin-acordo">
+  <div class="modal">
+    <div class="modal-title">Novo Acordo</div>
+    <div class="fg"><label>Credor / Descrição</label><input type="text" id="fac-nome" placeholder="Ex: Acordo com Fornecedor XYZ" style="text-transform:uppercase"></div>
+    <div class="row-3">
+      <div class="fg"><label>Categoria</label><select id="fac-categoria"><option value="">Selecione...</option></select></div>
+      <div class="fg"><label>Valor Total (R$)</label><input type="number" id="fac-valor-total" min="0" step="0.01" placeholder="0,00" oninput="atualizarPreviaParcela()"></div>
+      <div class="fg"><label>Qtd. de Parcelas</label><input type="number" id="fac-qtd-parcelas" min="1" step="1" placeholder="Ex: 12" oninput="atualizarPreviaParcela()"></div>
+    </div>
+    <div class="row-3">
+      <div class="fg"><label>Dia de Vencimento</label><input type="number" id="fac-dia-vencimento" min="1" max="31" placeholder="Ex: 10"></div>
+      <div class="fg"><label>Mês da 1ª Parcela</label><input type="month" id="fac-mes-inicio"></div>
+      <div class="fg"><label>Valor de cada parcela</label><input type="text" id="fac-previa-parcela" disabled style="opacity:.7"></div>
+    </div>
+    <div class="fg"><label>Observações</label><input type="text" id="fac-observacoes" placeholder="Opcional"></div>
+    <div class="modal-ft">
+      <button class="btn btn-ghost" onclick="closeModal('modal-fin-acordo')">Cancelar</button>
+      <button class="btn btn-ok" onclick="addAcordo()">Criar Acordo</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: DETALHES DO ACORDO (parcelas) -->
+<div class="overlay" id="modal-fin-acordo-detalhe">
+  <div class="modal" style="max-width:640px">
+    <div class="modal-title" id="facd-titulo">Detalhes do Acordo</div>
+    <div class="card-sub mb16" id="facd-resumo" style="margin:0 0 14px"></div>
+    <div id="facd-lista" style="max-height:400px;overflow-y:auto;display:flex;flex-direction:column;gap:8px"></div>
+    <div class="modal-ft">
+      <button class="btn btn-ghost" onclick="closeModal('modal-fin-acordo-detalhe')">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: DAR BAIXA (CONTAS A PAGAR OU PARCELA DE ACORDO) -->
 <div class="overlay" id="modal-fin-baixa">
   <div class="modal">
     <div class="modal-title">Dar Baixa</div>
     <input type="hidden" id="baixa-conta-id">
+    <input type="hidden" id="baixa-origem" value="prestador">
     <div class="card-sub mb16" id="baixa-resumo" style="margin:0 0 16px"></div>
     <div class="fg"><label>Forma de Pagamento</label>
       <select id="baixa-forma">
@@ -3874,7 +3931,7 @@ const _isConfirmLink = handleEmailConfirmation();
    SETOR FINANCEIRO — equipe e dados próprios, isolados do Comercial
 ══════════════════════════════════════════════════════════════ */
 let FU = null;
-let _fu = [], _fcat = [], _fp = [], _fr = [], _fpr = [], _flog = [];
+let _fu = [], _fcat = [], _fp = [], _fr = [], _fpr = [], _flog = [], _facordos = [], _facordosParcelas = [];
 let chFinCat = null;
 let _chatMsgs = [];
 let _chatListUnsub = null;
@@ -4044,18 +4101,22 @@ async function confirmarResetSenhaFin() {
 async function loadFinData() {
   loading(true);
   try {
-    const [fuSnap, fcatSnap, fpSnap, fprSnap, flogSnap] = await Promise.all([
+    const [fuSnap, fcatSnap, fpSnap, fprSnap, flogSnap, facSnap, facpSnap] = await Promise.all([
       db.collection('fin_usuarios').get(),
       db.collection('fin_categorias').get(),
       db.collection('fin_contas_pagar').get(),
       db.collection('fin_prestadores').get(),
-      db.collection('fin_log').get()
+      db.collection('fin_log').get(),
+      db.collection('fin_acordos').get(),
+      db.collection('fin_acordos_parcelas').get()
     ]);
     _fu = fuSnap.docs.map(d=>{ const x=d.data(); delete x.password; x.id=Number(x.id); return x; });
     _fcat = fcatSnap.docs.map(d=>d.data());
     _fp = fpSnap.docs.map(d=>d.data());
     _fpr = fprSnap.docs.map(d=>d.data());
     _flog = flogSnap.docs.map(d=>d.data());
+    _facordos = facSnap.docs.map(d=>d.data());
+    _facordosParcelas = facpSnap.docs.map(d=>d.data());
   } finally { loading(false); }
 }
 
@@ -4114,7 +4175,7 @@ function showPageFin(name) {
     t.classList.toggle('active', !!t.getAttribute('onclick')?.includes(`showPageFin('${name}')`));
   });
   if(!document.querySelector('#tab-bar-fin .tab-item.active')) document.getElementById('tab-mais-fin')?.classList.add('active');
-  const titles={dashboard:'Dashboard',pagar:'Pagamentos de Prestadores',categorias:'Categorias',usuarios:'Usuários',prestadores:'Prestadores',chat:'Conversas',log:'Log de Auditoria'};
+  const titles={dashboard:'Dashboard',pagar:'Pagamentos de Prestadores',categorias:'Categorias',usuarios:'Usuários',prestadores:'Prestadores',acordos:'Acordos',chat:'Conversas',log:'Log de Auditoria'};
   document.getElementById('fin-page-title').textContent=titles[name]||name;
   if(name==='dashboard')    renderFinDashboard();
   if(name==='pagar')        renderContasPagar();
@@ -4123,6 +4184,7 @@ function showPageFin(name) {
   if(name==='categorias')   renderFinCategorias();
   if(name==='usuarios')     renderFinUsuarios();
   if(name==='prestadores')  renderFinPrestadores();
+  if(name==='acordos')      renderFinAcordos();
 }
 
 function toggleSidebarFin() {
@@ -4156,37 +4218,52 @@ function mobilizeTables(root) {
 
 function fillFinSelects() {
   const despesaCats=_fcat.filter(c=>c.tipo==='despesa');
-  document.getElementById('fpr-categoria').innerHTML='<option value="">Selecione...</option>'+despesaCats.map(c=>`<option value="${c.name}">${c.name}</option>`).join('');
+  const opts='<option value="">Selecione...</option>'+despesaCats.map(c=>`<option value="${c.name}">${c.name}</option>`).join('');
+  document.getElementById('fpr-categoria').innerHTML=opts;
+  document.getElementById('fac-categoria').innerHTML=opts;
 }
 
 /* ── DASHBOARD ─────────────────────────────── */
 function renderFinDashboard() {
   const now=new Date(); const today=now.toISOString().split('T')[0]; const mk=mKey(now);
-  const despesasMes=_fp.filter(c=>c.status==='pago'&&c.dataPagamento&&c.dataPagamento.startsWith(mk)).reduce((s,c)=>s+c.valor,0);
+  const despesasMesPrestadores=_fp.filter(c=>c.status==='pago'&&c.dataPagamento&&c.dataPagamento.startsWith(mk)).reduce((s,c)=>s+c.valor,0);
+  const despesasMesAcordos=_facordosParcelas.filter(p=>p.status==='pago'&&p.dataPagamento&&p.dataPagamento.startsWith(mk)).reduce((s,p)=>s+p.valor,0);
+  const despesasMes=despesasMesPrestadores+despesasMesAcordos;
   const prestadorPend=_fp.filter(c=>c.prestadorId&&c.status==='pendente');
   const prestadorAtrasados=prestadorPend.filter(c=>c.vencimento<today).length;
   const seteDias=new Date(now.getTime()+7*86400000).toISOString().split('T')[0];
   const prestadorVencendoSemana=prestadorPend.filter(c=>c.vencimento>=today&&c.vencimento<=seteDias).length;
+  const acordosParcelasPend=_facordosParcelas.filter(p=>p.status==='pendente');
+  // igual o card DESPESAS, escopado no mês atual - não é uma contagem geral
+  // de atrasados/em-andamento, é "quanto de acordo vence esse mês"
+  const acordosParcelasMes=_facordosParcelas.filter(p=>p.mesReferencia===mk);
+  const acordosValorMes=acordosParcelasMes.reduce((s,p)=>s+p.valor,0);
 
   document.getElementById('fin-db-metrics').innerHTML=`
-    <div class="mc c4"><div class="mc-tag">DESPESAS</div><div class="mc-big">R$ ${despesasMes.toFixed(2)}</div><div class="mc-lbl">Pagamentos de prestadores este mês</div></div>
+    <div class="mc c4"><div class="mc-tag">DESPESAS</div><div class="mc-big">R$ ${despesasMes.toFixed(2)}</div><div class="mc-lbl">Prestadores + acordos pagos este mês</div></div>
     <div class="mc c4"><div class="mc-tag">PRESTADORES</div><div class="mc-big" style="color:var(--red)">${prestadorAtrasados}</div><div class="mc-lbl">Prestadores atrasados</div></div>
     <div class="mc c2"><div class="mc-tag">PRESTADORES</div><div class="mc-big">${prestadorVencendoSemana}</div><div class="mc-lbl">Vencendo esta semana</div></div>
+    <div class="mc c3"><div class="mc-tag">ACORDOS</div><div class="mc-big">R$ ${acordosValorMes.toFixed(2)}</div><div class="mc-lbl">${acordosParcelasMes.length} parcela(s) de acordo este mês</div></div>
   `;
 
-  const vencPrestadores=[...prestadorPend].sort((a,b)=>a.vencimento.localeCompare(b.vencimento)).slice(0,10);
-  document.getElementById('fin-db-vencimentos-prestadores').innerHTML=vencPrestadores.length?vencPrestadores.map(c=>{
+  const vencPrestadores=prestadorPend.map(c=>({vencimento:c.vencimento,nome:c.prestadorNome,valor:c.valor}));
+  const vencAcordos=acordosParcelasPend.map(p=>({vencimento:p.vencimento,nome:`${p.acordoNome} (${p.parcelaNum}/${p.totalParcelas})`,valor:p.valor,acordo:true}));
+  const vencimentos=[...vencPrestadores,...vencAcordos].sort((a,b)=>a.vencimento.localeCompare(b.vencimento)).slice(0,10);
+  document.getElementById('fin-db-vencimentos-prestadores').innerHTML=vencimentos.length?vencimentos.map(c=>{
     const atrasado=c.vencimento<today;
     return `<div class="det-entry">
       <div style="flex-shrink:0;width:100px;font-size:12.5px;font-weight:700;color:${atrasado?'var(--red)':'var(--black)'}">${fmt(c.vencimento)}</div>
-      <div class="det-body"><div class="det-pair"><span class="det-val">${c.prestadorNome}</span></div></div>
+      <div class="det-body"><div class="det-pair">${c.acordo?'<span class="badge b-3" style="margin-right:6px">Acordo</span>':''}<span class="det-val">${c.nome}</span></div></div>
       <div style="flex-shrink:0;font-weight:700">R$ ${c.valor.toFixed(2)}</div>
     </div>`;
-  }).join(''):`<div style="text-align:center;color:var(--muted);padding:24px;font-size:13px">Nenhum pagamento de prestador pendente</div>`;
+  }).join(''):`<div style="text-align:center;color:var(--muted);padding:24px;font-size:13px">Nenhum pagamento pendente</div>`;
 
   const despesasPorCat={};
   _fp.filter(c=>c.status==='pago'&&c.dataPagamento&&c.dataPagamento.startsWith(mk)).forEach(c=>{
     despesasPorCat[c.categoria]=(despesasPorCat[c.categoria]||0)+c.valor;
+  });
+  _facordosParcelas.filter(p=>p.status==='pago'&&p.dataPagamento&&p.dataPagamento.startsWith(mk)).forEach(p=>{
+    despesasPorCat[p.categoria]=(despesasPorCat[p.categoria]||0)+p.valor;
   });
   const catLabels=Object.keys(despesasPorCat);
   const catData=catLabels.map(k=>despesasPorCat[k]);
@@ -4543,6 +4620,7 @@ async function confirmarSelecaoMes() {
 
 function openBaixaModal(id) {
   const c=_fp.find(c=>c.id===id); if(!c) return;
+  document.getElementById('baixa-origem').value='prestador';
   document.getElementById('baixa-conta-id').value=id;
   document.getElementById('baixa-resumo').textContent=`${c.prestadorNome||c.fornecedor||c.descricao} — R$ ${c.valor.toFixed(2)} — vencimento ${fmt(c.vencimento)}`;
   document.getElementById('baixa-forma').value='';
@@ -4552,9 +4630,24 @@ function openBaixaModal(id) {
   document.getElementById('modal-fin-baixa').classList.add('open');
 }
 
+// mesmo modal de baixa da tela de Pagamentos de Prestadores, reaproveitado
+// aqui pras parcelas de Acordos - o campo escondido "baixa-origem" decide
+// pra qual coleção o confirmBaixa() grava
+function openBaixaModalAcordo(id) {
+  const p=_facordosParcelas.find(p=>p.id===id); if(!p) return;
+  document.getElementById('baixa-origem').value='acordo';
+  document.getElementById('baixa-conta-id').value=id;
+  document.getElementById('baixa-resumo').textContent=`${p.acordoNome} — Parcela ${p.parcelaNum}/${p.totalParcelas} — R$ ${p.valor.toFixed(2)} — vencimento ${fmt(p.vencimento)}`;
+  document.getElementById('baixa-forma').value='';
+  document.getElementById('baixa-data').value=new Date().toISOString().split('T')[0];
+  document.getElementById('baixa-nf').value='';
+  document.getElementById('baixa-nf-status').textContent='';
+  document.getElementById('modal-fin-baixa').classList.add('open');
+}
+
 async function confirmBaixa() {
+  const origem=document.getElementById('baixa-origem').value;
   const id=Number(document.getElementById('baixa-conta-id').value);
-  const c=_fp.find(c=>c.id===id); if(!c) return;
   const formaPagamento=document.getElementById('baixa-forma').value;
   const dataPagamento=document.getElementById('baixa-data').value;
   const arquivo=document.getElementById('baixa-nf').files[0];
@@ -4562,6 +4655,30 @@ async function confirmBaixa() {
   if(!dataPagamento) return toast('Informe a data do pagamento.','err');
   if(!arquivo) return toast('Anexe o PDF da Nota Fiscal.','err');
   if(arquivo.type!=='application/pdf') return toast('O arquivo precisa ser um PDF.','err');
+
+  if(origem==='acordo') {
+    const p=_facordosParcelas.find(p=>p.id===id); if(!p) return;
+    loading(true);
+    try {
+      const statusEl=document.getElementById('baixa-nf-status');
+      statusEl.textContent='Enviando PDF...';
+      const notaFiscalUrl=await uploadToCloudinary(arquivo);
+      statusEl.textContent='';
+      await db.collection('fin_acordos_parcelas').doc(String(id)).update({status:'pago',dataPagamento,formaPagamento,pagoPorId:FU.id,pagoPorNome:FU.name,notaFiscalUrl});
+      Object.assign(p,{status:'pago',dataPagamento,formaPagamento,pagoPorId:FU.id,pagoPorNome:FU.name,notaFiscalUrl});
+    } catch(e) {
+      toast('Erro ao enviar o PDF: '+e.message,'err');
+      return;
+    } finally { loading(false); }
+    logAcao('pagou','acordo',id,`Baixa — ${p.acordoNome} parcela ${p.parcelaNum}/${p.totalParcelas} — R$ ${p.valor.toFixed(2)} via ${formaPagamento}`);
+    closeModal('modal-fin-baixa');
+    renderFinAcordos();
+    renderAcordoParcelas(p.acordoId);
+    toast('Parcela baixada.','ok');
+    return;
+  }
+
+  const c=_fp.find(c=>c.id===id); if(!c) return;
   loading(true);
   try {
     const statusEl=document.getElementById('baixa-nf-status');
@@ -5154,8 +5271,153 @@ async function importPrestadoresExcel(input) {
 }
 
 // lançar/gerar pagamento de prestador agora é feito na própria tela de
-// Pagamentos de Prestadores (lancarPagamentoMes/lancarPendentesDoMes),
+// Pagamentos de Prestadores (openSelecionarMesModal/confirmarSelecaoMes),
 // escolhendo o mês ali - não mais daqui do cadastro
+
+/* ── ACORDOS (dívidas negociadas, pagas em parcelas mensais) ── */
+// mesmo padrão de fin_contas_pagar (status pendente/pago, baixa com PDF de
+// NF via Cloudinary), só que cada acordo já nasce com todas as N parcelas
+// lançadas de uma vez (valor total dividido, última parcela absorve o
+// arredondamento pra soma bater certinho com o total informado)
+function calcularParcelas(valorTotal, qtd) {
+  const base=Math.floor((valorTotal/qtd)*100)/100;
+  const valores=new Array(qtd).fill(base);
+  const resto=Math.round((valorTotal-base*qtd)*100)/100;
+  valores[qtd-1]=Math.round((valores[qtd-1]+resto)*100)/100;
+  return valores;
+}
+
+function atualizarPreviaParcela() {
+  const total=parseFloat(document.getElementById('fac-valor-total').value)||0;
+  const qtd=parseInt(document.getElementById('fac-qtd-parcelas').value,10)||0;
+  const el=document.getElementById('fac-previa-parcela');
+  el.value = (total>0 && qtd>0) ? `R$ ${(total/qtd).toFixed(2)} x ${qtd}` : '';
+}
+
+function openAddAcordo() {
+  document.getElementById('fac-nome').value='';
+  document.getElementById('fac-categoria').value='';
+  document.getElementById('fac-valor-total').value='';
+  document.getElementById('fac-qtd-parcelas').value='';
+  document.getElementById('fac-dia-vencimento').value='';
+  document.getElementById('fac-mes-inicio').value=new Date().toISOString().slice(0,7);
+  document.getElementById('fac-previa-parcela').value='';
+  document.getElementById('fac-observacoes').value='';
+  document.getElementById('modal-fin-acordo').classList.add('open');
+}
+
+async function addAcordo() {
+  const nome=document.getElementById('fac-nome').value.trim().toUpperCase();
+  const categoria=document.getElementById('fac-categoria').value;
+  const valorTotal=parseFloat(document.getElementById('fac-valor-total').value);
+  const qtdParcelas=parseInt(document.getElementById('fac-qtd-parcelas').value,10);
+  const diaVencimento=parseInt(document.getElementById('fac-dia-vencimento').value,10);
+  const mesInicio=document.getElementById('fac-mes-inicio').value;
+  const observacoes=document.getElementById('fac-observacoes').value.trim();
+  if(!nome) return toast('Informe o credor/descrição do acordo.','err');
+  if(!categoria) return toast('Selecione a categoria.','err');
+  if(!valorTotal||valorTotal<=0) return toast('Informe um valor total válido.','err');
+  if(!qtdParcelas||qtdParcelas<1) return toast('Informe a quantidade de parcelas.','err');
+  if(!diaVencimento||diaVencimento<1||diaVencimento>31) return toast('Informe um dia de vencimento entre 1 e 31.','err');
+  if(!mesInicio) return toast('Informe o mês da primeira parcela.','err');
+
+  const acordo={
+    id:newId(), nome, categoria, valorTotal, qtdParcelas, diaVencimento, mesInicio, observacoes,
+    criadoPorId:FU.id, criadoPorNome:FU.name, createdAt:Date.now()
+  };
+  const [anoIni,mesIni]=mesInicio.split('-').map(Number);
+  const parcelas=calcularParcelas(valorTotal,qtdParcelas).map((valor,i)=>{
+    const mk=mKey(new Date(anoIni, mesIni-1+i, 1));
+    return {
+      id:newId()+i+1, acordoId:acordo.id, acordoNome:nome, parcelaNum:i+1, totalParcelas:qtdParcelas,
+      categoria, valor, vencimento:buildVencimento(mk,diaVencimento), mesReferencia:mk,
+      status:'pendente', dataPagamento:null, formaPagamento:null, pagoPorId:null, pagoPorNome:null, notaFiscalUrl:null,
+      criadoPorId:FU.id, criadoPorNome:FU.name, createdAt:Date.now()
+    };
+  });
+
+  loading(true);
+  try {
+    const batch=db.batch();
+    batch.set(db.collection('fin_acordos').doc(String(acordo.id)), acordo);
+    parcelas.forEach(p=>batch.set(db.collection('fin_acordos_parcelas').doc(String(p.id)), p));
+    await batch.commit();
+    _facordos.push(acordo);
+    parcelas.forEach(p=>_facordosParcelas.push(p));
+  } finally { loading(false); }
+  logAcao('criou','acordo',acordo.id,`Acordo ${nome} — R$ ${valorTotal.toFixed(2)} em ${qtdParcelas}x`);
+  closeModal('modal-fin-acordo');
+  renderFinAcordos();
+  toast('Acordo criado com as parcelas lançadas.','ok');
+}
+
+function renderFinAcordos() {
+  const sorted=[..._facordos].sort((a,b)=>b.createdAt-a.createdAt);
+  document.getElementById('fac-tbody').innerHTML=sorted.length?sorted.map(a=>{
+    const parcelas=_facordosParcelas.filter(p=>p.acordoId===a.id);
+    const pagas=parcelas.filter(p=>p.status==='pago').length;
+    const statusBadge=pagas===a.qtdParcelas?'<span class="badge b-ok">Quitado</span>':'<span class="badge b-2">Em andamento</span>';
+    const del=canRemovePagamentos()?`<button class="btn-icon del" onclick="delAcordo(${a.id})" title="Excluir">×</button>`:'';
+    return `<tr>
+      <td><strong>${a.nome}</strong></td>
+      <td>${a.categoria?`<span class="badge b-3">${a.categoria}</span>`:'—'}</td>
+      <td>R$ ${a.valorTotal.toFixed(2)}</td>
+      <td>${pagas}/${a.qtdParcelas} pagas</td>
+      <td>${statusBadge}</td>
+      <td><div class="flex gap6"><button class="btn btn-ghost btn-xs" onclick="openDetalheAcordo(${a.id})">Ver Parcelas</button>${del}</div></td>
+    </tr>`;
+  }).join(''):`<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:32px">Nenhum acordo cadastrado</td></tr>`;
+}
+
+function openDetalheAcordo(acordoId) {
+  const a=_facordos.find(a=>a.id===acordoId); if(!a) return;
+  document.getElementById('facd-titulo').textContent=a.nome;
+  const parcelas=_facordosParcelas.filter(p=>p.acordoId===acordoId);
+  const pagas=parcelas.filter(p=>p.status==='pago').length;
+  document.getElementById('facd-resumo').textContent=`R$ ${a.valorTotal.toFixed(2)} total em ${a.qtdParcelas}x · ${pagas} de ${a.qtdParcelas} parcela(s) paga(s)`;
+  renderAcordoParcelas(acordoId);
+  document.getElementById('modal-fin-acordo-detalhe').classList.add('open');
+}
+
+function renderAcordoParcelas(acordoId) {
+  const today=new Date().toISOString().split('T')[0];
+  const parcelas=_facordosParcelas.filter(p=>p.acordoId===acordoId).sort((x,y)=>x.parcelaNum-y.parcelaNum);
+  document.getElementById('facd-lista').innerHTML=parcelas.map(p=>{
+    const statusBadge = p.status==='pago' ? '<span class="badge b-ok">Pago</span>'
+      : p.vencimento<today ? '<span class="badge b-gray" style="color:var(--red);background:rgba(185,28,28,.08)">Atrasado</span>'
+      : '<span class="badge b-2">Pendente</span>';
+    const acao = p.status==='pendente'
+      ? `<button class="btn btn-ok btn-xs" onclick="openBaixaModalAcordo(${p.id})">Dar Baixa</button>`
+      : (p.notaFiscalUrl?`<a href="${p.notaFiscalUrl}" target="_blank" rel="noopener" class="btn btn-ghost btn-xs">Ver NF</a>`:'');
+    return `<div class="flex items-c gap8" style="padding:8px 10px;border:1px solid var(--border);border-radius:8px">
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:700;font-size:13px">Parcela ${p.parcelaNum}/${p.totalParcelas}</div>
+        <div style="font-size:11px;color:var(--muted)">Vencimento ${fmt(p.vencimento)} · R$ ${p.valor.toFixed(2)}</div>
+      </div>
+      ${statusBadge}
+      ${acao}
+    </div>`;
+  }).join('');
+}
+
+async function delAcordo(id) {
+  if(!canRemovePagamentos()) return;
+  if(!confirm('Excluir este acordo e todas as parcelas? Essa ação não pode ser desfeita.')) return;
+  const a=_facordos.find(a=>a.id===id); if(!a) return;
+  const parcelas=_facordosParcelas.filter(p=>p.acordoId===id);
+  loading(true);
+  try {
+    const batch=db.batch();
+    batch.delete(db.collection('fin_acordos').doc(String(id)));
+    parcelas.forEach(p=>batch.delete(db.collection('fin_acordos_parcelas').doc(String(p.id))));
+    await batch.commit();
+    _facordos=_facordos.filter(a=>a.id!==id);
+    _facordosParcelas=_facordosParcelas.filter(p=>p.acordoId!==id);
+  } finally { loading(false); }
+  logAcao('removeu','acordo',id,`Acordo ${a.nome} (${parcelas.length} parcela(s))`);
+  renderFinAcordos();
+  toast('Acordo removido.','info');
+}
 
 /* ── CHAT (conversas privadas 1-a-1) ───────── */
 // primeira funcionalidade em tempo real do sistema (onSnapshot) - todo o
