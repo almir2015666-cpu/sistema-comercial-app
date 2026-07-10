@@ -1746,7 +1746,7 @@ tbody tr:hover td{background:var(--bg)}
         <div class="card">
           <div class="card-hd">
             <div><div class="card-title">Acordos</div><div class="card-sub">Dívidas negociadas, pagas em parcelas mensais com nota fiscal</div></div>
-            <button class="btn btn-ok btn-sm" style="width:auto" onclick="openAddAcordo()">+ Novo Acordo</button>
+            <button class="btn btn-ok btn-sm" id="fac-new-btn" style="width:auto" onclick="openAddAcordo()">+ Novo Acordo</button>
           </div>
           <div class="tbl-wrap">
             <table>
@@ -1850,9 +1850,13 @@ tbody tr:hover td{background:var(--bg)}
         <input type="checkbox" id="feu-perm-prestadores" style="width:15px;height:15px;accent-color:var(--blue2);cursor:pointer">
         Gerenciar prestadores (cadastrar, editar, excluir, importar planilha)
       </label>
-      <label style="display:flex;align-items:center;gap:8px;font-weight:400;text-transform:none;letter-spacing:normal;cursor:pointer">
+      <label style="display:flex;align-items:center;gap:8px;font-weight:400;text-transform:none;letter-spacing:normal;cursor:pointer;margin-bottom:8px">
         <input type="checkbox" id="feu-perm-pagamentos" style="width:15px;height:15px;accent-color:var(--blue2);cursor:pointer">
         Remover pagamentos já lançados
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;font-weight:400;text-transform:none;letter-spacing:normal;cursor:pointer">
+        <input type="checkbox" id="feu-perm-acordos" style="width:15px;height:15px;accent-color:var(--blue2);cursor:pointer">
+        Gerenciar acordos (criar, excluir)
       </label>
     </div>
     <div class="modal-ft">
@@ -4782,6 +4786,7 @@ async function delFinCategoria(id) {
 /* ── PRESTADORES DE SERVIÇO ────────────────── */
 function canManagePrestadores() { return FU.role==='gestor' || !!FU.permPrestadores; }
 function canRemovePagamentos() { return FU.role==='gestor' || !!FU.permPagamentos; }
+function canManageAcordos() { return FU.role==='gestor' || !!FU.permAcordos; }
 
 // clampa o dia ao último dia do mês (ex: dia 31 num mês de 30 ou fevereiro)
 function buildVencimento(mesReferencia, dia) {
@@ -5297,6 +5302,7 @@ function atualizarPreviaParcela() {
 }
 
 function openAddAcordo() {
+  if(!canManageAcordos()) return toast('Só o gestor pode incluir acordos.','err');
   document.getElementById('fac-nome').value='';
   document.getElementById('fac-categoria').value='';
   document.getElementById('fac-valor-total').value='';
@@ -5354,12 +5360,15 @@ async function addAcordo() {
 }
 
 function renderFinAcordos() {
+  const gerenciar=canManageAcordos();
+  const novoBtn=document.getElementById('fac-new-btn');
+  if(novoBtn) novoBtn.style.display=gerenciar?'':'none';
   const sorted=[..._facordos].sort((a,b)=>b.createdAt-a.createdAt);
   document.getElementById('fac-tbody').innerHTML=sorted.length?sorted.map(a=>{
     const parcelas=_facordosParcelas.filter(p=>p.acordoId===a.id);
     const pagas=parcelas.filter(p=>p.status==='pago').length;
     const statusBadge=pagas===a.qtdParcelas?'<span class="badge b-ok">Quitado</span>':'<span class="badge b-2">Em andamento</span>';
-    const del=canRemovePagamentos()?`<button class="btn-icon del" onclick="delAcordo(${a.id})" title="Excluir">×</button>`:'';
+    const del=gerenciar?`<button class="btn-icon del" onclick="delAcordo(${a.id})" title="Excluir">×</button>`:'';
     return `<tr>
       <td><strong>${a.nome}</strong></td>
       <td>${a.categoria?`<span class="badge b-3">${a.categoria}</span>`:'—'}</td>
@@ -5403,7 +5412,7 @@ function renderAcordoParcelas(acordoId) {
 }
 
 async function delAcordo(id) {
-  if(!canRemovePagamentos()) return;
+  if(!canManageAcordos()) return;
   if(!confirm('Excluir este acordo e todas as parcelas? Essa ação não pode ser desfeita.')) return;
   const a=_facordos.find(a=>a.id===id); if(!a) return;
   const parcelas=_facordosParcelas.filter(p=>p.acordoId===id);
@@ -5776,7 +5785,7 @@ async function addFinUser() {
       return;
     }
     const nid=_fu.length?Math.max(..._fu.map(u=>u.id))+1:1;
-    const nu={id:nid,name,usuario,role,photo:null,ativo:false,permPrestadores:false,permPagamentos:false};
+    const nu={id:nid,name,usuario,role,photo:null,ativo:false,permPrestadores:false,permPagamentos:false,permAcordos:false};
     await db.collection('fin_usuarios').doc(String(nid)).set(nu);
     _fu.push(nu);
   } finally { loading(false); }
@@ -5801,6 +5810,7 @@ function openEditFinUser(id) {
   document.getElementById('feu-role').value=u.role;
   document.getElementById('feu-perm-prestadores').checked=!!u.permPrestadores;
   document.getElementById('feu-perm-pagamentos').checked=!!u.permPagamentos;
+  document.getElementById('feu-perm-acordos').checked=!!u.permAcordos;
   onFeuRoleChange();
   document.getElementById('modal-fin-edit').classList.add('open');
 }
@@ -5812,11 +5822,12 @@ async function saveEditFinUser() {
   const role=document.getElementById('feu-role').value;
   const permPrestadores=document.getElementById('feu-perm-prestadores').checked;
   const permPagamentos=document.getElementById('feu-perm-pagamentos').checked;
+  const permAcordos=document.getElementById('feu-perm-acordos').checked;
   if(!name) return toast('Nome é obrigatório.','err');
   // usuário (login) não é editável aqui de propósito - mudar exigiria trocar
   // o e-mail sintético no Firebase Auth, e sem Admin SDK isso não é seguro
   // de fazer só pelo front-end
-  _fu[idx]={..._fu[idx],name,role,permPrestadores,permPagamentos};
+  _fu[idx]={..._fu[idx],name,role,permPrestadores,permPagamentos,permAcordos};
   loading(true);
   try {
     await db.collection('fin_usuarios').doc(String(id)).set(_fu[idx]);
