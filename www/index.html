@@ -619,6 +619,39 @@ tbody tr:hover td{background:var(--bg)}
 .modal-title{font-size:15px;font-weight:800;color:var(--black);margin-bottom:20px}
 .modal-ft{display:flex;gap:8px;justify-content:flex-end;margin-top:20px}
 
+/* ── SELETOR DE PRESTADORES DO MÊS ──────── */
+/* Nada aqui pode ser inline: no celular o .modal vira folha de baixo
+   (@media max-width:768px) e estilo inline atropelaria essa regra. */
+.selmes-linha{display:flex;align-items:center;gap:8px;margin-top:8px}
+.selmes-linha .selmes-tipo{width:150px;flex-shrink:0;height:38px;font-size:13px}
+.selmes-linha .selmes-valor{
+  width:130px;flex-shrink:0;height:38px;
+  font-size:14px;font-weight:700;text-align:right
+}
+.selmes-linha .selmes-obs{
+  flex:1;min-width:0;height:38px;font-size:13px;font-weight:600;
+  color:var(--blue2);border-color:var(--blue2);background:rgba(37,99,235,.06)
+}
+/* modal em coluna + lista elástica: os botões do rodapé ficam sempre visíveis,
+   independente de quantos prestadores a lista tenha (quem rola é a lista) */
+#modal-fin-selecionar-mes .modal{display:flex;flex-direction:column}
+#selmes-lista{
+  display:flex;flex-direction:column;gap:10px;
+  flex:1 1 auto;min-height:0;overflow-y:auto;padding-right:4px
+}
+@media(min-width:769px){
+  /* no desktop o modal precisa de largura pra observação respirar */
+  #modal-fin-selecionar-mes .modal{width:900px}
+}
+@media(max-width:768px){
+  /* tipo e valor dividem a primeira linha; a observação ganha a linha inteira */
+  .selmes-linha{flex-wrap:wrap}
+  .selmes-linha .selmes-tipo{width:auto;flex:1 1 auto;min-width:110px}
+  .selmes-linha .selmes-valor{width:104px}
+  .selmes-linha .selmes-obs{flex:1 1 100%;order:3}
+  .selmes-linha .selmes-del{order:2}
+}
+
 /* ── DETAIL HISTORY ROW ─────────────────── */
 .hist-det-row td{padding:0;border-bottom:1px solid var(--border)}
 .hist-det-inner{padding:12px 16px;background:#fafbfc;font-size:12.5px}
@@ -2039,7 +2072,7 @@ tbody tr:hover td{background:var(--bg)}
 
 <!-- MODAL: SELECIONAR PRESTADORES DO MÊS -->
 <div class="overlay" id="modal-fin-selecionar-mes">
-  <div class="modal" style="width:900px;max-width:94vw">
+  <div class="modal">
     <div class="modal-title">Selecionar Prestadores do Mês</div>
     <div class="card-sub mb16" id="selmes-resumo" style="margin:0 0 14px"></div>
     <div class="fg" style="margin-bottom:8px">
@@ -2048,7 +2081,7 @@ tbody tr:hover td{background:var(--bg)}
         Selecionar todos
       </label>
     </div>
-    <div id="selmes-lista" style="max-height:62vh;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding-right:4px"></div>
+    <div id="selmes-lista"></div>
     <div class="modal-ft">
       <button class="btn btn-ghost" onclick="closeModal('modal-fin-selecionar-mes')">Cancelar</button>
       <button class="btn btn-ok" onclick="confirmarSelecaoMes()">Lançar Selecionados</button>
@@ -4603,13 +4636,13 @@ async function confirmValorPagamento() {
 const TIPOS_LANCAMENTO=['Plantão','Coordenação','Consulta','Laudo'];
 
 function selmesLinhaHTML(valor, tipo) {
-  return `<div class="selmes-linha flex items-c gap8" style="margin-top:8px">
-    <select class="selmes-tipo" style="width:150px;flex-shrink:0;height:38px;font-size:13px">
+  return `<div class="selmes-linha">
+    <select class="selmes-tipo">
       ${TIPOS_LANCAMENTO.map(t=>`<option value="${t}"${t===tipo?' selected':''}>${t}</option>`).join('')}
     </select>
-    <input type="number" class="selmes-valor" value="${valor}" min="0" step="0.01" placeholder="0,00" style="width:130px;flex-shrink:0;height:38px;font-size:14px;font-weight:700;text-align:right">
-    <input type="text" class="selmes-obs" maxlength="200" placeholder="Observação (opcional)" style="flex:1;min-width:0;height:38px;font-size:13px;font-weight:600;color:var(--blue2);border-color:var(--blue2);background:rgba(37,99,235,.06)">
-    <button type="button" class="btn-icon del selmes-del" onclick="removeSelmesLinha(this)" title="Remover este lançamento" style="flex-shrink:0">×</button>
+    <input type="number" class="selmes-valor" value="${valor}" min="0" step="0.01" placeholder="0,00">
+    <input type="text" class="selmes-obs" maxlength="200" placeholder="Observação (opcional)">
+    <button type="button" class="btn-icon del selmes-del" onclick="removeSelmesLinha(this)" title="Remover este lançamento">×</button>
   </div>`;
 }
 
