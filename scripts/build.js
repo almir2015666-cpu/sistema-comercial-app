@@ -12,7 +12,13 @@ for (const file of ['index.html', 'logo.png', 'watermark.png']) {
   fs.copyFileSync(path.join(root, file), path.join(www, file));
 }
 
-// Copia o plugin de live update para www/ (necessário pois não há bundler)
+// Copia o runtime do Capacitor e o plugin de live update para www/ (necessário
+// pois não há bundler). A ordem importa no index.html: capacitor.js define o
+// global `capacitorExports`, do qual o plugin.js depende para se registrar.
+fs.copyFileSync(
+  path.join(root, 'node_modules/@capacitor/core/dist/capacitor.js'),
+  path.join(www, 'capacitor.js')
+);
 fs.copyFileSync(
   path.join(root, 'node_modules/@capawesome/capacitor-live-update/dist/plugin.js'),
   path.join(www, 'live-update-plugin.js')

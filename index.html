@@ -2107,6 +2107,14 @@ tbody tr:hover td{background:var(--bg)}
 
 <div class="toast" id="toast"></div>
 
+<!-- Runtime do Capacitor + plugin de live update (copiados para www/ pelo
+     build.js; a ordem importa: plugin.js depende do global capacitorExports).
+     No navegador eles carregam mas ficam inertes: isNativePlatform() é false.
+     Abrindo o index.html da raiz direto, dão 404 - por isso o código de
+     atualização sempre checa se os globais existem antes de usar. -->
+<script src="capacitor.js"></script>
+<script src="live-update-plugin.js"></script>
+
 <script>
 /* ══════════════════════════════════════════════
    FIREBASE
@@ -6093,6 +6101,57 @@ auth.onAuthStateChanged(async (fbUser) => {
   if(se){ document.getElementById('l-email').value=se; document.getElementById('l-remember').checked=true; }
   if(fsu){ document.getElementById('finl-usuario').value=fsu; document.getElementById('finl-remember').checked=true; }
 });
+
+/* ══════════════════════════════════════════════
+   LIVE UPDATE (app iOS)
+   Atualiza o app sem passar pela App Store: o deploy publica um
+   update-manifest.json + bundle.zip como release no GitHub (scripts/deploy-update.js),
+   e aqui o app compara o bundle instalado com o da última release.
+══════════════════════════════════════════════ */
+const LU_REPO='almir2015666-cpu/sistema-comercial-app';
+const LU_MANIFEST=`https://github.com/${LU_REPO}/releases/latest/download/update-manifest.json`;
+
+function liveUpdatePlugin() {
+  // no navegador os globais podem nem existir; e mesmo no app, só o nativo implementa
+  const Cap=window.Capacitor;
+  if(!Cap||typeof Cap.isNativePlatform!=='function'||!Cap.isNativePlatform()) return null;
+  return (window.capacitorLiveUpdate&&window.capacitorLiveUpdate.LiveUpdate)||null;
+}
+
+async function checarAtualizacaoApp() {
+  const LiveUpdate=liveUpdatePlugin();
+  if(!LiveUpdate) return;
+  try {
+    // confirma o bundle atual. Sem isso o plugin considera a atualização falha
+    // e volta pro bundle anterior sozinho na próxima abertura
+    await LiveUpdate.ready();
+  } catch(e) { console.warn('[live-update] ready falhou:',e); }
+  try {
+    const res=await fetch(LU_MANIFEST,{cache:'no-store'});
+    if(!res.ok) return; // nenhuma release publicada ainda
+    const manifest=await res.json();
+    if(!manifest||!manifest.bundleId||!manifest.bundleUrl) return;
+    // já instalado? ou já baixado e esperando o próximo abrir?
+    const atual=await LiveUpdate.getCurrentBundle().catch(()=>({bundleId:null}));
+    if(atual&&atual.bundleId===manifest.bundleId) return;
+    const proximo=await LiveUpdate.getNextBundle().catch(()=>({bundleId:null}));
+    if(proximo&&proximo.bundleId===manifest.bundleId) return toastAtualizacaoPronta();
+    await LiveUpdate.downloadBundle({url:manifest.bundleUrl,bundleId:manifest.bundleId,artifactType:'zip'});
+    await LiveUpdate.setNextBundle({bundleId:manifest.bundleId});
+    toastAtualizacaoPronta();
+  } catch(e) {
+    // rede ruim/release fora do ar não pode impedir o uso do app
+    console.warn('[live-update] falhou:',e);
+  }
+}
+
+// não recarrega na cara do usuário: ele pode estar no meio de um lançamento
+function toastAtualizacaoPronta() {
+  toast('Atualização baixada. Ela será aplicada quando você fechar e abrir o app.','ok');
+}
+
+// roda depois do app já ter carregado, pra não atrasar a tela de login
+setTimeout(checarAtualizacaoApp,3000);
 </script>
 </body>
 </html>
