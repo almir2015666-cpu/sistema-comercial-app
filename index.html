@@ -1555,6 +1555,10 @@ tbody tr:hover td{background:var(--bg)}
         <span class="nav-icon"><svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M2 7.5h4M9 7.5h4M6 4l-2 3.5L6 11M9 4l2 3.5L9 11" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
         Acordos
       </div>
+      <div class="nav-item" onclick="showPageFin('contas')">
+        <span class="nav-icon"><svg width="15" height="15" viewBox="0 0 15 15" fill="none"><rect x="1.5" y="3" width="12" height="9" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M1.5 6h12M4 9.5h3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></span>
+        Contas a Pagar
+      </div>
 
       <div class="sb-sec hidden" id="fin-nav-admin-sec">Administração</div>
       <div class="nav-item hidden" id="fin-nav-categorias" onclick="showPageFin('categorias')">
@@ -1608,6 +1612,7 @@ tbody tr:hover td{background:var(--bg)}
       <div class="tab-sheet-item hidden" id="mais-fin-log" onclick="showPageFin('log');toggleMaisSheetFin()">Log de Auditoria</div>
       <div class="tab-sheet-item" onclick="showPageFin('chat');toggleMaisSheetFin()">Conversas <span class="chat-badge hidden" id="mais-fin-chat-badge"></span></div>
       <div class="tab-sheet-item" onclick="showPageFin('acordos');toggleMaisSheetFin()">Acordos</div>
+      <div class="tab-sheet-item" onclick="showPageFin('contas');toggleMaisSheetFin()">Contas a Pagar</div>
       <div class="tab-sheet-item" style="color:var(--red)" onclick="toggleMaisSheetFin();doLogoutFin()">Sair do Sistema</div>
     </div>
   </div>
@@ -1799,6 +1804,62 @@ tbody tr:hover td{background:var(--bg)}
         </div>
       </div>
 
+      <!-- CONTAS A PAGAR (fornecedores: fixas e variáveis) -->
+      <div class="page" id="page-fin-contas">
+        <div class="card">
+          <div class="card-hd">
+            <div>
+              <div class="card-title">Contas a Pagar</div>
+              <div class="month-label" id="fd-month-label"></div>
+            </div>
+            <div class="month-nav">
+              <button class="month-nav-arrow" onclick="changeDespMonth(-1)" title="Mês anterior">‹</button>
+              <button class="month-nav-today" onclick="goDespToday()">Hoje</button>
+              <button class="month-nav-arrow" onclick="changeDespMonth(1)" title="Próximo mês">›</button>
+            </div>
+          </div>
+          <div class="g g4" id="fd-metrics"></div>
+        </div>
+        <div class="card">
+          <div class="card-hd">
+            <div><div class="card-title">Despesas do mês</div><div class="card-sub">Contas de fornecedores — fixas e variáveis, com vencimento, baixa e forma de pagamento</div></div>
+            <div class="flex gap6">
+              <button class="btn btn-ghost btn-sm" style="width:auto" onclick="imprimirDespesas()">🖨 Imprimir</button>
+              <button class="btn btn-ghost btn-sm" style="width:auto" onclick="exportDespesasExcel()">↓ Baixar Planilha</button>
+              <button class="btn btn-ghost btn-sm" id="fd-repetir-btn" style="width:auto" onclick="repetirFixasMesAnterior()">↻ Repetir fixas do mês anterior</button>
+              <button class="btn btn-ok btn-sm" id="fd-new-btn" style="width:auto" onclick="openAddDespesa()">+ Nova Conta</button>
+            </div>
+          </div>
+          <div class="row-3 mb16">
+            <div class="fg" style="margin:0">
+              <input type="text" id="fd-busca" placeholder="Buscar por fornecedor, NF ou registro..." oninput="renderDespesas()">
+            </div>
+            <div class="fg" style="margin:0">
+              <select id="fd-filtro-tipo" onchange="renderDespesas()">
+                <option value="">Fixas e variáveis</option>
+                <option value="Fixo">Só fixas</option>
+                <option value="Variável">Só variáveis</option>
+              </select>
+            </div>
+            <div class="fg" style="margin:0">
+              <select id="fd-filtro-status" onchange="renderDespesas()">
+                <option value="">Todos os status</option>
+                <option value="pago">Pago</option>
+                <option value="pendente">Pendente</option>
+                <option value="vence-em-breve">Vence em breve</option>
+                <option value="atrasado">Atrasado</option>
+              </select>
+            </div>
+          </div>
+          <div class="tbl-wrap">
+            <table>
+              <thead><tr><th>Reg.</th><th>Fornecedor</th><th>Tipo</th><th>Categoria</th><th>Valor</th><th>Vencimento</th><th>Status</th><th>Pago</th><th>Ações</th></tr></thead>
+              <tbody id="fd-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
       <!-- CHAT -->
       <div class="page" id="page-fin-chat">
         <div class="card card-chat">
@@ -1896,9 +1957,13 @@ tbody tr:hover td{background:var(--bg)}
         <input type="checkbox" id="feu-perm-pagamentos" style="width:15px;height:15px;accent-color:var(--blue2);cursor:pointer">
         Remover pagamentos já lançados
       </label>
-      <label style="display:flex;align-items:center;gap:8px;font-weight:400;text-transform:none;letter-spacing:normal;cursor:pointer">
+      <label style="display:flex;align-items:center;gap:8px;font-weight:400;text-transform:none;letter-spacing:normal;cursor:pointer;margin-bottom:8px">
         <input type="checkbox" id="feu-perm-acordos" style="width:15px;height:15px;accent-color:var(--blue2);cursor:pointer">
         Gerenciar acordos (criar, excluir)
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;font-weight:400;text-transform:none;letter-spacing:normal;cursor:pointer">
+        <input type="checkbox" id="feu-perm-contas" style="width:15px;height:15px;accent-color:var(--blue2);cursor:pointer">
+        Gerenciar contas a pagar (lançar despesas fixas e variáveis, editar, excluir)
       </label>
     </div>
     <div class="modal-ft">
@@ -2029,6 +2094,69 @@ tbody tr:hover td{background:var(--bg)}
     <div id="facd-lista" style="max-height:400px;overflow-y:auto;display:flex;flex-direction:column;gap:8px"></div>
     <div class="modal-ft">
       <button class="btn btn-ghost" onclick="closeModal('modal-fin-acordo-detalhe')">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: CONTA A PAGAR DE FORNECEDOR (fixa ou variável) -->
+<div class="overlay" id="modal-fin-despesa">
+  <div class="modal" style="width:760px">
+    <div class="modal-title" id="fd-modal-titulo">Nova Conta a Pagar</div>
+    <input type="hidden" id="fd-id">
+    <div class="row-3">
+      <div class="fg"><label>Fornecedor</label><input type="text" id="fd-fornecedor" placeholder="Ex: ITS BRASIL" style="text-transform:uppercase"></div>
+      <div class="fg"><label>Tipo de Despesa</label>
+        <select id="fd-tipo">
+          <option value="Fixo">Fixo</option>
+          <option value="Variável">Variável</option>
+        </select>
+      </div>
+      <div class="fg"><label>Centro de Custo</label><input type="text" id="fd-centro" placeholder="Ex: SEDE" style="text-transform:uppercase"></div>
+    </div>
+    <div class="row-3">
+      <div class="fg"><label>Categoria</label><select id="fd-categoria"><option value="">Selecione...</option></select></div>
+      <div class="fg"><label>Valor (R$)</label><input type="number" id="fd-valor" min="0" step="0.01" placeholder="0,00"></div>
+      <div class="fg"><label>Vencimento</label><input type="date" id="fd-vencimento"></div>
+    </div>
+    <div class="row-3">
+      <div class="fg"><label>Registro (Reg.)</label><input type="text" id="fd-reg" placeholder="Opcional — ex: 94"></div>
+      <div class="fg"><label>NF / Documento</label><input type="text" id="fd-nf" placeholder="Ex: RECIBO, 8/10, NF DIVERSAS"></div>
+      <div class="fg"><label>Data da NF</label><input type="date" id="fd-data-nf"></div>
+    </div>
+    <div class="fg"><label>Observações</label><input type="text" id="fd-observacao" maxlength="200" placeholder="Opcional"></div>
+    <div class="modal-ft">
+      <button class="btn btn-ghost" onclick="closeModal('modal-fin-despesa')">Cancelar</button>
+      <button class="btn btn-ok" id="fd-save-btn" onclick="salvarDespesa()">Salvar Conta</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: BAIXA DE CONTA DE FORNECEDOR (valor pago pode diferir: juros/desconto) -->
+<div class="overlay" id="modal-fin-despesa-baixa">
+  <div class="modal">
+    <div class="modal-title">Dar Baixa na Conta</div>
+    <input type="hidden" id="fdb-id">
+    <div class="card-sub mb16" id="fdb-resumo" style="margin:0 0 16px"></div>
+    <div class="row-3">
+      <div class="fg"><label>Valor Pago (R$)</label><input type="number" id="fdb-valor-pago" min="0" step="0.01" placeholder="0,00"></div>
+      <div class="fg"><label>Data do Pagamento</label><input type="date" id="fdb-data"></div>
+      <div class="fg"><label>Forma de Pagamento</label>
+        <select id="fdb-forma">
+          <option value="">Selecione...</option>
+          <option value="PIX">PIX</option>
+          <option value="Boleto">Boleto</option>
+          <option value="Transferência">Transferência</option>
+          <option value="Dinheiro">Dinheiro</option>
+          <option value="Cartão">Cartão</option>
+          <option value="Outro">Outro</option>
+        </select>
+      </div>
+    </div>
+    <div class="fg"><label>Banco / Conta</label><input type="text" id="fdb-banco" placeholder="Ex: 99629-4"></div>
+    <div class="fg" style="font-size:11.5px;color:var(--muted);margin-top:-4px">O valor pago já vem preenchido com o valor da conta — altere se houve juros, multa ou desconto.</div>
+    <div class="modal-ft">
+      <button class="btn btn-ghost" onclick="closeModal('modal-fin-despesa-baixa')">Cancelar</button>
+      <button class="btn btn-ok" onclick="confirmBaixaDespesa()">Confirmar Baixa</button>
     </div>
   </div>
 </div>
@@ -3986,6 +4114,10 @@ const _isConfirmLink = handleEmailConfirmation();
 ══════════════════════════════════════════════════════════════ */
 let FU = null;
 let _fu = [], _fcat = [], _fp = [], _fr = [], _fpr = [], _flog = [], _facordos = [], _facordosParcelas = [];
+// contas a pagar de FORNECEDOR (fixas e variáveis). Coleção própria, separada
+// de fin_contas_pagar: aquela é só pagamento de prestador e tem outra vida
+// (valor padrão por prestador, seleção do mês, tipo de lançamento)
+let _fdesp = [];
 let chFinCat = null;
 let _chatMsgs = [];
 let _chatListUnsub = null;
@@ -3994,6 +4126,7 @@ let _chatOpenWith = null;
 let _chatSuperviseIds = null;
 let _chatMarkedReadOnce = false;
 let pagMonthOffset = 0;
+let despMonthOffset = 0; // navegação de mês da tela de Contas a Pagar
 
 // login do Financeiro é por usuário (ex: "joao.silva"), não e-mail de
 // verdade - o Firebase Auth exige formato de e-mail pro provedor de
@@ -4155,14 +4288,15 @@ async function confirmarResetSenhaFin() {
 async function loadFinData() {
   loading(true);
   try {
-    const [fuSnap, fcatSnap, fpSnap, fprSnap, flogSnap, facSnap, facpSnap] = await Promise.all([
+    const [fuSnap, fcatSnap, fpSnap, fprSnap, flogSnap, facSnap, facpSnap, fdespSnap] = await Promise.all([
       db.collection('fin_usuarios').get(),
       db.collection('fin_categorias').get(),
       db.collection('fin_contas_pagar').get(),
       db.collection('fin_prestadores').get(),
       db.collection('fin_log').get(),
       db.collection('fin_acordos').get(),
-      db.collection('fin_acordos_parcelas').get()
+      db.collection('fin_acordos_parcelas').get(),
+      db.collection('fin_despesas').get()
     ]);
     _fu = fuSnap.docs.map(d=>{ const x=d.data(); delete x.password; x.id=Number(x.id); return x; });
     _fcat = fcatSnap.docs.map(d=>d.data());
@@ -4171,6 +4305,7 @@ async function loadFinData() {
     _flog = flogSnap.docs.map(d=>d.data());
     _facordos = facSnap.docs.map(d=>d.data());
     _facordosParcelas = facpSnap.docs.map(d=>d.data());
+    _fdesp = fdespSnap.docs.map(d=>d.data());
   } finally { loading(false); }
 }
 
@@ -4229,7 +4364,7 @@ function showPageFin(name) {
     t.classList.toggle('active', !!t.getAttribute('onclick')?.includes(`showPageFin('${name}')`));
   });
   if(!document.querySelector('#tab-bar-fin .tab-item.active')) document.getElementById('tab-mais-fin')?.classList.add('active');
-  const titles={dashboard:'Dashboard',pagar:'Pagamentos de Prestadores',categorias:'Categorias',usuarios:'Usuários',prestadores:'Prestadores',acordos:'Acordos',chat:'Conversas',log:'Log de Auditoria'};
+  const titles={dashboard:'Dashboard',pagar:'Pagamentos de Prestadores',contas:'Contas a Pagar',categorias:'Categorias',usuarios:'Usuários',prestadores:'Prestadores',acordos:'Acordos',chat:'Conversas',log:'Log de Auditoria'};
   document.getElementById('fin-page-title').textContent=titles[name]||name;
   if(name==='dashboard')    renderFinDashboard();
   if(name==='pagar')        renderContasPagar();
@@ -4239,6 +4374,7 @@ function showPageFin(name) {
   if(name==='usuarios')     renderFinUsuarios();
   if(name==='prestadores')  renderFinPrestadores();
   if(name==='acordos')      renderFinAcordos();
+  if(name==='contas')       renderDespesas();
 }
 
 function toggleSidebarFin() {
@@ -4275,6 +4411,7 @@ function fillFinSelects() {
   const opts='<option value="">Selecione...</option>'+despesaCats.map(c=>`<option value="${c.name}">${c.name}</option>`).join('');
   document.getElementById('fpr-categoria').innerHTML=opts;
   document.getElementById('fac-categoria').innerHTML=opts;
+  document.getElementById('fd-categoria').innerHTML=opts;
 }
 
 /* ── DASHBOARD ─────────────────────────────── */
@@ -4282,7 +4419,10 @@ function renderFinDashboard() {
   const now=new Date(); const today=now.toISOString().split('T')[0]; const mk=mKey(now);
   const despesasMesPrestadores=_fp.filter(c=>c.status==='pago'&&c.dataPagamento&&c.dataPagamento.startsWith(mk)).reduce((s,c)=>s+c.valor,0);
   const despesasMesAcordos=_facordosParcelas.filter(p=>p.status==='pago'&&p.dataPagamento&&p.dataPagamento.startsWith(mk)).reduce((s,p)=>s+p.valor,0);
-  const despesasMes=despesasMesPrestadores+despesasMesAcordos;
+  // conta de fornecedor entra pelo VALOR PAGO, nao pelo previsto: juros e multa
+  // de boleto fazem os dois diferirem, e o que saiu do caixa foi o pago
+  const despesasMesContas=_fdesp.filter(d=>d.status==='pago'&&d.dataPagamento&&d.dataPagamento.startsWith(mk)).reduce((s,d)=>s+(d.valorPago!=null?d.valorPago:d.valor),0);
+  const despesasMes=despesasMesPrestadores+despesasMesAcordos+despesasMesContas;
   const prestadorPend=_fp.filter(c=>c.prestadorId&&c.status==='pendente');
   const prestadorAtrasados=prestadorPend.filter(c=>c.vencimento<today).length;
   const seteDias=new Date(now.getTime()+7*86400000).toISOString().split('T')[0];
@@ -4296,7 +4436,7 @@ function renderFinDashboard() {
   const acordosPendMes=acordosParcelasMes.filter(p=>p.status==='pendente');
 
   document.getElementById('fin-db-metrics').innerHTML=`
-    <div class="mc c4"><div class="mc-tag">DESPESAS</div><div class="mc-big">R$ ${despesasMes.toFixed(2)}</div><div class="mc-lbl">Prestadores + acordos pagos este mês</div></div>
+    <div class="mc c4"><div class="mc-tag">DESPESAS</div><div class="mc-big">R$ ${despesasMes.toFixed(2)}</div><div class="mc-lbl">Prestadores + acordos + contas pagos este mês</div></div>
     <div class="mc c4"><div class="mc-tag">PRESTADORES</div><div class="mc-big" style="color:var(--red)">${prestadorAtrasados}</div><div class="mc-lbl">Prestadores atrasados</div></div>
     <div class="mc c2"><div class="mc-tag">PRESTADORES</div><div class="mc-big">${prestadorVencendoSemana}</div><div class="mc-lbl">Vencendo esta semana</div></div>
     <div class="mc c3"><div class="mc-tag">ACORDOS</div><div class="mc-big">R$ ${acordosValorMes.toFixed(2)}</div><div class="mc-lbl">${acordosParcelasMes.length} parcela(s) de acordo este mês</div></div>
@@ -4304,12 +4444,15 @@ function renderFinDashboard() {
 
   const vencPrestadores=prestadorPend.map(c=>({vencimento:c.vencimento,nome:c.prestadorNome,valor:c.valor}));
   const vencAcordos=acordosPendMes.map(p=>({vencimento:p.vencimento,nome:`${p.acordoNome} (${p.parcelaNum}/${p.totalParcelas})`,valor:p.valor,acordo:true}));
-  const vencimentos=[...vencPrestadores,...vencAcordos].sort((a,b)=>a.vencimento.localeCompare(b.vencimento)).slice(0,10);
+  // igual acordos: so o mes atual, senao conta futura lota a lista
+  const vencContas=_fdesp.filter(d=>d.status!=='pago'&&despMes(d)===mk&&d.vencimento)
+    .map(d=>({vencimento:d.vencimento,nome:d.fornecedor,valor:d.valor,conta:true}));
+  const vencimentos=[...vencPrestadores,...vencAcordos,...vencContas].sort((a,b)=>a.vencimento.localeCompare(b.vencimento)).slice(0,10);
   document.getElementById('fin-db-vencimentos-prestadores').innerHTML=vencimentos.length?vencimentos.map(c=>{
     const atrasado=c.vencimento<today;
     return `<div class="det-entry">
       <div style="flex-shrink:0;width:100px;font-size:12.5px;font-weight:700;color:${atrasado?'var(--red)':'var(--black)'}">${fmt(c.vencimento)}</div>
-      <div class="det-body"><div class="det-pair">${c.acordo?'<span class="badge b-3" style="margin-right:6px">Acordo</span>':''}<span class="det-val">${c.nome}</span></div></div>
+      <div class="det-body"><div class="det-pair">${c.acordo?'<span class="badge b-3" style="margin-right:6px">Acordo</span>':''}${c.conta?'<span class="badge b-1" style="margin-right:6px">Conta</span>':''}<span class="det-val">${escapeHtml(c.nome||'')}</span></div></div>
       <div style="flex-shrink:0;font-weight:700">R$ ${c.valor.toFixed(2)}</div>
     </div>`;
   }).join(''):`<div style="text-align:center;color:var(--muted);padding:24px;font-size:13px">Nenhum pagamento pendente</div>`;
@@ -4320,6 +4463,10 @@ function renderFinDashboard() {
   });
   _facordosParcelas.filter(p=>p.status==='pago'&&p.dataPagamento&&p.dataPagamento.startsWith(mk)).forEach(p=>{
     despesasPorCat[p.categoria]=(despesasPorCat[p.categoria]||0)+p.valor;
+  });
+  _fdesp.filter(d=>d.status==='pago'&&d.dataPagamento&&d.dataPagamento.startsWith(mk)).forEach(d=>{
+    const cat=d.categoria||'Sem categoria';
+    despesasPorCat[cat]=(despesasPorCat[cat]||0)+(d.valorPago!=null?d.valorPago:d.valor);
   });
   const catLabels=Object.keys(despesasPorCat);
   const catData=catLabels.map(k=>despesasPorCat[k]);
@@ -4939,6 +5086,9 @@ async function delFinCategoria(id) {
 function canManagePrestadores() { return FU.role==='gestor' || !!FU.permPrestadores; }
 function canRemovePagamentos() { return FU.role==='gestor' || !!FU.permPagamentos; }
 function canManageAcordos() { return FU.role==='gestor' || !!FU.permAcordos; }
+// lançar/editar/excluir conta de fornecedor. Dar baixa continua liberado pra
+// todo colaborador, igual acontece nos pagamentos de prestador
+function canManageContasPagar() { return FU.role==='gestor' || !!FU.permContasPagar; }
 
 // clampa o dia ao último dia do mês (ex: dia 31 num mês de 30 ou fevereiro)
 function buildVencimento(mesReferencia, dia) {
@@ -5582,6 +5732,372 @@ async function delAcordo(id) {
   toast('Acordo removido.','info');
 }
 
+/* ── CONTAS A PAGAR (fornecedores: despesas fixas e variáveis) ── */
+// Espelha o controle que era feito em planilha: REG, data da NF, centro de
+// custo, tipo (fixo/variável), fornecedor, NF, valor, vencimento, status,
+// valor pago, data e forma do pagamento, banco/conta.
+// Coleção fin_despesas, separada de fin_contas_pagar (prestadores).
+// A tela é por MÊS DE REFERÊNCIA, igual a planilha ("atualizado julho 2026").
+const FD_TIPOS=['Fixo','Variável'];
+
+function despMonthTarget() {
+  const d=new Date();
+  return new Date(d.getFullYear(), d.getMonth()+despMonthOffset, 1);
+}
+function changeDespMonth(delta) { despMonthOffset+=delta; renderDespesas(); }
+function goDespToday() { despMonthOffset=0; renderDespesas(); }
+
+// mês de referência da despesa, com fallback pro vencimento (mesmo padrão de contaMes)
+function despMes(d) { return d.mesReferencia || (d.vencimento ? d.vencimento.slice(0,7) : null); }
+
+function openAddDespesa() {
+  if(!canManageContasPagar()) return toast('Você não tem permissão para lançar contas a pagar.','err');
+  const mk=mKey(despMonthTarget());
+  document.getElementById('fd-modal-titulo').textContent='Nova Conta a Pagar';
+  document.getElementById('fd-id').value='';
+  document.getElementById('fd-fornecedor').value='';
+  document.getElementById('fd-tipo').value='Fixo';
+  document.getElementById('fd-centro').value='SEDE';
+  document.getElementById('fd-categoria').value='';
+  document.getElementById('fd-valor').value='';
+  // já nasce vencendo no mês que a tela está mostrando, não no mês de hoje
+  document.getElementById('fd-vencimento').value=buildVencimento(mk,10);
+  document.getElementById('fd-reg').value='';
+  document.getElementById('fd-nf').value='';
+  document.getElementById('fd-data-nf').value='';
+  document.getElementById('fd-observacao').value='';
+  document.getElementById('modal-fin-despesa').classList.add('open');
+}
+
+function openEditDespesa(id) {
+  if(!canManageContasPagar()) return toast('Você não tem permissão para editar contas a pagar.','err');
+  const d=_fdesp.find(x=>x.id===id); if(!d) return;
+  document.getElementById('fd-modal-titulo').textContent='Editar Conta a Pagar';
+  document.getElementById('fd-id').value=d.id;
+  document.getElementById('fd-fornecedor').value=d.fornecedor||'';
+  document.getElementById('fd-tipo').value=d.tipoDespesa||'Fixo';
+  document.getElementById('fd-centro').value=d.centroCusto||'';
+  document.getElementById('fd-categoria').value=d.categoria||'';
+  document.getElementById('fd-valor').value=d.valor||'';
+  document.getElementById('fd-vencimento').value=d.vencimento||'';
+  document.getElementById('fd-reg').value=d.reg||'';
+  document.getElementById('fd-nf').value=d.nf||'';
+  document.getElementById('fd-data-nf').value=d.dataNf||'';
+  document.getElementById('fd-observacao').value=d.observacao||'';
+  document.getElementById('modal-fin-despesa').classList.add('open');
+}
+
+async function salvarDespesa() {
+  if(!canManageContasPagar()) return toast('Você não tem permissão para lançar contas a pagar.','err');
+  const idRaw=document.getElementById('fd-id').value;
+  const fornecedor=document.getElementById('fd-fornecedor').value.trim().toUpperCase();
+  const tipoDespesa=document.getElementById('fd-tipo').value;
+  const centroCusto=document.getElementById('fd-centro').value.trim().toUpperCase();
+  const categoria=document.getElementById('fd-categoria').value;
+  const valor=parseFloat(document.getElementById('fd-valor').value);
+  const vencimento=document.getElementById('fd-vencimento').value;
+  const reg=document.getElementById('fd-reg').value.trim();
+  const nf=document.getElementById('fd-nf').value.trim().toUpperCase();
+  const dataNf=document.getElementById('fd-data-nf').value||null;
+  const observacao=document.getElementById('fd-observacao').value.trim();
+  if(!fornecedor) return toast('Informe o fornecedor.','err');
+  if(!FD_TIPOS.includes(tipoDespesa)) return toast('Selecione o tipo da despesa.','err');
+  if(!valor||valor<=0) return toast('Informe um valor válido.','err');
+  if(!vencimento) return toast('Informe o vencimento.','err');
+
+  loading(true);
+  try {
+    if (idRaw) {
+      const id=Number(idRaw);
+      const idx=_fdesp.findIndex(x=>x.id===id);
+      if(idx<0) { closeModal('modal-fin-despesa'); return; }
+      // mesReferencia acompanha o vencimento: mudar a data move a conta de mês
+      const upd={fornecedor,tipoDespesa,centroCusto,categoria,valor,vencimento,mesReferencia:vencimento.slice(0,7),reg,nf,dataNf,observacao};
+      await db.collection('fin_despesas').doc(String(id)).update(upd);
+      _fdesp[idx]={..._fdesp[idx],...upd};
+      logAcao('editou','conta-pagar',id,`Conta ${fornecedor} — R$ ${valor.toFixed(2)} (venc. ${fmt(vencimento)})`);
+    } else {
+      const desp={
+        id:newId(), fornecedor, tipoDespesa, centroCusto, categoria, valor, vencimento,
+        mesReferencia:vencimento.slice(0,7), reg, nf, dataNf, observacao,
+        status:'pendente', valorPago:null, dataPagamento:null, formaPagamento:null, bancoConta:null,
+        pagoPorId:null, pagoPorNome:null,
+        criadoPorId:FU.id, criadoPorNome:FU.name, createdAt:Date.now()
+      };
+      await db.collection('fin_despesas').doc(String(desp.id)).set(desp);
+      _fdesp.push(desp);
+      logAcao('criou','conta-pagar',desp.id,`Conta ${fornecedor} (${tipoDespesa}) — R$ ${valor.toFixed(2)} (venc. ${fmt(vencimento)})`);
+    }
+  } finally { loading(false); }
+  closeModal('modal-fin-despesa');
+  renderDespesas(); renderFinDashboard();
+  toast(idRaw?'Conta atualizada.':'Conta lançada.','ok');
+}
+
+// Despesa fixa se repete todo mês e era retrabalho de digitação na planilha:
+// traz as fixas do mês anterior que ainda não existem aqui, zeradas de baixa.
+async function repetirFixasMesAnterior() {
+  if(!canManageContasPagar()) return toast('Você não tem permissão para lançar contas a pagar.','err');
+  const alvo=despMonthTarget();
+  const mk=mKey(alvo);
+  const mkAnterior=mKey(new Date(alvo.getFullYear(), alvo.getMonth()-1, 1));
+  const fixasAnteriores=_fdesp.filter(d=>despMes(d)===mkAnterior&&d.tipoDespesa==='Fixo');
+  if(!fixasAnteriores.length) return toast(`Nenhuma despesa fixa em ${mesLabel(mkAnterior)} para repetir.`,'info');
+  // não duplica: fornecedor que já tem conta no mês fica de fora
+  const jaNoMes=new Set(_fdesp.filter(d=>despMes(d)===mk).map(d=>(d.fornecedor||'').toUpperCase()));
+  const novas=fixasAnteriores.filter(d=>!jaNoMes.has((d.fornecedor||'').toUpperCase()));
+  if(!novas.length) return toast('As fixas do mês anterior já estão lançadas neste mês.','info');
+  if(!confirm(`Repetir ${novas.length} despesa(s) fixa(s) de ${mesLabel(mkAnterior)} em ${mesLabel(mk)}?\n\nOs valores vêm iguais aos do mês anterior — confira e ajuste depois se algum mudou.`)) return;
+
+  loading(true);
+  let criadas=0;
+  try {
+    const batch=db.batch();
+    const geradas=[];
+    novas.forEach((d,i)=>{
+      const dia=Number((d.vencimento||'').slice(8,10))||10;
+      const nova={
+        id:newId()+i, fornecedor:d.fornecedor, tipoDespesa:'Fixo', centroCusto:d.centroCusto||'',
+        categoria:d.categoria||'', valor:d.valor, vencimento:buildVencimento(mk,dia), mesReferencia:mk,
+        reg:d.reg||'', nf:'', dataNf:null, observacao:'',
+        status:'pendente', valorPago:null, dataPagamento:null, formaPagamento:null, bancoConta:null,
+        pagoPorId:null, pagoPorNome:null,
+        criadoPorId:FU.id, criadoPorNome:FU.name, createdAt:Date.now()
+      };
+      batch.set(db.collection('fin_despesas').doc(String(nova.id)), nova);
+      geradas.push(nova); criadas++;
+    });
+    await batch.commit();
+    _fdesp.push(...geradas);
+  } finally { loading(false); }
+  logAcao('criou','conta-pagar',null,`${criadas} despesa(s) fixa(s) repetida(s) de ${mkAnterior} para ${mk}`);
+  renderDespesas(); renderFinDashboard();
+  toast(`${criadas} despesa(s) fixa(s) lançada(s) em ${mesLabel(mk)}.`,'ok');
+}
+
+function openBaixaDespesa(id) {
+  const d=_fdesp.find(x=>x.id===id); if(!d) return;
+  document.getElementById('fdb-id').value=d.id;
+  document.getElementById('fdb-resumo').textContent=`${d.fornecedor} — vence ${fmt(d.vencimento)} — R$ ${d.valor.toFixed(2)}`;
+  document.getElementById('fdb-valor-pago').value=d.valor.toFixed(2);
+  document.getElementById('fdb-data').value=new Date().toISOString().split('T')[0];
+  document.getElementById('fdb-forma').value='';
+  // banco/conta costuma ser sempre o mesmo: sugere o último usado
+  const ultima=[..._fdesp].filter(x=>x.bancoConta).sort((a,b)=>(b.dataPagamento||'').localeCompare(a.dataPagamento||''))[0];
+  document.getElementById('fdb-banco').value=(ultima&&ultima.bancoConta)||'';
+  document.getElementById('modal-fin-despesa-baixa').classList.add('open');
+}
+
+async function confirmBaixaDespesa() {
+  const id=Number(document.getElementById('fdb-id').value);
+  const d=_fdesp.find(x=>x.id===id); if(!d) return closeModal('modal-fin-despesa-baixa');
+  const valorPago=parseFloat(document.getElementById('fdb-valor-pago').value);
+  const dataPagamento=document.getElementById('fdb-data').value;
+  const formaPagamento=document.getElementById('fdb-forma').value;
+  const bancoConta=document.getElementById('fdb-banco').value.trim().toUpperCase();
+  if(!valorPago||valorPago<=0) return toast('Informe o valor pago.','err');
+  if(!dataPagamento) return toast('Informe a data do pagamento.','err');
+  if(!formaPagamento) return toast('Selecione a forma de pagamento.','err');
+
+  const upd={status:'pago', valorPago, dataPagamento, formaPagamento, bancoConta, pagoPorId:FU.id, pagoPorNome:FU.name};
+  loading(true);
+  try {
+    await db.collection('fin_despesas').doc(String(id)).update(upd);
+    const idx=_fdesp.findIndex(x=>x.id===id);
+    _fdesp[idx]={..._fdesp[idx],...upd};
+  } finally { loading(false); }
+  const dif=valorPago-d.valor;
+  logAcao('pagou','conta-pagar',id,`${d.fornecedor} — R$ ${valorPago.toFixed(2)} via ${formaPagamento}${Math.abs(dif)>=0.01?` (valor da conta: R$ ${d.valor.toFixed(2)})`:''}`);
+  closeModal('modal-fin-despesa-baixa');
+  renderDespesas(); renderFinDashboard();
+  toast('Baixa registrada.','ok');
+}
+
+async function delDespesa(id) {
+  if(!canManageContasPagar()) return toast('Você não tem permissão para excluir contas a pagar.','err');
+  const d=_fdesp.find(x=>x.id===id); if(!d) return;
+  if(!confirm(`Excluir a conta de ${d.fornecedor} (R$ ${d.valor.toFixed(2)})?`)) return;
+  loading(true);
+  try {
+    await db.collection('fin_despesas').doc(String(id)).delete();
+    _fdesp=_fdesp.filter(x=>x.id!==id);
+  } finally { loading(false); }
+  logAcao('removeu','conta-pagar',id,`Conta ${d.fornecedor} — R$ ${d.valor.toFixed(2)}`);
+  renderDespesas(); renderFinDashboard();
+  toast('Conta removida.','info');
+}
+
+function renderDespesas() {
+  const target=despMonthTarget();
+  const mk=mKey(target);
+  const today=new Date().toISOString().split('T')[0];
+  document.getElementById('fd-month-label').textContent=target.toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
+
+  const gerenciar=canManageContasPagar();
+  ['fd-new-btn','fd-repetir-btn'].forEach(bid=>{
+    const el=document.getElementById(bid); if(el) el.style.display=gerenciar?'':'none';
+  });
+
+  const doMes=_fdesp.filter(d=>despMes(d)===mk);
+  let totalPago=0, totalPendente=0, totalFixo=0, totalVariavel=0;
+  const comStatus=doMes.map(d=>{
+    if(d.status==='pago') totalPago+=(d.valorPago!=null?d.valorPago:d.valor); else totalPendente+=d.valor;
+    if(d.tipoDespesa==='Fixo') totalFixo+=d.valor; else totalVariavel+=d.valor;
+    return {d, statusKey:statusPagarInfo(d,today).key};
+  }).sort((a,b)=>(a.d.vencimento||'').localeCompare(b.d.vencimento||'')||(a.d.fornecedor||'').localeCompare(b.d.fornecedor||''));
+
+  const busca=document.getElementById('fd-busca').value.trim().toLowerCase();
+  const fTipo=document.getElementById('fd-filtro-tipo').value;
+  const fStatus=document.getElementById('fd-filtro-status').value;
+  const filtradas=comStatus.filter(({d,statusKey})=>
+    (!busca||`${d.fornecedor||''} ${d.nf||''} ${d.reg||''} ${d.observacao||''}`.toLowerCase().includes(busca)) &&
+    (!fTipo||fTipo===d.tipoDespesa) &&
+    (!fStatus||fStatus===statusKey)
+  );
+
+  document.getElementById('fd-metrics').innerHTML=`
+    <div class="mc c3"><div class="mc-tag">TOTAL PAGO</div><div class="mc-big">R$ ${totalPago.toFixed(2)}</div><div class="mc-lbl">${doMes.filter(d=>d.status==='pago').length} conta(s) paga(s)</div></div>
+    <div class="mc c4"><div class="mc-tag">TOTAL PENDENTE</div><div class="mc-big">R$ ${totalPendente.toFixed(2)}</div><div class="mc-lbl">${doMes.filter(d=>d.status!=='pago').length} aguardando baixa</div></div>
+    <div class="mc c2"><div class="mc-tag">FIXAS</div><div class="mc-big">R$ ${totalFixo.toFixed(2)}</div><div class="mc-lbl">${doMes.filter(d=>d.tipoDespesa==='Fixo').length} despesa(s) fixa(s)</div></div>
+    <div class="mc c3"><div class="mc-tag">VARIÁVEIS</div><div class="mc-big">R$ ${totalVariavel.toFixed(2)}</div><div class="mc-lbl">${doMes.filter(d=>d.tipoDespesa!=='Fixo').length} despesa(s) variável(is)</div></div>
+  `;
+
+  document.getElementById('fd-tbody').innerHTML=filtradas.length?filtradas.map(({d})=>{
+    const st=statusPagarInfo(d,today);
+    const tipoBadge=d.tipoDespesa==='Fixo'
+      ? '<span class="badge b-1">Fixo</span>'
+      : '<span class="badge b-4">Variável</span>';
+    const sub=[d.nf?`NF ${escapeHtml(d.nf)}`:'', d.centroCusto?escapeHtml(d.centroCusto):'', d.dataNf?`NF em ${fmt(d.dataNf)}`:'']
+      .filter(Boolean).join(' · ');
+    const obs=d.observacao?`<div style="font-size:11px;color:var(--soft)">${escapeHtml(d.observacao)}</div>`:'';
+    // valor pago diferente do previsto (juros/multa/desconto) precisa saltar aos olhos
+    const dif=d.status==='pago'&&d.valorPago!=null?d.valorPago-d.valor:0;
+    const pagoCel=d.status==='pago'
+      ? `<div><strong>R$ ${(d.valorPago!=null?d.valorPago:d.valor).toFixed(2)}</strong>${Math.abs(dif)>=0.01?`<div style="font-size:10.5px;font-weight:700;color:${dif>0?'var(--red)':'var(--green)'}">${dif>0?'+':'−'} R$ ${Math.abs(dif).toFixed(2)}</div>`:''}</div>
+         <div style="font-size:11px;color:var(--muted)">${d.dataPagamento?fmt(d.dataPagamento):''}${d.formaPagamento?' · '+escapeHtml(d.formaPagamento):''}${d.bancoConta?' · '+escapeHtml(d.bancoConta):''}</div>`
+      : '<span class="text-muted">—</span>';
+    const acoes=[
+      d.status!=='pago'?`<button class="btn btn-ghost btn-xs" onclick="openBaixaDespesa(${d.id})">Dar Baixa</button>`:'',
+      gerenciar?`<button class="btn btn-ghost btn-xs" onclick="openEditDespesa(${d.id})">Editar</button>`:'',
+      gerenciar?`<button class="btn-icon del" onclick="delDespesa(${d.id})" title="Excluir">×</button>`:''
+    ].join('');
+    return `<tr>
+      <td class="text-muted">${escapeHtml(d.reg||'—')}</td>
+      <td><strong>${escapeHtml(d.fornecedor||'—')}</strong>${sub?`<div style="font-size:11px;color:var(--muted)">${sub}</div>`:''}${obs}</td>
+      <td>${tipoBadge}</td>
+      <td>${d.categoria?`<span class="badge b-3">${escapeHtml(d.categoria)}</span>`:'—'}</td>
+      <td><strong>R$ ${d.valor.toFixed(2)}</strong></td>
+      <td class="text-muted">${fmt(d.vencimento)}</td>
+      <td>${st.html}</td>
+      <td>${pagoCel}</td>
+      <td><div class="flex gap6">${acoes}</div></td>
+    </tr>`;
+  }).join(''):`<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:32px">${doMes.length?'Nenhuma conta encontrada com esses filtros':'Nenhuma conta lançada neste mês. Clique em "+ Nova Conta" ou repita as fixas do mês anterior.'}</td></tr>`;
+}
+
+// mesma lógica da tela, reaproveitada pela planilha e pela impressão
+function despesasMensalDados() {
+  const target=despMonthTarget();
+  const mk=mKey(target);
+  const today=new Date().toISOString().split('T')[0];
+  const rows=_fdesp.filter(d=>despMes(d)===mk)
+    .sort((a,b)=>(a.vencimento||'').localeCompare(b.vencimento||'')||(a.fornecedor||'').localeCompare(b.fornecedor||''))
+    .map(d=>({
+      reg:d.reg||'', dataNf:d.dataNf||'', centroCusto:d.centroCusto||'', tipoDespesa:d.tipoDespesa||'',
+      fornecedor:d.fornecedor||'', nf:d.nf||'', categoria:d.categoria||'', valor:d.valor||0,
+      vencimento:d.vencimento||'', status:statusPagarInfo(d,today).label,
+      valorPago:d.status==='pago'?(d.valorPago!=null?d.valorPago:d.valor):null,
+      dataPagamento:d.dataPagamento||'', formaPagamento:d.formaPagamento||'', bancoConta:d.bancoConta||'',
+      observacao:d.observacao||'', registradoPor:d.criadoPorNome||'', baixadoPor:d.pagoPorNome||''
+    }));
+  const totalPago=rows.filter(r=>r.valorPago!=null).reduce((s,r)=>s+r.valorPago,0);
+  const totalPendente=rows.filter(r=>r.valorPago==null).reduce((s,r)=>s+r.valor,0);
+  const totalFixo=rows.filter(r=>r.tipoDespesa==='Fixo').reduce((s,r)=>s+r.valor,0);
+  const totalVariavel=rows.filter(r=>r.tipoDespesa!=='Fixo').reduce((s,r)=>s+r.valor,0);
+  return {mk, label:target.toLocaleDateString('pt-BR',{month:'long',year:'numeric'}), rows,
+    totalPago, totalPendente, totalFixo, totalVariavel, total:totalFixo+totalVariavel};
+}
+
+function exportDespesasExcel() {
+  if(typeof XLSX==='undefined') return toast('Biblioteca de planilha não carregou. Verifique sua conexão.','err');
+  const d=despesasMensalDados();
+  if(!d.rows.length) return toast('Nenhuma conta neste mês para exportar.','info');
+  // mesmas colunas da planilha que o financeiro já usava
+  const aoa=[['Reg.','Data NF','Centro de Custo','Tipo Despesa','Fornecedor','NF','Categoria','Valor (R$)','Vencimento','Status','Valor Pago (R$)','Data Pag.','Forma Pag.','Banco/Conta','Observação','Registrado por','Baixado por']];
+  const VALOR_COL=7, PAGO_COL=10;
+  d.rows.forEach(r=>aoa.push([r.reg,r.dataNf?fmt(r.dataNf):'',r.centroCusto,r.tipoDespesa,r.fornecedor,r.nf,r.categoria,
+    Number((r.valor||0).toFixed(2)), r.vencimento?fmt(r.vencimento):'', r.status,
+    r.valorPago!=null?Number(r.valorPago.toFixed(2)):'', r.dataPagamento?fmt(r.dataPagamento):'',
+    r.formaPagamento, r.bancoConta, r.observacao, r.registradoPor, r.baixadoPor]));
+  const totalPad=(label,valor,col)=>{const row=new Array(aoa[0].length).fill('');row[0]=label;row[col]=Number(valor.toFixed(2));return row;};
+  aoa.push([]);
+  aoa.push(totalPad('TOTAL FIXAS',d.totalFixo,VALOR_COL));
+  aoa.push(totalPad('TOTAL VARIÁVEIS',d.totalVariavel,VALOR_COL));
+  aoa.push(totalPad('TOTAL GERAL',d.total,VALOR_COL));
+  aoa.push(totalPad('TOTAL PAGO',d.totalPago,PAGO_COL));
+  aoa.push(totalPad('TOTAL PENDENTE',d.totalPendente,VALOR_COL));
+  const ws=XLSX.utils.aoa_to_sheet(aoa);
+  ws['!cols']=[{wch:8},{wch:11},{wch:16},{wch:13},{wch:30},{wch:18},{wch:18},{wch:14},{wch:12},{wch:14},{wch:14},{wch:12},{wch:14},{wch:14},{wch:24},{wch:18},{wch:18}];
+  const MOEDA='#,##0.00';
+  const ref=XLSX.utils.decode_range(ws['!ref']);
+  for(let row=1; row<=ref.e.r; row++){
+    [VALOR_COL,PAGO_COL].forEach(c=>{
+      const cell=ws[XLSX.utils.encode_cell({r:row,c})];
+      if(cell && cell.t==='n') cell.z=MOEDA;
+    });
+  }
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'Contas a Pagar');
+  XLSX.writeFile(wb,`Contas a Pagar - ${d.mk}.xlsx`);
+  toast('Planilha gerada.','ok');
+}
+
+function imprimirDespesas() {
+  const d=despesasMensalDados();
+  if(!d.rows.length) return toast('Nenhuma conta neste mês para imprimir.','info');
+  const now=new Date();
+  const dataStr=now.toLocaleDateString('pt-BR')+' '+now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  const linhasHtml=d.rows.map(r=>`<tr>
+      <td>${escapeHtml(r.reg)||'—'}</td>
+      <td>${escapeHtml(r.fornecedor)}${r.nf?`<div style="font-size:10px;color:#555">NF ${escapeHtml(r.nf)}</div>`:''}</td>
+      <td>${escapeHtml(r.tipoDespesa)}</td>
+      <td>${escapeHtml(r.categoria)||'—'}</td>
+      <td style="text-align:right">R$ ${fmtMoeda(r.valor)}</td>
+      <td>${r.vencimento?fmt(r.vencimento):'—'}</td>
+      <td>${escapeHtml(r.status)}</td>
+      <td style="text-align:right">${r.valorPago!=null?'R$ '+fmtMoeda(r.valorPago):'—'}</td>
+      <td>${escapeHtml(r.formaPagamento)||'—'}</td>
+    </tr>`).join('');
+  document.getElementById('print-orcamento').innerHTML=`
+    <div style="padding:24px;font-family:Arial,sans-serif">
+      <h2 style="margin:0 0 4px">Contas a Pagar</h2>
+      <div style="font-size:14px;margin-bottom:2px;text-transform:capitalize">Mês de referência: ${d.label}</div>
+      <div style="font-size:12px;color:#555;margin-bottom:16px">Emitido em ${dataStr}</div>
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr>
+          <th style="text-align:left;padding:6px">Reg.</th>
+          <th style="text-align:left;padding:6px">Fornecedor</th>
+          <th style="text-align:left;padding:6px">Tipo</th>
+          <th style="text-align:left;padding:6px">Categoria</th>
+          <th style="text-align:right;padding:6px">Valor</th>
+          <th style="text-align:left;padding:6px">Vencimento</th>
+          <th style="text-align:left;padding:6px">Status</th>
+          <th style="text-align:right;padding:6px">Valor Pago</th>
+          <th style="text-align:left;padding:6px">Forma</th>
+        </tr></thead>
+        <tbody>${linhasHtml}</tbody>
+      </table>
+      <div style="margin-top:18px;font-size:13px">
+        <div>Total fixas: <strong>R$ ${fmtMoeda(d.totalFixo)}</strong></div>
+        <div>Total variáveis: <strong>R$ ${fmtMoeda(d.totalVariavel)}</strong></div>
+        <div>Total pago: <strong>R$ ${fmtMoeda(d.totalPago)}</strong></div>
+        <div>Total pendente: <strong>R$ ${fmtMoeda(d.totalPendente)}</strong></div>
+        <div style="margin-top:6px;font-size:15px">Total geral do mês: <strong>R$ ${fmtMoeda(d.total)}</strong></div>
+      </div>
+    </div>`;
+  setTimeout(()=>window.print(),100);
+}
+
 /* ── CHAT (conversas privadas 1-a-1) ───────── */
 // primeira funcionalidade em tempo real do sistema (onSnapshot) - todo o
 // resto do app é busca única + atualização manual depois de escrever.
@@ -5937,7 +6453,7 @@ async function addFinUser() {
       return;
     }
     const nid=_fu.length?Math.max(..._fu.map(u=>u.id))+1:1;
-    const nu={id:nid,name,usuario,role,photo:null,ativo:false,permPrestadores:false,permPagamentos:false,permAcordos:false};
+    const nu={id:nid,name,usuario,role,photo:null,ativo:false,permPrestadores:false,permPagamentos:false,permAcordos:false,permContasPagar:false};
     await db.collection('fin_usuarios').doc(String(nid)).set(nu);
     _fu.push(nu);
   } finally { loading(false); }
@@ -5963,6 +6479,7 @@ function openEditFinUser(id) {
   document.getElementById('feu-perm-prestadores').checked=!!u.permPrestadores;
   document.getElementById('feu-perm-pagamentos').checked=!!u.permPagamentos;
   document.getElementById('feu-perm-acordos').checked=!!u.permAcordos;
+  document.getElementById('feu-perm-contas').checked=!!u.permContasPagar;
   onFeuRoleChange();
   document.getElementById('modal-fin-edit').classList.add('open');
 }
@@ -5975,11 +6492,12 @@ async function saveEditFinUser() {
   const permPrestadores=document.getElementById('feu-perm-prestadores').checked;
   const permPagamentos=document.getElementById('feu-perm-pagamentos').checked;
   const permAcordos=document.getElementById('feu-perm-acordos').checked;
+  const permContasPagar=document.getElementById('feu-perm-contas').checked;
   if(!name) return toast('Nome é obrigatório.','err');
   // usuário (login) não é editável aqui de propósito - mudar exigiria trocar
   // o e-mail sintético no Firebase Auth, e sem Admin SDK isso não é seguro
   // de fazer só pelo front-end
-  _fu[idx]={..._fu[idx],name,role,permPrestadores,permPagamentos,permAcordos};
+  _fu[idx]={..._fu[idx],name,role,permPrestadores,permPagamentos,permAcordos,permContasPagar};
   loading(true);
   try {
     await db.collection('fin_usuarios').doc(String(id)).set(_fu[idx]);
