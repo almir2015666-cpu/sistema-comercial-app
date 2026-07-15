@@ -52,6 +52,11 @@ workflows:
           keychain add-certificates
       - name: Configurar assinatura automática
         script: xcode-project use-profiles
+      # Isto define só o NÚMERO DE BUILD (CFBundleVersion), que é interno.
+      # A VERSÃO (CFBundleShortVersionString / MARKETING_VERSION) tem que ser
+      # subida à mão em ios/App/App.xcodeproj/project.pbxproj a cada versão
+      # aprovada na App Store: reenviar uma versão já aprovada é recusado pela
+      # Apple com "the train version X is closed for new build submissions".
       - name: Definir número de build único
         script: |
           cd ios/App
