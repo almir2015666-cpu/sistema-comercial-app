@@ -4402,7 +4402,7 @@ function pagMensalDados() {
   linhas.push(...removidos.values());
   linhas.sort((a,b)=>a.nome.localeCompare(b.nome));
   let totalPago=0, totalPendente=0, pagos=0, pendentes=0, naoLancados=0;
-  const porTipo={}; // quanto o mês teve de salário / coordenação / plantão
+  const porTipo={}; // quanto o mês teve de plantão / coordenação / consulta / laudo
   // um prestador com vários lançamentos no mês rende várias linhas, uma por
   // lançamento, pra planilha somar o mesmo total que a tela mostra
   const rows=linhas.flatMap(p=>{
@@ -4597,10 +4597,10 @@ async function confirmValorPagamento() {
 // escolhe quem entra no mês e já confere/ajusta o valor e a observação de cada
 // um na hora da seleção. O mesmo prestador pode receber vários lançamentos no
 // mesmo mês (botão +) - cada linha vira um pagamento independente.
-// tipos de lançamento: um prestador pode receber salário, coordenação e plantão
-// no mesmo mês - cada um vira um pagamento próprio. É lista fixa (e não texto
-// livre) pra dar pra somar/filtrar por tipo depois, sem "plantao" vs "Plantão"
-const TIPOS_LANCAMENTO=['Salário','Coordenação','Plantão','Bônus','Reembolso','Outro'];
+// tipos de lançamento: um prestador pode receber plantão, coordenação, consulta
+// e laudo no mesmo mês - cada um vira um pagamento próprio. É lista fixa (e não
+// texto livre) pra dar pra somar/filtrar por tipo depois, sem "plantao" vs "Plantão"
+const TIPOS_LANCAMENTO=['Plantão','Coordenação','Consulta','Laudo'];
 
 function selmesLinhaHTML(valor, tipo) {
   return `<div class="selmes-linha flex items-c gap8" style="margin-top:8px">
@@ -4644,11 +4644,12 @@ function openSelecionarMesModal() {
 
 // quem clica no + claramente quer esse prestador no mês, então já marca o check.
 // A linha nova entra no próximo tipo ainda não usado e com o VALOR VAZIO: o
-// valor padrão é o do salário, repeti-lo em plantão/coordenação seria chute
+// valor padrão é o do cadastro, repeti-lo nos outros tipos seria chute
 function addSelmesLinha(id) {
   const box=document.querySelector(`.selmes-linhas[data-id="${id}"]`); if(!box) return;
   const usados=new Set(Array.from(box.querySelectorAll('.selmes-tipo')).map(s=>s.value));
-  const tipo=TIPOS_LANCAMENTO.find(t=>!usados.has(t))||'Outro';
+  // esgotados os tipos, repete o primeiro: dá pra ter dois plantões no mês
+  const tipo=TIPOS_LANCAMENTO.find(t=>!usados.has(t))||TIPOS_LANCAMENTO[0];
   box.insertAdjacentHTML('beforeend', selmesLinhaHTML('',tipo));
   const chk=document.querySelector(`.selmes-chk[data-id="${id}"]`);
   if(chk) chk.checked=true;
@@ -4704,8 +4705,8 @@ async function confirmarSelecaoMes() {
       const id=Number(chk.dataset.id);
       const p=_fpr.find(p=>p.id===id); if(!p) return;
       const box=document.querySelector(`.selmes-linhas[data-id="${id}"]`); if(!box) return;
-      // cada linha do prestador vira um pagamento próprio: salário, coordenação
-      // e plantão do mesmo mês ficam separados, cada um com seu valor
+      // cada linha do prestador vira um pagamento próprio: plantão, coordenação,
+      // consulta e laudo do mesmo mês ficam separados, cada um com seu valor
       box.querySelectorAll('.selmes-linha').forEach(linha=>{
         const valor=parseFloat(linha.querySelector('.selmes-valor').value);
         if(!valor||valor<=0) return;
