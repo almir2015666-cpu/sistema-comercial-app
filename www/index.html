@@ -686,6 +686,15 @@ tbody tr:hover td{background:var(--bg)}
   .det-fields{flex-direction:column}
   .det-field{min-width:unset}
   .act-row{flex-wrap:wrap;gap:10px}
+
+  /* Cabeçalho de card: no celular, título em cima e botões embaixo.
+     Empilhar é obrigatório, não estético: lado a lado o texto encolhe até a
+     maior palavra (vira uma coluna de 2 palavras) e os botões, que não
+     encolhem, vazam pela direita. flex-wrap sozinho não resolve - o navegador
+     considera que "coube" justamente porque o texto encolheu. */
+  .card-hd{flex-direction:column;align-items:stretch;gap:12px}
+  .card-hd>*{min-width:0}
+  .card-hd>.flex{flex-wrap:wrap}
   .modal{width:100%;max-width:100vw;border-radius:20px 20px 0 0;position:fixed;bottom:0;margin:0;max-height:85vh}
   .overlay{align-items:flex-end}
 
