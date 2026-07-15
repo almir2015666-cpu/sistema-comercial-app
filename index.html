@@ -2039,7 +2039,7 @@ tbody tr:hover td{background:var(--bg)}
 
 <!-- MODAL: SELECIONAR PRESTADORES DO MÊS -->
 <div class="overlay" id="modal-fin-selecionar-mes">
-  <div class="modal" style="max-width:640px">
+  <div class="modal" style="width:900px;max-width:94vw">
     <div class="modal-title">Selecionar Prestadores do Mês</div>
     <div class="card-sub mb16" id="selmes-resumo" style="margin:0 0 14px"></div>
     <div class="fg" style="margin-bottom:8px">
@@ -2048,7 +2048,7 @@ tbody tr:hover td{background:var(--bg)}
         Selecionar todos
       </label>
     </div>
-    <div id="selmes-lista" style="max-height:360px;overflow-y:auto;display:flex;flex-direction:column;gap:8px"></div>
+    <div id="selmes-lista" style="max-height:62vh;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding-right:4px"></div>
     <div class="modal-ft">
       <button class="btn btn-ghost" onclick="closeModal('modal-fin-selecionar-mes')">Cancelar</button>
       <button class="btn btn-ok" onclick="confirmarSelecaoMes()">Lançar Selecionados</button>
@@ -4315,13 +4315,14 @@ function renderContasPagar() {
 
   const contasDoMes=_fp.filter(c=>c.prestadorId&&contaMes(c)===mk);
   const idsComConta=new Set(contasDoMes.map(c=>c.prestadorId));
-  const idsPrestador=new Set(_fpr.map(p=>p.id));
-  const linhas=_fpr.filter(p=>idsComConta.has(p.id));
-  // pagamento de prestador já EXCLUÍDO continua no histórico do mês: reconstrói
-  // a linha a partir do que ficou salvo no próprio lançamento (nome/valor/categoria)
-  contasDoMes.filter(c=>!idsPrestador.has(c.prestadorId)).forEach(c=>linhas.push(
-    {id:c.prestadorId,nome:c.prestadorNome||'(prestador excluído)',categoria:c.categoria||'',valorPadrao:c.valor||0,diaVencimentoPadrao:0,ativo:false,_removido:true}));
-  linhas.sort((a,b)=>a.nome.localeCompare(b.nome));
+  // uma linha por LANÇAMENTO - o mesmo prestador pode ter vários no mesmo mês.
+  // pagamento de prestador já EXCLUÍDO continua no histórico: a linha é
+  // reconstruída a partir do que ficou salvo no próprio lançamento
+  const linhas=contasDoMes.map(c=>({
+    p:_fpr.find(p=>p.id===c.prestadorId)||{id:c.prestadorId,nome:c.prestadorNome||'(prestador excluído)',ativo:false,_removido:true},
+    c
+  }));
+  linhas.sort((a,b)=>a.p.nome.localeCompare(b.p.nome)||(a.c.createdAt||0)-(b.c.createdAt||0));
 
   // quantos prestadores ativos ainda não foram escolhidos pro mês - vira o
   // card "Disponíveis" (clicável, abre o seletor) em vez de linha na tabela
@@ -4330,8 +4331,7 @@ function renderContasPagar() {
   const busca=document.getElementById('fp-busca').value.trim().toLowerCase();
   const filtroStatus=document.getElementById('fp-filtro-status').value;
   let pagos=0, pendentes=0, totalPago=0, totalPendente=0;
-  const linhasComStatus=linhas.map(p=>{
-    const c=contasDoMes.find(c=>c.prestadorId===p.id);
+  const linhasComStatus=linhas.map(({p,c})=>{
     if (c.status==='pago') { pagos++; totalPago+=c.valor; } else { pendentes++; totalPendente+=c.valor; }
     return {p,c,statusKey:statusPagarInfo(c,today).key};
   });
@@ -4348,8 +4348,10 @@ function renderContasPagar() {
     const rodape=c.status==='pago'
       ? `<div style="font-size:11px;color:var(--muted)">Registrado por ${c.criadoPorNome} · Baixado por ${c.pagoPorNome||'—'}${c.formaPagamento?' via '+c.formaPagamento:''}${c.notaFiscalUrl?` · <a href="${c.notaFiscalUrl}" target="_blank" rel="noopener" style="color:var(--blue2)">Ver NF</a>`:''}</div>`
       : `<div style="font-size:11px;color:var(--muted)">Registrado por ${c.criadoPorNome}</div>`;
+    const obs=c.observacao?`<div style="display:inline-block;margin:3px 0;padding:3px 8px;font-size:12px;font-weight:700;color:var(--blue2);background:rgba(37,99,235,.1);border-left:3px solid var(--blue2);border-radius:4px">📝 ${escapeHtml(c.observacao)}</div>`:'';
+    const tipo=c.tipoLancamento?` <span class="badge b-2" style="font-size:12px;padding:3px 10px">${escapeHtml(c.tipoLancamento)}</span>`:'';
     return `<tr>
-      <td><strong>${p.nome}</strong>${rodape}</td>
+      <td><strong>${p.nome}</strong>${tipo}${obs?'<br>'+obs:''}${rodape}</td>
       <td>${c.categoria?`<span class="badge b-3">${c.categoria}</span>`:'—'}</td>
       <td><strong>R$ ${c.valor.toFixed(2)}</strong></td>
       <td class="text-muted">${fmt(c.vencimento)}</td>
@@ -4359,9 +4361,9 @@ function renderContasPagar() {
   }).join(''):`<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:32px">${naoSelecionados?'Nenhum prestador selecionado ainda esse mês. Clique em "Selecionar Prestadores do Mês".':'Nenhum prestador encontrado'}</td></tr>`;
 
   document.getElementById('fp-month-metrics').innerHTML=`
-    <div class="mc c3"><div class="mc-tag">TOTAL PAGO</div><div class="mc-big">R$ ${totalPago.toFixed(2)}</div><div class="mc-lbl">${pagos} prestador(es) pago(s)</div></div>
+    <div class="mc c3"><div class="mc-tag">TOTAL PAGO</div><div class="mc-big">R$ ${totalPago.toFixed(2)}</div><div class="mc-lbl">${pagos} lançamento(s) pago(s)</div></div>
     <div class="mc c4"><div class="mc-tag">TOTAL PENDENTE</div><div class="mc-big">R$ ${totalPendente.toFixed(2)}</div><div class="mc-lbl">${pendentes} aguardando baixa</div></div>
-    <div class="mc c3"><div class="mc-tag">PAGOS</div><div class="mc-big">${pagos}</div><div class="mc-lbl">Prestadores pagos este mês</div></div>
+    <div class="mc c3"><div class="mc-tag">PAGOS</div><div class="mc-big">${pagos}</div><div class="mc-lbl">Lançamentos pagos este mês</div></div>
     <div class="mc c2" style="cursor:pointer" onclick="openSelecionarMesModal()" title="Selecionar prestadores do mês"><div class="mc-tag">DISPONÍVEIS</div><div class="mc-big">${naoSelecionados}</div><div class="mc-lbl">Ainda não selecionados esse mês</div></div>
   `;
 }
@@ -4382,12 +4384,20 @@ function pagMensalDados() {
   const idsComConta=new Set(contasDoMes.map(c=>c.prestadorId));
   const idsPrestador=new Set(_fpr.map(p=>p.id));
   const linhas=_fpr.filter(p=>p.ativo!==false||idsComConta.has(p.id));
-  // inclui no relatório o que foi pago a prestadores já excluídos (via snapshot do lançamento)
-  contasDoMes.filter(c=>!idsPrestador.has(c.prestadorId)).forEach(c=>linhas.push(
-    {id:c.prestadorId,nome:c.prestadorNome||'(prestador excluído)',categoria:c.categoria||'',valorPadrao:c.valor||0,diaVencimentoPadrao:0,ativo:false,_removido:true}));
+  // inclui no relatório o que foi pago a prestadores já excluídos (via snapshot
+  // do lançamento) - uma entrada por prestador, mesmo com vários lançamentos
+  const removidos=new Map();
+  contasDoMes.filter(c=>!idsPrestador.has(c.prestadorId)).forEach(c=>{
+    if(removidos.has(c.prestadorId)) return;
+    removidos.set(c.prestadorId,{id:c.prestadorId,nome:c.prestadorNome||'(prestador excluído)',categoria:c.categoria||'',valorPadrao:c.valor||0,diaVencimentoPadrao:0,ativo:false,_removido:true});
+  });
+  linhas.push(...removidos.values());
   linhas.sort((a,b)=>a.nome.localeCompare(b.nome));
   let totalPago=0, totalPendente=0, pagos=0, pendentes=0, naoLancados=0;
-  const rows=linhas.map(p=>{
+  const porTipo={}; // quanto o mês teve de salário / coordenação / plantão
+  // um prestador com vários lançamentos no mês rende várias linhas, uma por
+  // lançamento, pra planilha somar o mesmo total que a tela mostra
+  const rows=linhas.flatMap(p=>{
     // dados cadastrais do prestador vão junto em toda linha, pra planilha
     // trazer banco/agência/conta/PIX/documento/contato completos
     const cadastro={
@@ -4395,38 +4405,44 @@ function pagMensalDados() {
       chavePix:p.chavePix||'', banco:p.banco||'', agencia:p.agencia||'',
       conta:p.conta||'', observacoes:p.observacoes||''
     };
-    const c=contasDoMes.find(c=>c.prestadorId===p.id);
-    if(!c){
+    const contas=contasDoMes.filter(c=>c.prestadorId===p.id);
+    if(!contas.length){
       naoLancados++;
-      return {nome:p.nome, tipo:p.tipo||'', categoria:p.categoria||'', valor:p.valorPadrao||0,
+      return [{nome:p.nome, tipo:p.tipo||'', categoria:p.categoria||'', valor:p.valorPadrao||0,
         vencimento:buildVencimento(mk,p.diaVencimentoPadrao), status:'Não lançado',
-        forma:'', dataPagamento:'', registradoPor:'', baixadoPor:'', ...cadastro};
+        forma:'', dataPagamento:'', registradoPor:'', baixadoPor:'', tipoLancamento:'', obsLancamento:'', ...cadastro}];
     }
-    if(c.status==='pago'){ pagos++; totalPago+=c.valor; } else { pendentes++; totalPendente+=c.valor; }
-    const st=statusPagarInfo(c,today);
-    return {nome:p.nome, tipo:p.tipo||'', categoria:c.categoria||'', valor:c.valor,
-      vencimento:c.vencimento, status:st.label, forma:c.formaPagamento||'',
-      dataPagamento:c.dataPagamento||'', registradoPor:c.criadoPorNome||'', baixadoPor:c.pagoPorNome||'', ...cadastro};
+    return contas.map(c=>{
+      if(c.status==='pago'){ pagos++; totalPago+=c.valor; } else { pendentes++; totalPendente+=c.valor; }
+      const st=statusPagarInfo(c,today);
+      porTipo[c.tipoLancamento||'—']=(porTipo[c.tipoLancamento||'—']||0)+c.valor;
+      return {nome:p.nome, tipo:p.tipo||'', categoria:c.categoria||'', valor:c.valor,
+        vencimento:c.vencimento, status:st.label, forma:c.formaPagamento||'',
+        dataPagamento:c.dataPagamento||'', registradoPor:c.criadoPorNome||'', baixadoPor:c.pagoPorNome||'',
+        tipoLancamento:c.tipoLancamento||'', obsLancamento:c.observacao||'', ...cadastro};
+    });
   });
-  return {mk,label,rows,totalPago,totalPendente,pagos,pendentes,naoLancados,total:totalPago+totalPendente};
+  return {mk,label,rows,totalPago,totalPendente,pagos,pendentes,naoLancados,porTipo,total:totalPago+totalPendente};
 }
 
 function exportPagMensalExcel() {
   if(typeof XLSX==='undefined') return toast('Biblioteca de planilha não carregou. Verifique sua conexão.','err');
   const d=pagMensalDados();
   if(!d.rows.length) return toast('Nenhum prestador neste mês para exportar.','info');
-  const aoa=[['Prestador','Tipo','Documento','Categoria','Valor (R$)','Vencimento','Status','Forma de Pagamento','Data do Pagamento','Telefone','E-mail','Chave PIX','Banco','Agência','Conta','Observações','Registrado por','Baixado por']];
-  const VALOR_COL=4; // índice (0-based) da coluna "Valor (R$)"
-  d.rows.forEach(r=>aoa.push([r.nome,r.tipo,r.documento,r.categoria,Number((r.valor||0).toFixed(2)),
-    r.vencimento?fmt(r.vencimento):'',r.status,r.forma,r.dataPagamento?fmt(r.dataPagamento):'',
+  const aoa=[['Prestador','Tipo','Documento','Categoria','Lançamento','Valor (R$)','Vencimento','Status','Observação do Lançamento','Forma de Pagamento','Data do Pagamento','Telefone','E-mail','Chave PIX','Banco','Agência','Conta','Observações','Registrado por','Baixado por']];
+  const VALOR_COL=5; // índice (0-based) da coluna "Valor (R$)"
+  d.rows.forEach(r=>aoa.push([r.nome,r.tipo,r.documento,r.categoria,r.tipoLancamento,Number((r.valor||0).toFixed(2)),
+    r.vencimento?fmt(r.vencimento):'',r.status,r.obsLancamento,r.forma,r.dataPagamento?fmt(r.dataPagamento):'',
     r.telefone,r.email,r.chavePix,r.banco,r.agencia,r.conta,r.observacoes,r.registradoPor,r.baixadoPor]));
   const totalPad=(label,valor)=>{const row=new Array(aoa[0].length).fill('');row[0]=label;row[VALOR_COL]=Number(valor.toFixed(2));return row;};
   aoa.push([]);
   aoa.push(totalPad('TOTAL PAGO',d.totalPago));
   aoa.push(totalPad('TOTAL PENDENTE',d.totalPendente));
   aoa.push(totalPad('TOTAL GERAL',d.total));
+  // e o total de cada tipo: é o "quanto gastei de plantão esse mês"
+  Object.keys(d.porTipo).sort().forEach(t=>aoa.push(totalPad('TOTAL '+t.toUpperCase(),d.porTipo[t])));
   const ws=XLSX.utils.aoa_to_sheet(aoa);
-  ws['!cols']=[{wch:28},{wch:14},{wch:16},{wch:18},{wch:14},{wch:12},{wch:14},{wch:18},{wch:16},{wch:16},{wch:24},{wch:20},{wch:18},{wch:10},{wch:14},{wch:24},{wch:18},{wch:18}];
+  ws['!cols']=[{wch:28},{wch:14},{wch:16},{wch:18},{wch:14},{wch:14},{wch:12},{wch:14},{wch:30},{wch:18},{wch:16},{wch:16},{wch:24},{wch:20},{wch:18},{wch:10},{wch:14},{wch:24},{wch:18},{wch:18}];
   // formata a coluna de valor como moeda: no Excel pt-BR aparece 25.000,00,
   // mantendo o conteúdo numérico pra continuar somável
   const MOEDA='#,##0.00';
@@ -4447,7 +4463,8 @@ function imprimirPagMensal() {
   const now=new Date();
   const dataStr=now.toLocaleDateString('pt-BR')+' '+now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
   const linhasHtml=d.rows.map(r=>`<tr>
-      <td>${escapeHtml(r.nome)}</td>
+      <td>${escapeHtml(r.nome)}${r.obsLancamento?`<div style="font-size:10px;color:#555">${escapeHtml(r.obsLancamento)}</div>`:''}</td>
+      <td>${escapeHtml(r.tipoLancamento)||'—'}</td>
       <td>${escapeHtml(r.categoria)||'—'}</td>
       <td style="text-align:right">R$ ${fmtMoeda(r.valor)}</td>
       <td>${r.vencimento?fmt(r.vencimento):'—'}</td>
@@ -4462,6 +4479,7 @@ function imprimirPagMensal() {
       <table style="width:100%;border-collapse:collapse;font-size:12px">
         <thead><tr>
           <th style="text-align:left;padding:6px">Prestador</th>
+          <th style="text-align:left;padding:6px">Lançamento</th>
           <th style="text-align:left;padding:6px">Categoria</th>
           <th style="text-align:right;padding:6px">Valor</th>
           <th style="text-align:left;padding:6px">Vencimento</th>
@@ -4471,9 +4489,10 @@ function imprimirPagMensal() {
         <tbody>${linhasHtml}</tbody>
       </table>
       <div style="margin-top:18px;font-size:13px">
-        <div>Total pago: <strong>R$ ${fmtMoeda(d.totalPago)}</strong> (${d.pagos} prestador[es])</div>
+        <div>Total pago: <strong>R$ ${fmtMoeda(d.totalPago)}</strong> (${d.pagos} lançamento[s])</div>
         <div>Total pendente: <strong>R$ ${fmtMoeda(d.totalPendente)}</strong> (${d.pendentes} aguardando)</div>
         <div>Não lançados: <strong>${d.naoLancados}</strong></div>
+        ${Object.keys(d.porTipo).sort().map(t=>`<div>Total ${escapeHtml(t)}: <strong>R$ ${fmtMoeda(d.porTipo[t])}</strong></div>`).join('')}
         <div style="margin-top:6px;font-size:15px">Total geral do mês: <strong>R$ ${fmtMoeda(d.total)}</strong></div>
       </div>
     </div>`;
@@ -4567,61 +4586,143 @@ async function confirmValorPagamento() {
 }
 
 // Em vez de lançar todo mundo automaticamente no valor padrão, a pessoa
-// escolhe quem entra no mês e já confere/ajusta o valor de cada um na hora
-// da seleção - só prestadores ainda sem lançamento neste mês aparecem aqui.
+// escolhe quem entra no mês e já confere/ajusta o valor e a observação de cada
+// um na hora da seleção. O mesmo prestador pode receber vários lançamentos no
+// mesmo mês (botão +) - cada linha vira um pagamento independente.
+// tipos de lançamento: um prestador pode receber salário, coordenação e plantão
+// no mesmo mês - cada um vira um pagamento próprio. É lista fixa (e não texto
+// livre) pra dar pra somar/filtrar por tipo depois, sem "plantao" vs "Plantão"
+const TIPOS_LANCAMENTO=['Salário','Coordenação','Plantão','Bônus','Reembolso','Outro'];
+
+function selmesLinhaHTML(valor, tipo) {
+  return `<div class="selmes-linha flex items-c gap8" style="margin-top:8px">
+    <select class="selmes-tipo" style="width:150px;flex-shrink:0;height:38px;font-size:13px">
+      ${TIPOS_LANCAMENTO.map(t=>`<option value="${t}"${t===tipo?' selected':''}>${t}</option>`).join('')}
+    </select>
+    <input type="number" class="selmes-valor" value="${valor}" min="0" step="0.01" placeholder="0,00" style="width:130px;flex-shrink:0;height:38px;font-size:14px;font-weight:700;text-align:right">
+    <input type="text" class="selmes-obs" maxlength="200" placeholder="Observação (opcional)" style="flex:1;min-width:0;height:38px;font-size:13px;font-weight:600;color:var(--blue2);border-color:var(--blue2);background:rgba(37,99,235,.06)">
+    <button type="button" class="btn-icon del selmes-del" onclick="removeSelmesLinha(this)" title="Remover este lançamento" style="flex-shrink:0">×</button>
+  </div>`;
+}
+
 function openSelecionarMesModal() {
   const target=pagMonthTarget();
   const mk=mKey(target);
-  const candidatos=_fpr.filter(p=>p.ativo!==false&&!_fp.some(c=>c.prestadorId===p.id&&contaMes(c)===mk)).sort((a,b)=>a.nome.localeCompare(b.nome));
-  if(!candidatos.length) return toast('Todos os prestadores ativos já têm pagamento lançado neste mês.','info');
-  document.getElementById('selmes-resumo').textContent=`${candidatos.length} prestador(es) ainda não lançado(s) em ${target.toLocaleDateString('pt-BR',{month:'long',year:'numeric'})}. Marque quem entra esse mês e confira o valor.`;
-  document.getElementById('selmes-lista').innerHTML=candidatos.map(p=>`
-    <div class="flex items-c gap8" style="padding:8px 10px;border:1px solid var(--border);border-radius:8px">
-      <input type="checkbox" class="selmes-chk" data-id="${p.id}" style="width:15px;height:15px;accent-color:var(--blue2);cursor:pointer;flex-shrink:0">
-      <div style="flex:1;min-width:0">
-        <div style="font-weight:700;font-size:13px">${p.nome}</div>
-        <div style="font-size:11px;color:var(--muted)">${p.categoria||'—'} · vence dia ${p.diaVencimentoPadrao||'—'}</div>
+  const candidatos=_fpr.filter(p=>p.ativo!==false).sort((a,b)=>a.nome.localeCompare(b.nome));
+  if(!candidatos.length) return toast('Nenhum prestador ativo cadastrado.','info');
+  const semLancamento=candidatos.filter(p=>!_fp.some(c=>c.prestadorId===p.id&&contaMes(c)===mk)).length;
+  document.getElementById('selmes-resumo').textContent=`${semLancamento} de ${candidatos.length} prestador(es) ainda não lançado(s) em ${target.toLocaleDateString('pt-BR',{month:'long',year:'numeric'})}. Marque quem entra esse mês, confira o valor e a observação — use o + pra lançar o mesmo prestador mais de uma vez.`;
+  document.getElementById('selmes-lista').innerHTML=candidatos.map(p=>{
+    const doMes=_fp.filter(c=>c.prestadorId===p.id&&contaMes(c)===mk);
+    // mostra QUAIS tipos já entraram, pra saber se falta a coordenação/plantão
+    const tipos=doMes.map(c=>c.tipoLancamento||'sem tipo').join(', ');
+    return `
+    <div style="padding:12px 14px;border:1px solid var(--border);border-radius:8px">
+      <div class="flex items-c gap8">
+        <input type="checkbox" class="selmes-chk" data-id="${p.id}" data-lancados="${doMes.length}" style="width:17px;height:17px;accent-color:var(--blue2);cursor:pointer;flex-shrink:0">
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:700;font-size:14px">${p.nome}${doMes.length?` <span class="badge b-4" style="font-size:11px">já lançado: ${escapeHtml(tipos)}</span>`:''}</div>
+          <div style="font-size:12px;color:var(--muted)">${p.categoria||'—'} · vence dia ${p.diaVencimentoPadrao||'—'}</div>
+        </div>
+        <button type="button" class="btn btn-ghost" onclick="addSelmesLinha(${p.id})" title="Adicionar outro lançamento para ${p.nome}" style="flex-shrink:0;font-size:18px;font-weight:800;line-height:1;padding:6px 14px">+</button>
       </div>
-      <input type="number" class="selmes-valor" data-id="${p.id}" value="${(p.valorPadrao||0).toFixed(2)}" min="0" step="0.01" style="width:110px;flex-shrink:0">
-    </div>`).join('');
+      <div class="selmes-linhas" data-id="${p.id}">${selmesLinhaHTML((p.valorPadrao||0).toFixed(2),TIPOS_LANCAMENTO[0])}</div>
+    </div>`;
+  }).join('');
+  document.querySelectorAll('.selmes-linhas').forEach(syncSelmesDel);
   document.getElementById('selmes-todos').checked=false;
   document.getElementById('modal-fin-selecionar-mes').classList.add('open');
 }
 
+// quem clica no + claramente quer esse prestador no mês, então já marca o check.
+// A linha nova entra no próximo tipo ainda não usado e com o VALOR VAZIO: o
+// valor padrão é o do salário, repeti-lo em plantão/coordenação seria chute
+function addSelmesLinha(id) {
+  const box=document.querySelector(`.selmes-linhas[data-id="${id}"]`); if(!box) return;
+  const usados=new Set(Array.from(box.querySelectorAll('.selmes-tipo')).map(s=>s.value));
+  const tipo=TIPOS_LANCAMENTO.find(t=>!usados.has(t))||'Outro';
+  box.insertAdjacentHTML('beforeend', selmesLinhaHTML('',tipo));
+  const chk=document.querySelector(`.selmes-chk[data-id="${id}"]`);
+  if(chk) chk.checked=true;
+  syncSelmesDel(box);
+  const valores=box.querySelectorAll('.selmes-valor');
+  valores[valores.length-1].focus();
+}
+
+function removeSelmesLinha(btn) {
+  const box=btn.closest('.selmes-linhas');
+  btn.closest('.selmes-linha').remove();
+  syncSelmesDel(box);
+}
+
+// o × só aparece quando há mais de um lançamento - a primeira linha é fixa
+function syncSelmesDel(box) {
+  const linhas=box.querySelectorAll('.selmes-linha');
+  linhas.forEach(l=>l.querySelector('.selmes-del').style.display=linhas.length>1?'':'none');
+}
+
+// "selecionar todos" marca só quem ainda não tem lançamento no mês: duplicar um
+// prestador é sempre ação deliberada (botão +), nunca efeito colateral daqui
 function toggleSelmesTodos(el) {
-  document.querySelectorAll('.selmes-chk').forEach(c=>c.checked=el.checked);
+  document.querySelectorAll('.selmes-chk').forEach(c=>{
+    if(Number(c.dataset.lancados)>0) return;
+    c.checked=el.checked;
+  });
 }
 
 async function confirmarSelecaoMes() {
   const mk=mKey(pagMonthTarget());
   const marcados=Array.from(document.querySelectorAll('.selmes-chk')).filter(c=>c.checked);
   if(!marcados.length) return toast('Marque ao menos um prestador.','err');
+  // uma linha marcada mas sem valor é quase sempre esquecimento: avisa em vez
+  // de ignorar calado, senão o plantão simplesmente não seria lançado
+  const semValor=[];
+  marcados.forEach(chk=>{
+    const box=document.querySelector(`.selmes-linhas[data-id="${chk.dataset.id}"]`); if(!box) return;
+    const p=_fpr.find(p=>p.id===Number(chk.dataset.id));
+    box.querySelectorAll('.selmes-linha').forEach(linha=>{
+      const valor=parseFloat(linha.querySelector('.selmes-valor').value);
+      if(!valor||valor<=0) semValor.push(`${p?p.nome:'?'} (${linha.querySelector('.selmes-tipo').value})`);
+    });
+  });
+  if(semValor.length) return toast(`Informe o valor de: ${semValor.join(', ')}.`,'err');
+
   loading(true);
   let gerados=0;
   try {
     const batch=db.batch();
+    const novas=[];
     marcados.forEach(chk=>{
       const id=Number(chk.dataset.id);
       const p=_fpr.find(p=>p.id===id); if(!p) return;
-      const valorInput=document.querySelector(`.selmes-valor[data-id="${id}"]`);
-      const valor=parseFloat(valorInput.value);
-      if(!valor||valor<=0) return;
-      const conta={
-        id:newId()+gerados, descricao:`Pagamento — ${p.nome}`, fornecedor:'', prestadorId:p.id, prestadorNome:p.nome,
-        categoria:p.categoria, valor, vencimento:buildVencimento(mk,p.diaVencimentoPadrao), mesReferencia:mk,
-        status:'pendente', dataPagamento:null, pagoPorId:null, pagoPorNome:null, formaPagamento:null,
-        recorrente:true, criadoPorId:FU.id, criadoPorNome:FU.name, createdAt:Date.now()
-      };
-      batch.set(db.collection('fin_contas_pagar').doc(String(conta.id)),conta);
-      _fp.push(conta);
-      gerados++;
+      const box=document.querySelector(`.selmes-linhas[data-id="${id}"]`); if(!box) return;
+      // cada linha do prestador vira um pagamento próprio: salário, coordenação
+      // e plantão do mesmo mês ficam separados, cada um com seu valor
+      box.querySelectorAll('.selmes-linha').forEach(linha=>{
+        const valor=parseFloat(linha.querySelector('.selmes-valor').value);
+        if(!valor||valor<=0) return;
+        const tipoLancamento=linha.querySelector('.selmes-tipo').value;
+        const observacao=linha.querySelector('.selmes-obs').value.trim();
+        const conta={
+          id:newId()+gerados, descricao:`${tipoLancamento} — ${p.nome}`, fornecedor:'', prestadorId:p.id, prestadorNome:p.nome,
+          tipoLancamento, observacao,
+          categoria:p.categoria, valor, vencimento:buildVencimento(mk,p.diaVencimentoPadrao), mesReferencia:mk,
+          status:'pendente', dataPagamento:null, pagoPorId:null, pagoPorNome:null, formaPagamento:null,
+          recorrente:true, criadoPorId:FU.id, criadoPorNome:FU.name, createdAt:Date.now()
+        };
+        batch.set(db.collection('fin_contas_pagar').doc(String(conta.id)),conta);
+        novas.push(conta);
+        gerados++;
+      });
     });
+    if(!gerados) return toast('Informe um valor maior que zero em pelo menos um lançamento.','err');
     await batch.commit();
+    _fp.push(...novas);
   } finally { loading(false); }
-  if (gerados) logAcao('criou','pagamento',null,`${gerados} prestador(es) selecionado(s) pro mês — ${mk}`);
+  logAcao('criou','pagamento',null,`${gerados} lançamento(s) criado(s) pro mês — ${mk}`);
   closeModal('modal-fin-selecionar-mes');
   renderContasPagar(); renderFinDashboard();
-  toast(`${gerados} prestador(es) lançado(s).`,'ok');
+  toast(`${gerados} lançamento(s) criado(s).`,'ok');
 }
 
 function openBaixaModal(id) {
