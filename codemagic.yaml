@@ -52,15 +52,24 @@ workflows:
           keychain add-certificates
       - name: Configurar assinatura automática
         script: xcode-project use-profiles
-      # Isto define só o NÚMERO DE BUILD (CFBundleVersion), que é interno.
-      # A VERSÃO (CFBundleShortVersionString / MARKETING_VERSION) tem que ser
-      # subida à mão em ios/App/App.xcodeproj/project.pbxproj a cada versão
-      # aprovada na App Store: reenviar uma versão já aprovada é recusado pela
-      # Apple com "the train version X is closed for new build submissions".
-      - name: Definir número de build único
+      # Versão e build automáticos, pra nunca esbarrar em "train version closed"
+      # (erro 90186) nem em build repetido:
+      #  - CFBundleVersion (build interno): timestamp, sempre único
+      #  - CFBundleShortVersionString (versão): base MAJOR.MINOR lida do projeto
+      #    + contador de commits como patch (ex.: 1.3.42). Sempre sobe, então a
+      #    Apple nunca recusa por versão já aprovada. Pra um lançamento "de
+      #    verdade" na App Store, basta subir o MAJOR.MINOR no project.pbxproj
+      #    (1.3 -> 1.4) e o patch continua automático.
+      - name: Definir versão e build automáticos
         script: |
           cd ios/App
           agvtool new-version -all $(date +%s)
+          BASE=$(grep -m1 'MARKETING_VERSION' App.xcodeproj/project.pbxproj | sed -E 's/.*= *([0-9]+\.[0-9]+).*/\1/')
+          if [ -z "$BASE" ]; then BASE="1.3"; fi
+          COUNT=$(git rev-list --count HEAD 2>/dev/null || echo "")
+          if [ -z "$COUNT" ]; then COUNT=$(date +%y%m%d); fi
+          echo "Versão de marketing: $BASE.$COUNT"
+          agvtool new-marketing-version "$BASE.$COUNT"
       - name: Gerar .ipa assinado
         script: |
           xcode-project build-ipa \
