@@ -747,7 +747,8 @@ tbody tr:hover td{background:var(--bg)}
   [data-theme="dark"] .mc.c3{background:linear-gradient(145deg,rgba(48,209,88,.14),rgba(48,209,88,.04))}
   [data-theme="dark"] .mc.c4{background:linear-gradient(145deg,rgba(255,159,10,.16),rgba(255,159,10,.04))}
   .mc-tag{box-shadow:none}
-  .mc-big{font-size:32px}
+  .mc{overflow:hidden}
+  .mc-big{font-size:26px;overflow-wrap:anywhere;line-height:1.08}
 
   /* tabela -> lista de cards nativa (rótulo vem de data-label, setado via JS a partir do <th>) */
   .tbl-wrap{overflow-x:visible;border:none;border-radius:0}
@@ -762,13 +763,14 @@ tbody tr:hover td{background:var(--bg)}
   .tbl-wrap td{
     display:flex;justify-content:space-between;align-items:center;gap:14px;
     padding:10px 0;border:none!important;font-size:14px;text-align:right;
-    border-bottom:1px solid var(--border)!important
+    border-bottom:1px solid var(--border)!important;
+    min-width:0;overflow-wrap:anywhere;word-break:break-word
   }
   .tbl-wrap td:last-child{border-bottom:none!important}
   .tbl-wrap td::before{
     content:attr(data-label);
     font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;
-    text-align:left;flex-shrink:0
+    text-align:left;flex-shrink:0;max-width:45%
   }
 
   /* CONTAS A PAGAR no mobile: esconde a tabela (cards genéricos densos) e usa
@@ -853,6 +855,15 @@ tbody tr:hover td{background:var(--bg)}
 #page-fin-contas .tbl-wrap thead th{position:sticky;top:0;background:var(--white);z-index:2}
 /* lista de vencimentos do dashboard também rola dentro dela mesma */
 #fin-db-vencimentos-prestadores{max-height:440px;overflow-y:auto}
+
+/* linha "em aberto por origem" no dashboard */
+.db-origem{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;padding:12px 6px 2px;font-size:13px;color:var(--muted);min-width:0}
+.db-origem span{min-width:0;overflow-wrap:anywhere}
+.db-origem-tit{font-weight:700;color:var(--soft)}
+@media(max-width:768px){
+  .db-origem{flex-direction:column;align-items:flex-start;gap:7px}
+  .db-origem span{width:100%}
+}
 
 /* ── TOAST ──────────────────────────────── */
 .toast{
@@ -4561,13 +4572,16 @@ function renderFinDashboard() {
   const atrasadoQtd=contasAtrasadoLista.length+prestadorAtrasados+acordosPendTodas.filter(p=>p.vencimento&&p.vencimento<today).length;
 
   document.getElementById('fin-db-metrics').innerHTML=`
-    <div class="mc c3"><div class="mc-tag">PAGO ESTE MÊS</div><div class="mc-big">R$ ${fmtMoeda(despesasMes)}</div><div class="mc-lbl">Saiu do caixa: prestadores + acordos + contas</div></div>
-    <div class="mc c4"><div class="mc-tag">A PAGAR ESTE MÊS</div><div class="mc-big">R$ ${fmtMoeda(aPagarMes)}</div><div class="mc-lbl">Pendente que vence em ${now.toLocaleDateString('pt-BR',{month:'long'})}</div></div>
+    <div class="mc c4"><div class="mc-tag">A PAGAR ESTE MÊS</div><div class="mc-big">R$ ${fmtMoeda(aPagarMes)}</div><div class="mc-lbl">Vence em ${now.toLocaleDateString('pt-BR',{month:'long'})}</div></div>
     <div class="mc c4"><div class="mc-tag">ATRASADO</div><div class="mc-big" style="color:var(--red)">R$ ${fmtMoeda(atrasadoGeral)}</div><div class="mc-lbl">${atrasadoQtd} vencido(s) e não pago(s)</div></div>
+    <div class="mc c3"><div class="mc-tag">PAGO ESTE MÊS</div><div class="mc-big">R$ ${fmtMoeda(despesasMes)}</div><div class="mc-lbl">Saiu do caixa este mês</div></div>
     <div class="mc c2"><div class="mc-tag">EM ABERTO (TOTAL)</div><div class="mc-big">R$ ${fmtMoeda(abertoGeral)}</div><div class="mc-lbl">Tudo que falta pagar, todos os meses</div></div>
-    <div class="mc c1"><div class="mc-tag">CONTAS A PAGAR</div><div class="mc-big">R$ ${fmtMoeda(contasPendGeral)}</div><div class="mc-lbl">${contasAbertoQtd} conta(s) em aberto${contasAtrasadoLista.length?` · <span style="color:var(--red)">${contasAtrasadoLista.length} atrasada(s)</span>`:''}</div></div>
-    <div class="mc c4"><div class="mc-tag">PAGAMENTO DE PRESTADORES</div><div class="mc-big">R$ ${fmtMoeda(prestAbertoValor)}</div><div class="mc-lbl">${prestadorPend.length} em aberto${prestadorAtrasados?` · <span style="color:var(--red)">${prestadorAtrasados} atrasado(s)</span>`:''}</div></div>
-    <div class="mc c3"><div class="mc-tag">ACORDOS</div><div class="mc-big">R$ ${fmtMoeda(acordosAbertoValor)}</div><div class="mc-lbl">${acordosPendTodas.length} parcela(s) em aberto</div></div>
+    <div class="db-origem">
+      <span class="db-origem-tit">Em aberto por origem:</span>
+      <span>🔵 Contas a pagar <strong>R$ ${fmtMoeda(contasPendGeral)}</strong> · ${contasAbertoQtd} conta(s)${contasAtrasadoLista.length?` <span style="color:var(--red)">(${contasAtrasadoLista.length} atrasada[s])</span>`:''}</span>
+      <span>🟠 Prestadores <strong>R$ ${fmtMoeda(prestAbertoValor)}</strong> · ${prestadorPend.length} pagamento(s)${prestadorAtrasados?` <span style="color:var(--red)">(${prestadorAtrasados} atrasado[s])</span>`:''}</span>
+      <span>🟢 Acordos <strong>R$ ${fmtMoeda(acordosAbertoValor)}</strong> · ${acordosPendTodas.length} parcela(s)</span>
+    </div>
   `;
 
   const vencPrestadores=prestadorPend.map(c=>({vencimento:c.vencimento,nome:c.prestadorNome,valor:c.valor,prestador:true}));
