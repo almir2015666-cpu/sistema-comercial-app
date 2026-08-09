@@ -162,6 +162,35 @@ body{
 .row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
 .row-4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
 
+/* ── FILTRO POR VALOR ───────────────────────
+   Barra usada em todas as listas do Financeiro que mostram dinheiro.
+   O mesmo bloco se repete com um prefixo por tela (fp, fd, fpr, fac, facd). */
+.fv{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.fv-lbl{
+  font-size:10.5px;font-weight:700;color:var(--muted);
+  text-transform:uppercase;letter-spacing:.7px
+}
+.fv select,.fv input{
+  padding:9px 12px;
+  border:1.5px solid var(--border);border-radius:var(--r);
+  font-size:13.5px;color:var(--text);background:var(--white);
+  outline:none;transition:border-color .15s,box-shadow .15s;
+  font-family:inherit
+}
+.fv select{min-width:136px}
+.fv input{width:132px}
+.fv select:focus,.fv input:focus{
+  border-color:var(--blue2);box-shadow:0 0 0 3px rgba(37,99,235,.1)
+}
+.fv-e{font-size:12px;color:var(--muted)}
+/* filtro valendo: destaca a barra pra ninguém achar que a lista está vazia */
+.fv.fv-on select,.fv.fv-on input{border-color:var(--blue2)}
+.fv-hint{font-size:11.5px;color:var(--muted)}
+@media(max-width:640px){
+  .fv select{flex:1 1 100%;min-width:0}
+  .fv input{flex:1 1 90px;width:auto;min-width:0}
+}
+
 /* ── BUTTONS ────────────────────────────── */
 .btn{
   display:inline-flex;align-items:center;justify-content:center;
@@ -1741,6 +1770,20 @@ tbody tr:hover td{background:var(--bg)}
               </select>
             </div>
           </div>
+          <div class="fv" id="fp-fv">
+            <span class="fv-lbl">Valor</span>
+            <select id="fp-fv-op" onchange="fvOp('fp',renderContasPagar)">
+              <option value="">Qualquer valor</option>
+              <option value="eq">Igual a</option>
+              <option value="gte">A partir de</option>
+              <option value="lte">Até</option>
+              <option value="btw">Entre</option>
+            </select>
+            <input type="text" inputmode="decimal" id="fp-fv-a" placeholder="0,00" style="display:none" oninput="renderContasPagar()">
+            <span class="fv-e" id="fp-fv-e" style="display:none">e</span>
+            <input type="text" inputmode="decimal" id="fp-fv-b" placeholder="0,00" style="display:none" oninput="renderContasPagar()">
+            <button type="button" class="btn btn-ghost btn-sm" id="fp-fv-clr" style="width:auto;display:none" onclick="fvLimpar('fp',renderContasPagar)">✕ limpar</button>
+          </div>
           <div class="tbl-wrap">
             <table>
               <thead><tr><th>Prestador</th><th>Categoria</th><th>Valor</th><th>Vencimento</th><th>Status</th><th>Ações</th></tr></thead>
@@ -1826,6 +1869,20 @@ tbody tr:hover td{background:var(--bg)}
               <button class="btn btn-ok btn-sm" id="fpr-new-btn" style="width:auto" onclick="openAddFinPrestador()">+ Novo Prestador</button>
             </div>
           </div>
+          <div class="fv" id="fpr-fv">
+            <span class="fv-lbl">Valor padrão</span>
+            <select id="fpr-fv-op" onchange="fvOp('fpr',renderFinPrestadores)">
+              <option value="">Qualquer valor</option>
+              <option value="eq">Igual a</option>
+              <option value="gte">A partir de</option>
+              <option value="lte">Até</option>
+              <option value="btw">Entre</option>
+            </select>
+            <input type="text" inputmode="decimal" id="fpr-fv-a" placeholder="0,00" style="display:none" oninput="renderFinPrestadores()">
+            <span class="fv-e" id="fpr-fv-e" style="display:none">e</span>
+            <input type="text" inputmode="decimal" id="fpr-fv-b" placeholder="0,00" style="display:none" oninput="renderFinPrestadores()">
+            <button type="button" class="btn btn-ghost btn-sm" id="fpr-fv-clr" style="width:auto;display:none" onclick="fvLimpar('fpr',renderFinPrestadores)">✕ limpar</button>
+          </div>
           <div class="tbl-wrap">
             <table>
               <thead><tr><th>Nome</th><th>Tipo</th><th>Categoria</th><th>Valor Padrão</th><th>Dia Venc.</th><th>Status</th><th>Ações</th></tr></thead>
@@ -1841,6 +1898,20 @@ tbody tr:hover td{background:var(--bg)}
           <div class="card-hd">
             <div><div class="card-title">Acordos</div><div class="card-sub">Dívidas negociadas, pagas em parcelas mensais com nota fiscal</div></div>
             <button class="btn btn-ok btn-sm" id="fac-new-btn" style="width:auto" onclick="openAddAcordo()">+ Novo Acordo</button>
+          </div>
+          <div class="fv" id="fac-fv">
+            <span class="fv-lbl">Valor total</span>
+            <select id="fac-fv-op" onchange="fvOp('fac',renderFinAcordos)">
+              <option value="">Qualquer valor</option>
+              <option value="eq">Igual a</option>
+              <option value="gte">A partir de</option>
+              <option value="lte">Até</option>
+              <option value="btw">Entre</option>
+            </select>
+            <input type="text" inputmode="decimal" id="fac-fv-a" placeholder="0,00" style="display:none" oninput="renderFinAcordos()">
+            <span class="fv-e" id="fac-fv-e" style="display:none">e</span>
+            <input type="text" inputmode="decimal" id="fac-fv-b" placeholder="0,00" style="display:none" oninput="renderFinAcordos()">
+            <button type="button" class="btn btn-ghost btn-sm" id="fac-fv-clr" style="width:auto;display:none" onclick="fvLimpar('fac',renderFinAcordos)">✕ limpar</button>
           </div>
           <div class="tbl-wrap">
             <table>
@@ -1909,6 +1980,21 @@ tbody tr:hover td{background:var(--bg)}
                 <button type="button" class="btn btn-ghost btn-sm" style="width:auto;display:none" id="fd-status-limpar" onclick="limparFdStatus()">✕ limpar</button>
               </div>
             </div>
+          </div>
+          <div class="fv" id="fd-fv">
+            <span class="fv-lbl">Valor</span>
+            <select id="fd-fv-op" onchange="fvOp('fd',renderDespesas)">
+              <option value="">Qualquer valor</option>
+              <option value="eq">Igual a</option>
+              <option value="gte">A partir de</option>
+              <option value="lte">Até</option>
+              <option value="btw">Entre</option>
+            </select>
+            <input type="text" inputmode="decimal" id="fd-fv-a" placeholder="0,00" style="display:none" oninput="renderDespesas()">
+            <span class="fv-e" id="fd-fv-e" style="display:none">e</span>
+            <input type="text" inputmode="decimal" id="fd-fv-b" placeholder="0,00" style="display:none" oninput="renderDespesas()">
+            <span class="fv-hint" id="fd-fv-hint" style="display:none">compara o valor da conta e, nas pagas, também o valor pago</span>
+            <button type="button" class="btn btn-ghost btn-sm" id="fd-fv-clr" style="width:auto;display:none" onclick="fvLimpar('fd',renderDespesas)">✕ limpar</button>
           </div>
           <!-- barra de ordenação só no mobile (no celular o cabeçalho da tabela some) -->
           <div class="fd-mobile-sort" style="display:none;gap:8px;margin-bottom:12px;align-items:center">
@@ -2175,6 +2261,20 @@ tbody tr:hover td{background:var(--bg)}
   <div class="modal" style="max-width:640px">
     <div class="modal-title" id="facd-titulo">Detalhes do Acordo</div>
     <div class="card-sub mb16" id="facd-resumo" style="margin:0 0 14px"></div>
+    <div class="fv" id="facd-fv">
+      <span class="fv-lbl">Valor da parcela</span>
+      <select id="facd-fv-op" onchange="fvOp('facd',renderAcordoParcelasAtual)">
+        <option value="">Qualquer valor</option>
+        <option value="eq">Igual a</option>
+        <option value="gte">A partir de</option>
+        <option value="lte">Até</option>
+        <option value="btw">Entre</option>
+      </select>
+      <input type="text" inputmode="decimal" id="facd-fv-a" placeholder="0,00" style="display:none" oninput="renderAcordoParcelasAtual()">
+      <span class="fv-e" id="facd-fv-e" style="display:none">e</span>
+      <input type="text" inputmode="decimal" id="facd-fv-b" placeholder="0,00" style="display:none" oninput="renderAcordoParcelasAtual()">
+      <button type="button" class="btn btn-ghost btn-sm" id="facd-fv-clr" style="width:auto;display:none" onclick="fvLimpar('facd',renderAcordoParcelasAtual)">✕ limpar</button>
+    </div>
     <div id="facd-lista" style="max-height:400px;overflow-y:auto;display:flex;flex-direction:column;gap:8px"></div>
     <div class="modal-ft">
       <button class="btn btn-ghost" onclick="closeModal('modal-fin-acordo-detalhe')">Fechar</button>
@@ -4654,6 +4754,81 @@ function goPagToday() { pagMonthOffset=0; renderContasPagar(); }
 // visão mensal: uma linha por prestador JÁ SELECIONADO pro mês (via o botão
 // "Selecionar Prestadores do Mês") - quem ainda não foi escolhido não polui
 // a tabela, só conta no card "Disponíveis" até a pessoa decidir incluir
+/* ── FILTRO POR VALOR ────────────────────────────────────────────────
+   O mesmo controle serve todas as listas do Financeiro que mostram
+   dinheiro. Cada tela usa um prefixo (fp, fd, fpr, fac, facd) e tem os
+   ids <prefixo>-fv-op, -fv-a, -fv-b, -fv-e e -fv-clr. Aqui ficam só o
+   parser e o teste — quem filtra é a própria render da tela.          */
+
+// aceita "1.234,56", "1234,56", "1234.56" e "1234", ignorando "R$" e
+// espaços. "1.500" sem centavos é mil e quinhentos, não 1,5.
+function parseValorFiltro(txt) {
+  let s=String(txt==null?'':txt).replace(/[R$\s]/gi,'').trim();
+  if(!s) return null;
+  if(s.includes(',')) s=s.replace(/\./g,'').replace(',','.');
+  else if(/^\d{1,3}(\.\d{3})+$/.test(s)) s=s.replace(/\./g,'');
+  const n=Number(s);
+  return isFinite(n)?n:null;
+}
+
+// mostra/esconde os campos conforme o operador e destaca a barra quando
+// o filtro está mesmo valendo (senão a lista vazia parece bug)
+function fvUI(prefix, op, a, b) {
+  const g=suf=>document.getElementById(prefix+'-fv'+suf);
+  const box=g(''), ea=g('-a'), eb=g('-b'), e=g('-e'), clr=g('-clr'), hint=g('-hint');
+  if(!box||!ea) return;
+  const dois=op==='btw';
+  ea.style.display=op?'':'none';
+  eb.style.display=dois?'':'none';
+  e.style.display=dois?'':'none';
+  if(hint) hint.style.display=op?'':'none';
+  clr.style.display=(op||ea.value||eb.value)?'':'none';
+  box.classList.toggle('fv-on', !!op && a!=null && (!dois||b!=null));
+}
+
+// devolve o teste (valor)=>bool da tela; sem operador ou sem número
+// digitado ele deixa tudo passar
+function filtroValor(prefix) {
+  const opEl=document.getElementById(prefix+'-fv-op');
+  if(!opEl) return ()=>true;
+  const op=opEl.value;
+  const a=parseValorFiltro(document.getElementById(prefix+'-fv-a').value);
+  const b=parseValorFiltro(document.getElementById(prefix+'-fv-b').value);
+  fvUI(prefix, op, a, b);
+  if(!op||a==null) return ()=>true;
+  const t=0.005; // meio centavo de folga: arredondamento não pode esconder linha
+  if(op==='eq')  return v=>Math.abs((Number(v)||0)-a)<t;
+  if(op==='gte') return v=>(Number(v)||0)>=a-t;
+  if(op==='lte') return v=>(Number(v)||0)<=a+t;
+  if(op==='btw') {
+    if(b==null) return ()=>true;
+    const lo=Math.min(a,b), hi=Math.max(a,b);
+    return v=>{ const n=Number(v)||0; return n>=lo-t&&n<=hi+t; };
+  }
+  return ()=>true;
+}
+
+// pra tela saber se deve dizer "nada encontrado com esses filtros"
+function filtroValorAtivo(prefix) {
+  const opEl=document.getElementById(prefix+'-fv-op');
+  if(!opEl||!opEl.value) return false;
+  if(opEl.value==='btw' && parseValorFiltro(document.getElementById(prefix+'-fv-b').value)==null) return false;
+  return parseValorFiltro(document.getElementById(prefix+'-fv-a').value)!=null;
+}
+
+function fvOp(prefix, render) {
+  render();
+  // escolheu o operador: já joga o cursor no campo do valor
+  if(document.getElementById(prefix+'-fv-op').value) document.getElementById(prefix+'-fv-a').focus();
+}
+
+function fvLimpar(prefix, render) {
+  document.getElementById(prefix+'-fv-op').value='';
+  document.getElementById(prefix+'-fv-a').value='';
+  document.getElementById(prefix+'-fv-b').value='';
+  render();
+}
+
 function renderContasPagar() {
   const target=pagMonthTarget();
   const mk=mKey(target);
@@ -4683,9 +4858,11 @@ function renderContasPagar() {
     return {p,c,statusKey:statusPagarInfo(c,today).key};
   });
 
-  const linhasFiltradas=linhasComStatus.filter(({p,statusKey})=>
+  const testeValor=filtroValor('fp');
+  const linhasFiltradas=linhasComStatus.filter(({p,c,statusKey})=>
     (!busca||p.nome.toLowerCase().includes(busca)) &&
-    (!filtroStatus||filtroStatus===statusKey)
+    (!filtroStatus||filtroStatus===statusKey) &&
+    testeValor(c.valor)
   );
 
   document.getElementById('fp-tbody').innerHTML=linhasFiltradas.length?linhasFiltradas.map(({p,c})=>{
@@ -4705,7 +4882,7 @@ function renderContasPagar() {
       <td>${statusBadge}</td>
       <td><div class="flex gap6">${acoes}${del}</div></td>
     </tr>`;
-  }).join(''):`<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:32px">${naoSelecionados?'Nenhum prestador selecionado ainda esse mês. Clique em "Selecionar Prestadores do Mês".':'Nenhum prestador encontrado'}</td></tr>`;
+  }).join(''):`<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:32px">${linhas.length?'Nenhum lançamento encontrado com esses filtros':(naoSelecionados?'Nenhum prestador selecionado ainda esse mês. Clique em "Selecionar Prestadores do Mês".':'Nenhum prestador encontrado')}</td></tr>`;
 
   document.getElementById('fp-month-metrics').innerHTML=`
     <div class="mc c3"><div class="mc-tag">TOTAL PAGO</div><div class="mc-big">R$ ${fmtMoeda(totalPago)}</div><div class="mc-lbl">${pagos} lançamento(s) pago(s)</div></div>
@@ -5257,7 +5434,8 @@ function renderFinPrestadores() {
   const gerenciar=canManagePrestadores();
   const acoesBox=document.getElementById('fpr-actions');
   if(acoesBox) acoesBox.style.display=gerenciar?'':'none';
-  const sorted=[..._fpr].sort((a,b)=>a.nome.localeCompare(b.nome));
+  const testeValor=filtroValor('fpr');
+  const sorted=[..._fpr].filter(p=>testeValor(p.valorPadrao||0)).sort((a,b)=>a.nome.localeCompare(b.nome));
   document.getElementById('fpr-tbody').innerHTML=sorted.length?sorted.map(p=>{
     const statusBadge=p.ativo===false?'<span class="badge b-gray">Inativo</span>':'<span class="badge b-ok">Ativo</span>';
     const acoesGestor=gerenciar?`
@@ -5273,7 +5451,7 @@ function renderFinPrestadores() {
       <td>${statusBadge}</td>
       <td><div class="flex gap6">${acoesGestor}</div></td>
     </tr>`;
-  }).join(''):`<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:32px">Nenhum prestador cadastrado</td></tr>`;
+  }).join(''):`<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:32px">${_fpr.length?'Nenhum prestador com esse valor padrão':'Nenhum prestador cadastrado'}</td></tr>`;
 }
 
 // Nome do prestador é sempre gravado em CAIXA ALTA, seja digitado à mão ou
@@ -5821,7 +5999,8 @@ function renderFinAcordos() {
   const gerenciar=canManageAcordos();
   const novoBtn=document.getElementById('fac-new-btn');
   if(novoBtn) novoBtn.style.display=gerenciar?'':'none';
-  const sorted=[..._facordos].sort((a,b)=>b.createdAt-a.createdAt);
+  const testeValor=filtroValor('fac');
+  const sorted=[..._facordos].filter(a=>testeValor(a.valorTotal)).sort((a,b)=>b.createdAt-a.createdAt);
   document.getElementById('fac-tbody').innerHTML=sorted.length?sorted.map(a=>{
     const parcelas=_facordosParcelas.filter(p=>p.acordoId===a.id);
     const pagas=parcelas.filter(p=>p.status==='pago').length;
@@ -5835,7 +6014,7 @@ function renderFinAcordos() {
       <td>${statusBadge}</td>
       <td><div class="flex gap6"><button class="btn btn-ghost btn-xs" onclick="openDetalheAcordo(${a.id})">Ver Parcelas</button>${del}</div></td>
     </tr>`;
-  }).join(''):`<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:32px">Nenhum acordo cadastrado</td></tr>`;
+  }).join(''):`<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:32px">${_facordos.length?'Nenhum acordo com esse valor total':'Nenhum acordo cadastrado'}</td></tr>`;
 }
 
 function openDetalheAcordo(acordoId) {
@@ -5844,13 +6023,27 @@ function openDetalheAcordo(acordoId) {
   const parcelas=_facordosParcelas.filter(p=>p.acordoId===acordoId);
   const pagas=parcelas.filter(p=>p.status==='pago').length;
   document.getElementById('facd-resumo').textContent=`R$ ${fmtMoeda(a.valorTotal)} total em ${a.qtdParcelas}x · ${pagas} de ${a.qtdParcelas} parcela(s) paga(s)`;
+  // abre sempre limpo, sem herdar o filtro de valor do acordo anterior
+  ['facd-fv-op','facd-fv-a','facd-fv-b'].forEach(id=>{ document.getElementById(id).value=''; });
   renderAcordoParcelas(acordoId);
   document.getElementById('modal-fin-acordo-detalhe').classList.add('open');
 }
 
+// acordo aberto no modal de parcelas - o filtro de valor precisa saber
+// qual recarregar quando o usuário digita
+let _facdAtual=null;
+function renderAcordoParcelasAtual(){ if(_facdAtual!=null) renderAcordoParcelas(_facdAtual); }
+
 function renderAcordoParcelas(acordoId) {
+  _facdAtual=acordoId;
   const today=new Date().toISOString().split('T')[0];
-  const parcelas=_facordosParcelas.filter(p=>p.acordoId===acordoId).sort((x,y)=>x.parcelaNum-y.parcelaNum);
+  const testeValor=filtroValor('facd');
+  const todas=_facordosParcelas.filter(p=>p.acordoId===acordoId);
+  const parcelas=todas.filter(p=>testeValor(p.valor)).sort((x,y)=>x.parcelaNum-y.parcelaNum);
+  if(!parcelas.length) {
+    document.getElementById('facd-lista').innerHTML=`<div style="text-align:center;color:var(--muted);padding:24px;font-size:13px">${todas.length?'Nenhuma parcela com esse valor':'Nenhuma parcela lançada'}</div>`;
+    return;
+  }
   document.getElementById('facd-lista').innerHTML=parcelas.map(p=>{
     const statusBadge = p.status==='pago' ? '<span class="badge b-ok">Pago</span>'
       : p.vencimento<today ? '<span class="badge b-gray" style="color:var(--red);background:rgba(185,28,28,.08)">Atrasado</span>'
@@ -6244,10 +6437,14 @@ function renderDespesas() {
   atualizarChipsStatus();
   const busca=document.getElementById('fd-busca').value.trim().toLowerCase();
   const fTipo=document.getElementById('fd-filtro-tipo').value;
+  // no valor, conta paga com juros/desconto casa tanto pelo valor previsto
+  // quanto pelo que saiu de fato do caixa
+  const testeValor=filtroValor('fd');
   const filtradas=comStatus.filter(({d,statusKey})=>
     (!busca||`${d.fornecedor||''} ${d.nf||''} ${d.reg||''} ${d.observacao||''}`.toLowerCase().includes(busca)) &&
     (!fTipo||fTipo===d.tipoDespesa) &&
-    (!_fdStatusSel.size || _fdStatusSel.has(statusKey))
+    (!_fdStatusSel.size || _fdStatusSel.has(statusKey)) &&
+    (testeValor(d.valor) || (d.status==='pago' && d.valorPago!=null && testeValor(d.valorPago)))
   );
 
   const escopo=_fdViewTodos?'no total':'no mês';
