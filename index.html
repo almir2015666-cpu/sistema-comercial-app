@@ -2287,6 +2287,17 @@ tbody tr:hover td{background:var(--bg)}
   <div class="modal" style="width:760px">
     <div class="modal-title" id="fd-modal-titulo">Nova Conta a Pagar</div>
     <input type="hidden" id="fd-id">
+
+    <!-- Leitor do código de barras do boleto: puxa valor e vencimento sozinho -->
+    <div class="fg" style="background:var(--panel2,#f5f7fb);border:1px dashed var(--line);border-radius:10px;padding:10px 12px">
+      <label>📷 Código de barras do boleto <span style="font-weight:400;color:var(--muted)">— escaneie com o leitor ou cole a linha digitável</span></label>
+      <div class="flex gap6">
+        <input type="text" id="fd-boleto-cod" inputmode="numeric" autocomplete="off" placeholder="Escaneie aqui ou cole os números do boleto" oninput="autoLerBoleto()" onkeydown="if(event.key==='Enter'){event.preventDefault();lerBoleto();}" style="flex:1">
+        <button type="button" class="btn btn-sm" style="width:auto" onclick="lerBoleto()">Puxar dados</button>
+      </div>
+      <div id="fd-boleto-status" style="font-size:11.5px;color:var(--muted);margin-top:4px">Preenche valor e vencimento automaticamente. Confira sempre antes de salvar.</div>
+    </div>
+
     <div class="row-3">
       <div class="fg"><label>Fornecedor</label><input type="text" id="fd-fornecedor" placeholder="Ex: ITS BRASIL" style="text-transform:uppercase"></div>
       <div class="fg"><label>Tipo de Despesa</label>
@@ -2309,34 +2320,11 @@ tbody tr:hover td{background:var(--bg)}
     </div>
     <div class="fg"><label>Observações</label><input type="text" id="fd-observacao" maxlength="200" placeholder="Opcional"></div>
 
-    <!-- Lançar JÁ PAGA: anexa o comprovante e cria a conta já com a baixa -->
-    <div id="fd-japaga-wrap" style="border-top:1px solid var(--line);margin-top:6px;padding-top:12px">
-      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:600;margin:0">
-        <input type="checkbox" id="fd-japaga" onchange="toggleFdJaPaga()" style="width:auto;margin:0"> Já paga — dar baixa agora
-      </label>
-      <div style="font-size:11.5px;color:var(--muted);margin-top:4px">Marque quando a conta já foi paga: anexe o comprovante/NF e ela entra direto como paga, sem precisar dar baixa depois.</div>
-      <div id="fd-baixa-campos" style="display:none;margin-top:10px">
-        <div class="row-3">
-          <div class="fg"><label>Data do Pagamento</label><input type="date" id="fd-pg-data"></div>
-          <div class="fg"><label>Forma de Pagamento</label>
-            <select id="fd-pg-forma">
-              <option value="">Selecione...</option>
-              <option value="PIX">PIX</option>
-              <option value="Boleto">Boleto</option>
-              <option value="Transferência">Transferência</option>
-              <option value="Dinheiro">Dinheiro</option>
-              <option value="Cartão">Cartão</option>
-              <option value="Outro">Outro</option>
-            </select>
-          </div>
-          <div class="fg"><label>Banco / Conta</label><input type="text" id="fd-pg-banco" placeholder="Ex: 99629-4" style="text-transform:uppercase"></div>
-        </div>
-        <div class="fg">
-          <label>Nota Fiscal / Comprovante (PDF) <span style="font-weight:400;color:var(--red)">obrigatório</span></label>
-          <input type="file" id="fd-pg-nf" accept="application/pdf">
-          <div id="fd-pg-nf-status" style="font-size:11.5px;color:var(--muted);margin-top:4px"></div>
-        </div>
-      </div>
+    <!-- Anexar o boleto / documento escaneado já no lançamento (a conta segue pendente) -->
+    <div class="fg">
+      <label>Boleto / Documento escaneado <span style="font-weight:400;color:var(--muted)">(opcional — PDF ou imagem)</span></label>
+      <input type="file" id="fd-anexo" accept="application/pdf,image/*">
+      <div id="fd-anexo-status" style="font-size:11.5px;color:var(--muted);margin-top:4px"></div>
     </div>
 
     <div class="modal-ft">
@@ -6146,35 +6134,19 @@ function openAddDespesa() {
   document.getElementById('fd-nf').value='';
   document.getElementById('fd-data-nf').value='';
   document.getElementById('fd-observacao').value='';
-  // opção "já paga" só faz sentido ao criar: começa desmarcada e visível
-  document.getElementById('fd-japaga-wrap').style.display='';
-  resetFdJaPaga();
+  // anexo do boleto começa vazio a cada nova conta
+  document.getElementById('fd-anexo').value='';
+  document.getElementById('fd-anexo-status').textContent='';
+  resetBoletoLeitor();
   document.getElementById('modal-fin-despesa').classList.add('open');
+  // foca o leitor: com um leitor USB é só escanear que já cai aqui
+  setTimeout(()=>document.getElementById('fd-boleto-cod').focus(),50);
 }
 
-// mostra/esconde os campos de pagamento do "já paga" e limpa o formulário dele
-function toggleFdJaPaga() {
-  const on=document.getElementById('fd-japaga').checked;
-  document.getElementById('fd-baixa-campos').style.display=on?'':'none';
-  if(on){
-    if(!document.getElementById('fd-pg-data').value)
-      document.getElementById('fd-pg-data').value=new Date().toISOString().split('T')[0];
-    // banco/conta costuma ser o mesmo: sugere o último usado (igual à baixa normal)
-    if(!document.getElementById('fd-pg-banco').value){
-      const ultima=[..._fdesp].filter(x=>x.bancoConta).sort((a,b)=>(b.dataPagamento||'').localeCompare(a.dataPagamento||''))[0];
-      document.getElementById('fd-pg-banco').value=(ultima&&ultima.bancoConta)||'';
-    }
-  }
-}
-
-function resetFdJaPaga() {
-  document.getElementById('fd-japaga').checked=false;
-  document.getElementById('fd-baixa-campos').style.display='none';
-  document.getElementById('fd-pg-data').value='';
-  document.getElementById('fd-pg-forma').value='';
-  document.getElementById('fd-pg-banco').value='';
-  document.getElementById('fd-pg-nf').value='';
-  document.getElementById('fd-pg-nf-status').textContent='';
+function resetBoletoLeitor(){
+  const inp=document.getElementById('fd-boleto-cod'); if(inp) inp.value='';
+  const st=document.getElementById('fd-boleto-status');
+  if(st){ st.style.color='var(--muted)'; st.textContent='Preenche valor e vencimento automaticamente. Confira sempre antes de salvar.'; }
 }
 
 function openEditDespesa(id) {
@@ -6192,10 +6164,67 @@ function openEditDespesa(id) {
   document.getElementById('fd-nf').value=d.nf||'';
   document.getElementById('fd-data-nf').value=d.dataNf||'';
   document.getElementById('fd-observacao').value=d.observacao||'';
-  // na edição não oferece "já paga": a baixa de conta existente é pelo botão Dar Baixa
-  document.getElementById('fd-japaga-wrap').style.display='none';
-  resetFdJaPaga();
+  // boleto anexado: mostra o que já tem e deixa substituir escolhendo outro arquivo
+  document.getElementById('fd-anexo').value='';
+  document.getElementById('fd-anexo-status').innerHTML = d.boletoUrl
+    ? `Boleto anexado — <a href="${d.boletoUrl}" target="_blank" rel="noopener" style="color:var(--blue2)">ver</a>. Escolha um arquivo só se quiser substituir.`
+    : '';
+  resetBoletoLeitor();
   document.getElementById('modal-fin-despesa').classList.add('open');
+}
+
+// ── Leitura do código de barras / linha digitável do boleto ──────────────
+// Extrai valor e vencimento sem depender de internet. Aceita a linha digitável
+// (47 díg. boleto bancário, 48 díg. concessionária) ou o código de barras (44).
+function fatorVencParaData(fatorStr){
+  const f=parseInt(fatorStr,10);
+  if(!f) return null;   // 0000 = boleto sem data de vencimento
+  // Base FEBRABAN 07/10/1997. Depois que o fator chegou a 9999 (21/02/2025),
+  // ele reiniciou em 1000 = 22/02/2025. Calculamos os dois ciclos e ficamos com
+  // a data mais próxima de hoje — a certa para um boleto atual.
+  const d1=new Date(Date.UTC(1997,9,7)+f*86400000);
+  const d2=new Date(Date.UTC(2025,1,22)+(f-1000)*86400000);
+  const hoje=Date.now();
+  const pick=Math.abs(d2.getTime()-hoje)<Math.abs(d1.getTime()-hoje)?d2:d1;
+  return pick.toISOString().split('T')[0];
+}
+function parseBoletoCodigo(raw){
+  const s=(raw||'').replace(/\D/g,'');
+  // concessionária (água/luz/telefone): 48 díg. começando com 8, ou 44 díg. com 8
+  if(s.length===48){
+    const barras=s.substring(0,11)+s.substring(12,23)+s.substring(24,35)+s.substring(36,47);
+    const v=parseInt(barras.substring(4,15),10)/100;
+    return { valor:v>0?v:null, vencimento:null };
+  }
+  if(s.length===44 && s[0]==='8'){
+    const v=parseInt(s.substring(4,15),10)/100;
+    return { valor:v>0?v:null, vencimento:null };
+  }
+  // boleto bancário
+  if(s.length===47){
+    const v=parseInt(s.substring(37,47),10)/100;
+    return { valor:v>0?v:null, vencimento:fatorVencParaData(s.substring(33,37)) };
+  }
+  if(s.length===44){
+    const v=parseInt(s.substring(9,19),10)/100;
+    return { valor:v>0?v:null, vencimento:fatorVencParaData(s.substring(5,9)) };
+  }
+  return null;
+}
+function lerBoleto(){
+  const info=document.getElementById('fd-boleto-status');
+  const dados=parseBoletoCodigo(document.getElementById('fd-boleto-cod').value);
+  if(!dados){ info.style.color='var(--red)'; info.textContent='Código não reconhecido. Escaneie o código de barras ou cole a linha digitável (47 ou 48 números).'; return; }
+  const msgs=[];
+  if(dados.valor!=null){ document.getElementById('fd-valor').value=dados.valor.toFixed(2); msgs.push('valor R$ '+fmtMoeda(dados.valor)); }
+  if(dados.vencimento){ document.getElementById('fd-vencimento').value=dados.vencimento; msgs.push('vencimento '+fmt(dados.vencimento)); }
+  if(!msgs.length){ info.style.color='var(--red)'; info.textContent='Li o código, mas não achei valor nele. Confira o número.'; return; }
+  info.style.color='var(--green)';
+  info.textContent='Puxado do boleto: '+msgs.join(' · ')+'. Confira e ajuste se precisar.';
+}
+function autoLerBoleto(){
+  const s=(document.getElementById('fd-boleto-cod').value||'').replace(/\D/g,'');
+  if(s.length===44||s.length===47||s.length===48) lerBoleto();
 }
 
 async function salvarDespesa() {
@@ -6216,59 +6245,48 @@ async function salvarDespesa() {
   if(!valor||valor<=0) return toast('Informe um valor válido.','err');
   if(!vencimento) return toast('Informe o vencimento.','err');
 
-  // lançar JÁ PAGA? (só ao criar) — confere os campos do pagamento antes de tudo
-  const jaPaga = !idRaw && document.getElementById('fd-japaga').checked;
-  let pgArquivo=null;
-  if(jaPaga){
-    pgArquivo=document.getElementById('fd-pg-nf').files[0];
-    if(!document.getElementById('fd-pg-data').value) return toast('Informe a data do pagamento.','err');
-    if(!document.getElementById('fd-pg-forma').value) return toast('Selecione a forma de pagamento.','err');
-    if(!pgArquivo) return toast('Anexe o PDF da Nota Fiscal / comprovante.','err');
-    if(pgArquivo.type!=='application/pdf') return toast('O comprovante precisa ser um PDF.','err');
-  }
+  // anexo do boleto/documento escaneado (opcional): aceita PDF ou imagem
+  const anexoFile=document.getElementById('fd-anexo').files[0];
+  if(anexoFile && !(anexoFile.type==='application/pdf'||anexoFile.type.startsWith('image/')))
+    return toast('O anexo precisa ser um PDF ou uma imagem.','err');
 
   loading(true);
   try {
+    // se anexou um boleto, sobe primeiro (vale para conta nova e para edição)
+    let boletoUrl=null;
+    if(anexoFile){
+      try {
+        document.getElementById('fd-anexo-status').textContent='Enviando anexo...';
+        boletoUrl=await uploadToCloudinary(anexoFile);
+        document.getElementById('fd-anexo-status').textContent='';
+      } catch(e){ loading(false); document.getElementById('fd-anexo-status').textContent=''; return toast('Erro ao enviar o anexo: '+((e&&e.message)?e.message:'tente de novo'),'err'); }
+    }
     if (idRaw) {
       const id=Number(idRaw);
       const idx=_fdesp.findIndex(x=>x.id===id);
       if(idx<0) { closeModal('modal-fin-despesa'); return; }
       // mesReferencia acompanha o vencimento: mudar a data move a conta de mês
       const upd={fornecedor,tipoDespesa,centroCusto,categoria,valor,vencimento,mesReferencia:vencimento.slice(0,7),reg,nf,dataNf,observacao};
+      if(boletoUrl) upd.boletoUrl=boletoUrl;   // só substitui o boleto se enviou um novo
       await db.collection('fin_despesas').doc(String(id)).update(upd);
       _fdesp[idx]={..._fdesp[idx],...upd};
       logAcao('editou','conta-pagar',id,`Conta ${fornecedor} — R$ ${fmtMoeda(valor)} (venc. ${fmt(vencimento)})`);
     } else {
-      // por padrão nasce pendente; se "já paga", sobe o comprovante e nasce paga
-      let pg={ status:'pendente', valorPago:null, dataPagamento:null, formaPagamento:null,
-               bancoConta:null, notaFiscalUrl:null, pagoPorId:null, pagoPorNome:null };
-      if(jaPaga){
-        let notaFiscalUrl;
-        try {
-          const st=document.getElementById('fd-pg-nf-status'); st.textContent='Enviando PDF...';
-          notaFiscalUrl=await uploadToCloudinary(pgArquivo);
-          st.textContent='';
-        } catch(e){ loading(false); document.getElementById('fd-pg-nf-status').textContent=''; return toast('Erro ao enviar o PDF: '+((e&&e.message)?e.message:'tente de novo'),'err'); }
-        pg={ status:'pago', valorPago:valor, dataPagamento:document.getElementById('fd-pg-data').value,
-             formaPagamento:document.getElementById('fd-pg-forma').value,
-             bancoConta:document.getElementById('fd-pg-banco').value.trim().toUpperCase(),
-             notaFiscalUrl, pagoPorId:FU.id, pagoPorNome:FU.name };
-      }
       const desp={
         id:newId(), fornecedor, tipoDespesa, centroCusto, categoria, valor, vencimento,
         mesReferencia:vencimento.slice(0,7), reg, nf, dataNf, observacao,
-        ...pg,
+        status:'pendente', valorPago:null, dataPagamento:null, formaPagamento:null, bancoConta:null,
+        notaFiscalUrl:null, boletoUrl, pagoPorId:null, pagoPorNome:null,
         criadoPorId:FU.id, criadoPorNome:FU.name, createdAt:Date.now()
       };
       await db.collection('fin_despesas').doc(String(desp.id)).set(desp);
       _fdesp.push(desp);
-      logAcao('criou','conta-pagar',desp.id,`Conta ${fornecedor} (${tipoDespesa}) — R$ ${fmtMoeda(valor)} (venc. ${fmt(vencimento)})`);
-      if(jaPaga) logAcao('pagou','conta-pagar',desp.id,`${fornecedor} — R$ ${fmtMoeda(valor)} via ${pg.formaPagamento} (lançada já paga)`);
+      logAcao('criou','conta-pagar',desp.id,`Conta ${fornecedor} (${tipoDespesa}) — R$ ${fmtMoeda(valor)} (venc. ${fmt(vencimento)})${boletoUrl?' [com boleto]':''}`);
     }
   } finally { loading(false); }
   closeModal('modal-fin-despesa');
   renderDespesas(); renderFinDashboard();
-  toast(idRaw?'Conta atualizada.':(jaPaga?'Conta lançada e paga.':'Conta lançada.'),'ok');
+  toast(idRaw?'Conta atualizada.':'Conta lançada.','ok');
 }
 
 // Despesa fixa se repete todo mês e era retrabalho de digitação na planilha:
@@ -6548,7 +6566,8 @@ function renderDespesas() {
     const tipoBadge=d.tipoDespesa==='Fixo'
       ? '<span class="badge b-1">Fixo</span>'
       : '<span class="badge b-4">Variável</span>';
-    const sub=[d.nf?`NF ${escapeHtml(d.nf)}`:'', d.centroCusto?escapeHtml(d.centroCusto):'', d.dataNf?`NF em ${fmt(d.dataNf)}`:'']
+    const sub=[d.nf?`NF ${escapeHtml(d.nf)}`:'', d.centroCusto?escapeHtml(d.centroCusto):'', d.dataNf?`NF em ${fmt(d.dataNf)}`:'',
+      d.boletoUrl?`<a href="${d.boletoUrl}" target="_blank" rel="noopener" style="color:var(--blue2)">Ver boleto</a>`:'']
       .filter(Boolean).join(' · ');
     const obs=d.observacao?`<div style="font-size:11px;color:var(--soft)">${escapeHtml(d.observacao)}</div>`:'';
     // valor pago diferente do previsto (juros/multa/desconto) precisa saltar aos olhos
@@ -6585,7 +6604,8 @@ function renderDespesas() {
       d.reg?`<span>Reg ${escapeHtml(d.reg)}</span>`:'',
       d.nf?`<span>NF ${escapeHtml(d.nf)}</span>`:'',
       d.centroCusto?`<span>${escapeHtml(d.centroCusto)}</span>`:'',
-      d.categoria?`<span class="badge b-3">${escapeHtml(d.categoria)}</span>`:''
+      d.categoria?`<span class="badge b-3">${escapeHtml(d.categoria)}</span>`:'',
+      d.boletoUrl?`<span><a href="${d.boletoUrl}" target="_blank" rel="noopener" style="color:var(--blue2)">Ver boleto</a></span>`:''
     ].filter(Boolean).join('');
     const pago=d.status==='pago'
       ? `<div class="fdc-pago"><strong>Pago R$ ${fmtMoeda(d.valorPago!=null?d.valorPago:d.valor)}</strong>${Math.abs(dif)>=0.01?` <span style="font-weight:700;color:${dif>0?'var(--red)':'var(--green)'}">${dif>0?'+':'−'} R$ ${fmtMoeda(Math.abs(dif))}</span>`:''}<div style="color:var(--muted);margin-top:2px">${d.dataPagamento?fmt(d.dataPagamento):''}${d.formaPagamento?' · '+escapeHtml(d.formaPagamento):''}${d.bancoConta?' · '+escapeHtml(d.bancoConta):''}${d.notaFiscalUrl?` · <a href="${d.notaFiscalUrl}" target="_blank" rel="noopener" style="color:var(--blue2)">Ver NF</a>`:''}</div></div>`
