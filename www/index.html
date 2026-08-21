@@ -2308,6 +2308,37 @@ tbody tr:hover td{background:var(--bg)}
       <div class="fg"><label>Data da NF</label><input type="date" id="fd-data-nf"></div>
     </div>
     <div class="fg"><label>Observações</label><input type="text" id="fd-observacao" maxlength="200" placeholder="Opcional"></div>
+
+    <!-- Lançar JÁ PAGA: anexa o comprovante e cria a conta já com a baixa -->
+    <div id="fd-japaga-wrap" style="border-top:1px solid var(--line);margin-top:6px;padding-top:12px">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:600;margin:0">
+        <input type="checkbox" id="fd-japaga" onchange="toggleFdJaPaga()" style="width:auto;margin:0"> Já paga — dar baixa agora
+      </label>
+      <div style="font-size:11.5px;color:var(--muted);margin-top:4px">Marque quando a conta já foi paga: anexe o comprovante/NF e ela entra direto como paga, sem precisar dar baixa depois.</div>
+      <div id="fd-baixa-campos" style="display:none;margin-top:10px">
+        <div class="row-3">
+          <div class="fg"><label>Data do Pagamento</label><input type="date" id="fd-pg-data"></div>
+          <div class="fg"><label>Forma de Pagamento</label>
+            <select id="fd-pg-forma">
+              <option value="">Selecione...</option>
+              <option value="PIX">PIX</option>
+              <option value="Boleto">Boleto</option>
+              <option value="Transferência">Transferência</option>
+              <option value="Dinheiro">Dinheiro</option>
+              <option value="Cartão">Cartão</option>
+              <option value="Outro">Outro</option>
+            </select>
+          </div>
+          <div class="fg"><label>Banco / Conta</label><input type="text" id="fd-pg-banco" placeholder="Ex: 99629-4" style="text-transform:uppercase"></div>
+        </div>
+        <div class="fg">
+          <label>Nota Fiscal / Comprovante (PDF) <span style="font-weight:400;color:var(--red)">obrigatório</span></label>
+          <input type="file" id="fd-pg-nf" accept="application/pdf">
+          <div id="fd-pg-nf-status" style="font-size:11.5px;color:var(--muted);margin-top:4px"></div>
+        </div>
+      </div>
+    </div>
+
     <div class="modal-ft">
       <button class="btn btn-ghost" onclick="closeModal('modal-fin-despesa')">Cancelar</button>
       <button class="btn btn-ok" id="fd-save-btn" onclick="salvarDespesa()">Salvar Conta</button>
@@ -6115,7 +6146,35 @@ function openAddDespesa() {
   document.getElementById('fd-nf').value='';
   document.getElementById('fd-data-nf').value='';
   document.getElementById('fd-observacao').value='';
+  // opção "já paga" só faz sentido ao criar: começa desmarcada e visível
+  document.getElementById('fd-japaga-wrap').style.display='';
+  resetFdJaPaga();
   document.getElementById('modal-fin-despesa').classList.add('open');
+}
+
+// mostra/esconde os campos de pagamento do "já paga" e limpa o formulário dele
+function toggleFdJaPaga() {
+  const on=document.getElementById('fd-japaga').checked;
+  document.getElementById('fd-baixa-campos').style.display=on?'':'none';
+  if(on){
+    if(!document.getElementById('fd-pg-data').value)
+      document.getElementById('fd-pg-data').value=new Date().toISOString().split('T')[0];
+    // banco/conta costuma ser o mesmo: sugere o último usado (igual à baixa normal)
+    if(!document.getElementById('fd-pg-banco').value){
+      const ultima=[..._fdesp].filter(x=>x.bancoConta).sort((a,b)=>(b.dataPagamento||'').localeCompare(a.dataPagamento||''))[0];
+      document.getElementById('fd-pg-banco').value=(ultima&&ultima.bancoConta)||'';
+    }
+  }
+}
+
+function resetFdJaPaga() {
+  document.getElementById('fd-japaga').checked=false;
+  document.getElementById('fd-baixa-campos').style.display='none';
+  document.getElementById('fd-pg-data').value='';
+  document.getElementById('fd-pg-forma').value='';
+  document.getElementById('fd-pg-banco').value='';
+  document.getElementById('fd-pg-nf').value='';
+  document.getElementById('fd-pg-nf-status').textContent='';
 }
 
 function openEditDespesa(id) {
@@ -6133,6 +6192,9 @@ function openEditDespesa(id) {
   document.getElementById('fd-nf').value=d.nf||'';
   document.getElementById('fd-data-nf').value=d.dataNf||'';
   document.getElementById('fd-observacao').value=d.observacao||'';
+  // na edição não oferece "já paga": a baixa de conta existente é pelo botão Dar Baixa
+  document.getElementById('fd-japaga-wrap').style.display='none';
+  resetFdJaPaga();
   document.getElementById('modal-fin-despesa').classList.add('open');
 }
 
@@ -6154,6 +6216,17 @@ async function salvarDespesa() {
   if(!valor||valor<=0) return toast('Informe um valor válido.','err');
   if(!vencimento) return toast('Informe o vencimento.','err');
 
+  // lançar JÁ PAGA? (só ao criar) — confere os campos do pagamento antes de tudo
+  const jaPaga = !idRaw && document.getElementById('fd-japaga').checked;
+  let pgArquivo=null;
+  if(jaPaga){
+    pgArquivo=document.getElementById('fd-pg-nf').files[0];
+    if(!document.getElementById('fd-pg-data').value) return toast('Informe a data do pagamento.','err');
+    if(!document.getElementById('fd-pg-forma').value) return toast('Selecione a forma de pagamento.','err');
+    if(!pgArquivo) return toast('Anexe o PDF da Nota Fiscal / comprovante.','err');
+    if(pgArquivo.type!=='application/pdf') return toast('O comprovante precisa ser um PDF.','err');
+  }
+
   loading(true);
   try {
     if (idRaw) {
@@ -6166,21 +6239,36 @@ async function salvarDespesa() {
       _fdesp[idx]={..._fdesp[idx],...upd};
       logAcao('editou','conta-pagar',id,`Conta ${fornecedor} — R$ ${fmtMoeda(valor)} (venc. ${fmt(vencimento)})`);
     } else {
+      // por padrão nasce pendente; se "já paga", sobe o comprovante e nasce paga
+      let pg={ status:'pendente', valorPago:null, dataPagamento:null, formaPagamento:null,
+               bancoConta:null, notaFiscalUrl:null, pagoPorId:null, pagoPorNome:null };
+      if(jaPaga){
+        let notaFiscalUrl;
+        try {
+          const st=document.getElementById('fd-pg-nf-status'); st.textContent='Enviando PDF...';
+          notaFiscalUrl=await uploadToCloudinary(pgArquivo);
+          st.textContent='';
+        } catch(e){ loading(false); document.getElementById('fd-pg-nf-status').textContent=''; return toast('Erro ao enviar o PDF: '+((e&&e.message)?e.message:'tente de novo'),'err'); }
+        pg={ status:'pago', valorPago:valor, dataPagamento:document.getElementById('fd-pg-data').value,
+             formaPagamento:document.getElementById('fd-pg-forma').value,
+             bancoConta:document.getElementById('fd-pg-banco').value.trim().toUpperCase(),
+             notaFiscalUrl, pagoPorId:FU.id, pagoPorNome:FU.name };
+      }
       const desp={
         id:newId(), fornecedor, tipoDespesa, centroCusto, categoria, valor, vencimento,
         mesReferencia:vencimento.slice(0,7), reg, nf, dataNf, observacao,
-        status:'pendente', valorPago:null, dataPagamento:null, formaPagamento:null, bancoConta:null,
-        pagoPorId:null, pagoPorNome:null,
+        ...pg,
         criadoPorId:FU.id, criadoPorNome:FU.name, createdAt:Date.now()
       };
       await db.collection('fin_despesas').doc(String(desp.id)).set(desp);
       _fdesp.push(desp);
       logAcao('criou','conta-pagar',desp.id,`Conta ${fornecedor} (${tipoDespesa}) — R$ ${fmtMoeda(valor)} (venc. ${fmt(vencimento)})`);
+      if(jaPaga) logAcao('pagou','conta-pagar',desp.id,`${fornecedor} — R$ ${fmtMoeda(valor)} via ${pg.formaPagamento} (lançada já paga)`);
     }
   } finally { loading(false); }
   closeModal('modal-fin-despesa');
   renderDespesas(); renderFinDashboard();
-  toast(idRaw?'Conta atualizada.':'Conta lançada.','ok');
+  toast(idRaw?'Conta atualizada.':(jaPaga?'Conta lançada e paga.':'Conta lançada.'),'ok');
 }
 
 // Despesa fixa se repete todo mês e era retrabalho de digitação na planilha:
