@@ -6211,20 +6211,32 @@ function parseBoletoCodigo(raw){
   }
   return null;
 }
+let _boletoTimer=null;
 function lerBoleto(){
+  clearTimeout(_boletoTimer);
   const info=document.getElementById('fd-boleto-status');
-  const dados=parseBoletoCodigo(document.getElementById('fd-boleto-cod').value);
-  if(!dados){ info.style.color='var(--red)'; info.textContent='Código não reconhecido. Escaneie o código de barras ou cole a linha digitável (47 ou 48 números).'; return; }
+  const s=(document.getElementById('fd-boleto-cod').value||'').replace(/\D/g,'');
+  const dados=parseBoletoCodigo(s);
+  if(!dados){
+    info.style.color='var(--red)';
+    // mostra o que foi lido para diagnosticar leitores que mandam formato diferente
+    info.textContent=`Não reconheci: li ${s.length} dígito(s) (esperado 44, 47 ou 48). Número lido: ${s||'(vazio)'}`;
+    return;
+  }
   const msgs=[];
   if(dados.valor!=null){ document.getElementById('fd-valor').value=dados.valor.toFixed(2); msgs.push('valor R$ '+fmtMoeda(dados.valor)); }
   if(dados.vencimento){ document.getElementById('fd-vencimento').value=dados.vencimento; msgs.push('vencimento '+fmt(dados.vencimento)); }
-  if(!msgs.length){ info.style.color='var(--red)'; info.textContent='Li o código, mas não achei valor nele. Confira o número.'; return; }
+  if(!msgs.length){ info.style.color='var(--red)'; info.textContent=`Li ${s.length} dígitos mas não achei o valor. Número: ${s}`; return; }
   info.style.color='var(--green)';
-  info.textContent='Puxado do boleto: '+msgs.join(' · ')+'. Confira e ajuste se precisar.';
+  info.textContent=`Puxado (${s.length} díg.): `+msgs.join(' · ')+'. Confira antes de salvar.';
 }
 function autoLerBoleto(){
+  // leitor USB digita rápido e manda Enter no fim; o Enter já dispara lerBoleto.
+  // Este atraso é só um reforço: espera parar de digitar e lê o número COMPLETO
+  // (evita ler no meio e pegar só parte dos dígitos).
+  clearTimeout(_boletoTimer);
   const s=(document.getElementById('fd-boleto-cod').value||'').replace(/\D/g,'');
-  if(s.length===44||s.length===47||s.length===48) lerBoleto();
+  if(s.length>=40) _boletoTimer=setTimeout(lerBoleto,250);
 }
 
 async function salvarDespesa() {
