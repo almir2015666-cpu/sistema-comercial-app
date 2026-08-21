@@ -6206,6 +6206,16 @@ function parseBoletoCodigo(raw){
     return { valor:v>0?v:null, vencimento:fatorVencParaData(s.substring(33,37)) };
   }
   if(s.length===44){
+    // CUIDADO: a chave de NF-e / CT-e também tem 44 dígitos, mas NÃO é boleto
+    // (e não contém o valor). Boleto bancário tem a moeda '9' na posição 4;
+    // a NF-e/CT-e traz o modelo (55/65/57...) nas posições 21-22.
+    const modelo=s.substring(20,22);
+    if(s[3]!=='9' || ['55','65','57','67'].includes(modelo)){
+      const tipo=['55','65'].includes(modelo)?'nfe':(['57','67'].includes(modelo)?'cte':'outro');
+      const res={ naoBoleto:true, tipo };
+      if(tipo==='nfe'){ res.nfNumero=String(parseInt(s.substring(25,34),10)||''); }
+      return res;
+    }
     const v=parseInt(s.substring(9,19),10)/100;
     return { valor:v>0?v:null, vencimento:fatorVencParaData(s.substring(5,9)) };
   }
@@ -6221,6 +6231,19 @@ function lerBoleto(){
     info.style.color='var(--red)';
     // mostra o que foi lido para diagnosticar leitores que mandam formato diferente
     info.textContent=`Não reconheci: li ${s.length} dígito(s) (esperado 44, 47 ou 48). Número lido: ${s||'(vazio)'}`;
+    return;
+  }
+  if(dados.naoBoleto){
+    info.style.color='var(--red)';
+    if(dados.tipo==='nfe'){
+      // bônus: já preenche o campo "NF / Documento" com o número da nota
+      if(dados.nfNumero){ const nfEl=document.getElementById('fd-nf'); if(nfEl && !nfEl.value.trim()) nfEl.value='NF '+dados.nfNumero; }
+      info.innerHTML='Esse código é a <b>chave de uma Nota Fiscal (NF-e)</b>'+(dados.nfNumero?(' nº '+dados.nfNumero):'')+', não um boleto — o valor <b>não vem</b> na chave. Digite o valor e o vencimento à mão. (Se houver boleto anexo, escaneie o código de barras dele.)';
+    } else if(dados.tipo==='cte'){
+      info.textContent='Esse código é de um CT-e (transporte), não um boleto. Digite o valor à mão.';
+    } else {
+      info.textContent='Esse código de 44 dígitos não é um boleto (parece uma chave de nota fiscal). Digite o valor à mão.';
+    }
     return;
   }
   const msgs=[];
