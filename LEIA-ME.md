@@ -94,7 +94,7 @@ TestFlight. Quatro segredos no repositório `almir2015666-cpu/sistema-comercial-
 | `CERTIFICATE_PRIVATE_KEY` | gravado (de `C:\Projetos\Mobile\wavetalk-cert\private_key_rsa.pem`, sem CRLF) |
 | `APP_STORE_CONNECT_KEY_IDENTIFIER` | gravado (`7R4QL39S29`) |
 | `APP_STORE_CONNECT_PRIVATE_KEY` | gravado (`AuthKey_7R4QL39S29.p8`) |
-| `APP_STORE_CONNECT_ISSUER_ID` | **falta**: App Store Connect → Usuários e acesso → Integrações → Issuer ID |
+| `APP_STORE_CONNECT_ISSUER_ID` | gravado (App Store Connect → Usuários e acesso → Integrações; a chave "GitHub CI" é a 7R4QL39S29) |
 
 A versão de marketing é `2.0.<número do build>`; o build interno é o
 número da execução. Para um lançamento de verdade, suba o `MARKETING_VERSION`
