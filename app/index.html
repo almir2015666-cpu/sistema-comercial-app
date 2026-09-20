@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="format-detection" content="telephone=no">
+<meta name="theme-color" content="#0a0e1a">
+<title>CMH Sistema</title>
+<!-- O tema entra antes do CSS, senao a tela pisca clara antes de escurecer. -->
+<script>
+try {
+  var t = localStorage.getItem('cmh_theme');
+  if (t === 'dark' || (!t && matchMedia('(prefers-color-scheme: dark)').matches)) document.documentElement.setAttribute('data-theme', 'dark');
+} catch (e) {}
+</script>
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+
+<!-- Abertura: cobre tudo enquanto a sessao e conferida. -->
+<div class="abrindo" id="abrindo">
+  <img src="marca/logo.png" alt="Clínica Medicina Humana" width="190">
+  <div class="spinner" aria-hidden="true"></div>
+</div>
+
+<!-- Entrar: usuario e senha, depois o codigo de seis digitos, depois a troca
+     de senha obrigatoria — tres passos na mesma tela. -->
+<section class="entrar" id="tela-entrar" hidden>
+  <div class="lcard">
+    <div class="llogo"><img src="marca/logo.png" alt="Clínica Medicina Humana"></div>
+    <div class="ltitle">CMH Sistema</div>
+    <div class="lsub">A equipe da clínica, no celular</div>
+    <form id="form-entrar" class="passo" autocomplete="on">
+      <div class="fg"><label for="usuario">Usuário</label><input id="usuario" name="username" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" inputmode="text" required></div>
+      <div class="fg"><label for="senha">Senha</label><input id="senha" name="password" type="password" autocomplete="current-password" required></div>
+      <button class="btn btn-primary" type="submit">Entrar</button>
+      <div class="lerr" id="erro-entrar" role="alert"></div>
+    </form>
+    <form id="form-codigo" class="passo" hidden>
+      <p class="lexpl">Sua conta tem a verificação em duas etapas. Abra o aplicativo autenticador e digite o código de seis dígitos.</p>
+      <div class="fg"><label for="codigo">Código</label><input id="codigo" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" required></div>
+      <button class="btn btn-primary" type="submit">Confirmar</button>
+      <button class="btn btn-ghost w-full mt8" type="button" id="codigo-cancelar">Voltar</button>
+      <div class="lerr" id="erro-codigo" role="alert"></div>
+    </form>
+    <form id="form-trocar" class="passo" hidden>
+      <p class="lexpl">Sua senha é provisória. Escolha uma senha nova para continuar.</p>
+      <div class="fg"><label for="nova1">Senha nova</label><input id="nova1" type="password" autocomplete="new-password" minlength="8" required></div>
+      <div class="fg"><label for="nova2">Repita a senha</label><input id="nova2" type="password" autocomplete="new-password" minlength="8" required></div>
+      <button class="btn btn-primary" type="submit">Salvar e entrar</button>
+      <button class="btn btn-ghost w-full mt8" type="button" id="trocar-desistir">Sair</button>
+      <div class="lerr" id="erro-trocar" role="alert"></div>
+    </form>
+    <p class="lrodape">Não tem acesso? Peça ao administrador do SistemaCMH.</p>
+  </div>
+</section>
+
+<!-- O app: barra de cima, o palco onde cada tela desenha, abas embaixo. -->
+<div id="app" hidden>
+  <header class="topo" id="topo">
+    <button class="topo__voltar" id="voltar" type="button" aria-label="Voltar" hidden>
+      <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+    </button>
+    <div class="topo__titulo" id="topo-titulo"></div>
+    <div class="topo__dir" id="topo-dir"></div>
+  </header>
+  <main class="palco" id="palco"></main>
+  <nav class="abas" id="abas" aria-label="Seções"></nav>
+</div>
+
+<!-- Folha (modal que vira folha inferior no celular) e avisos. -->
+<div class="overlay" id="folha" hidden><div class="modal" id="folha-caixa" role="dialog" aria-modal="true"></div></div>
+<div class="carregando" id="carregando" hidden><div class="spinner"></div><span id="carregando-texto"></span></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<input type="file" id="arquivo" hidden>
+
+<script src="vendor/supabase.js"></script>
+<script src="vendor/qrcode.js"></script>
+<script src="config.js"></script>
+<script src="logica.js"></script>
+<script src="ui.js"></script>
+<script src="nuvem.js"></script>
+<script src="modulos/chat.js"></script>
+<script src="modulos/tarefas.js"></script>
+<script src="modulos/compromissos.js"></script>
+<script src="modulos/chamados.js"></script>
+<script src="modulos/conferencia.js"></script>
+<script src="modulos/diario.js"></script>
+<script src="modulos/admin.js"></script>
+<script src="app.js"></script>
+
+</body>
+</html>

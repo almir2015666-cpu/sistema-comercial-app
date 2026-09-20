@@ -2,7 +2,27 @@
   "appId": "com.sistemacmh.app",
   "appName": "CMH Sistema",
   "webDir": "www",
+  "backgroundColor": "#0a0e1a",
   "ios": {
-    "contentInset": "automatic"
+    "contentInset": "never",
+    "backgroundColor": "#0a0e1a",
+    "limitsNavigationsToAppBoundDomains": false
+  },
+  "plugins": {
+    "StatusBar": {
+      "style": "DARK",
+      "backgroundColor": "#0a0e1a",
+      "overlaysWebView": true
+    },
+    "SplashScreen": {
+      "launchAutoHide": true,
+      "launchShowDuration": 500,
+      "backgroundColor": "#0a0e1a",
+      "showSpinner": false
+    },
+    "Keyboard": {
+      "resize": "native",
+      "resizeOnFullScreen": true
+    }
   }
 }

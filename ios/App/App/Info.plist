@@ -24,6 +24,10 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Para tirar uma foto e mandar no chat da equipe.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Para escolher uma foto ou arquivo e mandar no chat da equipe.</string>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>

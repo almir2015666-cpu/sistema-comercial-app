@@ -14,25 +14,26 @@
 </head>
 <body>
   <h1>Política de Privacidade</h1>
-  <p class="updated">CMH Sistema — Clínica Medicina Humana<br>Última atualização: 19 de junho de 2026</p>
+  <p class="updated">CMH Sistema — Clínica Medicina Humana<br>Última atualização: 19 de setembro de 2026</p>
 
-  <p>Este aplicativo ("CMH Sistema") é uma ferramenta interna de gestão usada pela equipe da Clínica Medicina Humana para controle comercial e financeiro. Esta política explica quais dados são tratados ao usar o app.</p>
+  <p>Este aplicativo ("CMH Sistema") é uma ferramenta interna de gestão usada pela equipe da Clínica Medicina Humana. É a versão de celular do sistema de gestão da clínica (SistemaCMH): os mesmos usuários, permissões e dados. Esta política explica quais dados são tratados ao usar o app.</p>
 
   <h2>Quais dados coletamos</h2>
   <ul>
-    <li><strong>Dados de login:</strong> e-mail e senha (autenticação via Firebase), usados apenas para identificar o colaborador que acessa o sistema.</li>
-    <li><strong>Nome e função do colaborador</strong> cadastrados pelo administrador do sistema.</li>
-    <li><strong>Dados operacionais da clínica:</strong> agendamentos, orçamentos, lançamentos financeiros (contas a pagar/receber) e cadastros de empresas parceiras, inseridos pelos próprios usuários durante o uso normal do sistema.</li>
+    <li><strong>Dados de login:</strong> usuário e senha, e opcionalmente um código de verificação em duas etapas, usados apenas para identificar o colaborador que acessa o sistema.</li>
+    <li><strong>Nome, cargo e setor do colaborador</strong> cadastrados pelo administrador do sistema.</li>
+    <li><strong>Dados operacionais da clínica:</strong> mensagens da equipe, tarefas, compromissos, chamados de suporte, o controle de serviços protocolados (conferência) e o diário de atividades comerciais, inseridos pelos próprios usuários durante o uso normal do sistema.</li>
+    <li><strong>Registro de acesso:</strong> o nome do aparelho e a versão do app a cada entrada, no log de auditoria do sistema. O app não coleta localização nem endereço IP.</li>
   </ul>
 
   <h2>Como usamos esses dados</h2>
   <p>Os dados são usados exclusivamente para o funcionamento do sistema de gestão interna da clínica: controle de agenda, registro de atividades comerciais e controle financeiro. Não usamos os dados para publicidade, não vendemos nem compartilhamos dados com terceiros para fins de marketing.</p>
 
   <h2>Onde os dados são armazenados</h2>
-  <p>Os dados são armazenados de forma segura no Firebase (Google Cloud), serviço de infraestrutura usado pelo sistema para autenticação e banco de dados.</p>
+  <p>Os dados são armazenados de forma segura no Supabase (banco de dados PostgreSQL em servidor gerenciado), o mesmo serviço de infraestrutura usado pelo sistema de gestão da clínica para autenticação, banco de dados e arquivos. O acesso a cada registro é controlado por regras no próprio banco, conforme o cadastro do colaborador.</p>
 
   <h2>Compartilhamento com terceiros</h2>
-  <p>Não compartilhamos dados pessoais com terceiros, exceto os provedores de infraestrutura necessários para o funcionamento do app (Firebase/Google Cloud).</p>
+  <p>Não compartilhamos dados pessoais com terceiros, exceto o provedor de infraestrutura necessário para o funcionamento do app (Supabase).</p>
 
   <h2>Seus direitos</h2>
   <p>Colaboradores cadastrados podem solicitar a correção ou exclusão de seus dados de acesso a qualquer momento, entrando em contato pelo e-mail abaixo.</p>

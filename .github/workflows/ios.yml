@@ -1,0 +1,119 @@
+name: iOS — Build & TestFlight
+
+# Compila no macOS da GitHub usando as codemagic-cli-tools: reaproveita o
+# certificado de distribuicao que ja existe, cria o perfil sozinho e envia ao
+# TestFlight. Nao precisa de Mac. Mesmo fluxo do treinamento-app, do
+# CMHReuniao e do AppVault.
+#
+# Minuto de macOS conta 10x na cota da GitHub: no plano gratuito, ~200
+# minutos de macOS por mes, uns 60 builds. Se apertar, tire o gatilho de
+# `push` e rode so a mao (workflow_dispatch).
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
+      - 'legado/**'
+      - 'capturas/**'
+      - 'tests/**'
+
+env:
+  XCODE_PROJECT: ios/App/App.xcodeproj
+  XCODE_SCHEME: App
+  BUNDLE_ID: com.sistemacmh.app
+
+jobs:
+  build:
+    runs-on: macos-26
+    env:
+      # As CLI da Codemagic leem estes nomes sozinhas.
+      APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+      APP_STORE_CONNECT_KEY_IDENTIFIER: ${{ secrets.APP_STORE_CONNECT_KEY_IDENTIFIER }}
+      APP_STORE_CONNECT_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
+      # Chave privada do certificado de distribuicao.
+      CERTIFICATE_PRIVATE_KEY: ${{ secrets.CERTIFICATE_PRIVATE_KEY }}
+      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Selecionar Xcode (mais recente disponivel)
+        run: |
+          XC=$(ls -d /Applications/Xcode_*.app 2>/dev/null | sort -V | tail -1)
+          sudo xcode-select -s "${XC:-/Applications/Xcode.app}"
+          xcodebuild -version
+
+      - name: Instalar Codemagic CLI
+        run: pip3 install --break-system-packages codemagic-cli-tools || pip3 install codemagic-cli-tools
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Testes das regras
+        run: npm test
+
+      - name: Build do app web + sync com o projeto iOS
+        run: npm run sync
+
+      - name: Conferir que o app nao ficou dependendo de internet
+        run: |
+          if grep -rlE '<(script|link)[^>]+(src|href)="https?://' www --include='*.html' | grep -q .; then
+            echo "ERRO: alguma pagina carrega recurso de fora. O app nao abriria sem sinal."
+            grep -rnE '<(script|link)[^>]+(src|href)="https?://' www --include='*.html'
+            exit 1
+          fi
+          echo "OK: nenhuma pagina carrega recurso externo."
+
+      - name: Assinatura (reutiliza certificado + cria perfil)
+        run: |
+          keychain initialize
+          app-store-connect fetch-signing-files "$BUNDLE_ID" \
+            --type IOS_APP_STORE \
+            --certificate-key=@env:CERTIFICATE_PRIVATE_KEY \
+            --create
+          keychain add-certificates
+          xcode-project use-profiles
+
+      # Build sempre unico e sempre crescente, senao a Apple recusa por versao
+      # repetida (erro 90186).
+      - name: Definir versao e build
+        run: |
+          cd ios/App
+          agvtool new-version -all ${{ github.run_number }}
+          BASE=$(grep -m1 'MARKETING_VERSION' App.xcodeproj/project.pbxproj | sed -E 's/.*= *([0-9]+\.[0-9]+).*/\1/')
+          if [ -z "$BASE" ]; then BASE="2.0"; fi
+          agvtool new-marketing-version "$BASE.${{ github.run_number }}"
+          echo "Versao: $BASE.${{ github.run_number }} (build ${{ github.run_number }})"
+
+      - name: Compilar IPA
+        run: |
+          xcode-project build-ipa \
+            --project "$XCODE_PROJECT" \
+            --scheme "$XCODE_SCHEME"
+
+      - name: Enviar ao TestFlight
+        run: |
+          mkdir -p ~/private_keys
+          printf '%s' "$APP_STORE_CONNECT_PRIVATE_KEY" > ~/private_keys/AuthKey_$APP_STORE_CONNECT_KEY_IDENTIFIER.p8
+          IPA=$(ls build/ios/ipa/*.ipa | head -1)
+          echo "Enviando: $IPA"
+          xcrun altool --upload-app -f "$IPA" -t ios \
+            --apiKey "$APP_STORE_CONNECT_KEY_IDENTIFIER" \
+            --apiIssuer "$APP_STORE_CONNECT_ISSUER_ID"
+
+      - name: Guardar o IPA como artefato
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cmh-sistema-ipa
+          path: build/ios/ipa/*.ipa
+          if-no-files-found: ignore

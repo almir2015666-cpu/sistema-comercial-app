@@ -6,3 +6,13 @@ ios/App/build/
 ios/App/DerivedData/
 *.log
 .DS_Store
+# chave de administrador do Firebase (só para os scripts/): nunca sobe.
+# Cobre também "serviceAccount.json.json" (o Windows esconde a extensão) e
+# o nome original que o Firebase dá ao arquivo baixado.
+serviceAccount*.json
+*firebase-adminsdk*.json
+
+# gerado pelo build (npm run build) e pelas capturas de tela
+www/
+dist/
+capturas/
