@@ -8,6 +8,7 @@
     "sync": "npm run build && npx cap sync ios",
     "open:ios": "npm run sync && npx cap open ios",
     "telas": "node scripts/telas.js",
+    "telas:simulado": "node scripts/telas-simulado.js",
     "previa": "npx http-server www -p 8791 -c-1",
     "postsync": "node scripts/fix-spm-paths.js"
   },

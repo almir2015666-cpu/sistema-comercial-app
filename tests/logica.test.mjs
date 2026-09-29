@@ -197,7 +197,8 @@ test('diario: validacao, dinheiro, data, metas e ranking', () => {
   const v = L.validarDetalhe('atendimento', { empresa: ' ACME ', servico: 'Consulta', pagamento: 'PIX', valor: '100,00', obs: 'ok' });
   assert.equal(v.ok, true);
   assert.equal(v.detalhe.valor, 100);
-  assert.equal(L.validarDetalhe('atendimento', { empresa: 'ACME', servico: 'Consulta', pagamento: 'PIX', valor: '0', obs: 'ok' }).ok, false);
+  // zero vale, como no diario_nucleo (cortesia, atendimento sem cobrança)
+  assert.equal(L.validarDetalhe('atendimento', { empresa: 'ACME', servico: 'Consulta', pagamento: 'PIX', valor: '0', obs: 'ok' }).ok, true);
   assert.equal(L.validarDetalhe('prospeccao', { empresa: 'ACME', contato: 'x', status: 'Retornar', retorno: 'amanha', obs: 'ok' }).ok, false);
   assert.equal(L.metaDe([{ usuario_id: 'u1', atividade: 'contratos', meta: 5 }], 'u1', 'contratos'), 5);
   assert.equal(L.metaDe([], 'u1', 'contratos'), 80);
@@ -225,4 +226,62 @@ test('diario: retornos pendentes, aniversariantes e busca', () => {
   assert.equal(L.buscarEmpresa(registros, '12345').length, 1);
   assert.equal(L.buscarEmpresa(registros, 'cia').length, 1);
   assert.equal(L.buscarEmpresa(registros, '').length, 0);
+});
+
+test('dinheiro como o dinheiro.py: ponto de milhar e zero na frente', () => {
+  assert.equal(L.lerDinheiro('1.500'), 1500, 'mil e quinhentos, e nao um e meio');
+  assert.equal(L.lerDinheiro('1.234,56'), 1234.56);
+  assert.equal(L.lerDinheiro('1234.56'), 1234.56);
+  assert.equal(L.lerDinheiro('0.750'), 0.75, 'zero na frente e decimal');
+  assert.equal(L.lerDinheiro('R$ 2.000.000'), 2000000);
+  assert.equal(L.lerDinheiro('abc'), 0);
+});
+
+test('cadastro: salvar pelo app nao apaga permissao que o app nao desenha', () => {
+  const gravados = ['chat', 'almoxarifado', 'chave_do_futuro', 'financeiro:ver'];
+  const marcados = ['chat', 'tarefas'];
+  const final = L.juntarModulos(gravados, marcados);
+  assert.ok(final.includes('chave_do_futuro'), 'chave desconhecida fica');
+  assert.ok(final.includes('tarefas'));
+  assert.ok(!final.includes('almoxarifado'), 'o app desenha almoxarifado: desmarcado sai');
+  assert.ok(!final.includes('financeiro:ver'), 'o app desenha financeiro:ver: desmarcado sai');
+  assert.ok(L.MODULOS.some(([k]) => k === 'homologacao'));
+  assert.ok(L.BOTOES.some(([k]) => k === 'pedir_material'));
+  assert.ok(L.CARGOS.includes('Diretor médico'));
+  assert.ok(L.SETORES.includes('Contabilidade'));
+});
+
+test('conferencia: quem assina e o comprovante, como o conferencia_nucleo', () => {
+  // apagar o nome de quem liberou nao faz o app assinar de novo
+  const a = L.assinar({ liberado_por: 'LAYLA', situacao_sesmt: 'LIBERADO' }, { liberado_por: '', situacao_sesmt: 'LIBERADO' }, 'ANA', false);
+  assert.equal(a.liberado_por, null);
+  // anexar a nota num faturado sem nome assina
+  const b = L.assinar({ faturado_em: '2026-09-01', faturado_por: '' }, { faturado_em: '2026-09-01', faturado_por: '', nf_arquivo: 'x.pdf' }, 'ANA', false);
+  assert.equal(b.faturado_por, 'ANA');
+  // nome de outra pessoa nao se troca
+  const c = L.assinar({ faturado_em: '2026-09-01', faturado_por: 'BIA' }, { faturado_em: '2026-09-01', faturado_por: 'BIA', nf_arquivo: 'x.pdf' }, 'ANA', false);
+  assert.equal(c.faturado_por, 'BIA');
+  // admin com o campo vazio tambem assina
+  const d = L.assinar({}, { faturado_em: '2026-09-02', faturado_por: '' }, 'ADM', true);
+  assert.equal(d.faturado_por, 'ADM');
+  assert.match(L.faltaComprovante({ faturado_em: '2026-09-01' }), /NOTA FISCAL/);
+  assert.match(L.faltaComprovante({ faturado_em: '2026-09-01', nf_arquivo: 'n.pdf', forma_pagamento: 'BOLETO 5 DIAS' }), /BOLETO/);
+  assert.equal(L.faltaComprovante({ faturado_em: '2026-09-01', nf_arquivo: 'n.pdf', forma_pagamento: 'PIX' }), '');
+});
+
+test('diario: valor zero vale, texto nao', () => {
+  const ok = L.validarDetalhe('contratos', { empresa: 'X', servico: 'Y', valor: '0', pagamento: 'PIX', obs: 'cortesia' });
+  assert.equal(ok.ok, true, ok.erro);
+  const ruim = L.validarDetalhe('contratos', { empresa: 'X', servico: 'Y', valor: 'da', pagamento: 'PIX', obs: 'z' });
+  assert.equal(ruim.ok, false);
+});
+
+test('forma de pagamento pela palavra, como o conferencia_nucleo', () => {
+  assert.equal(L.chaveDoPagamento('BOLEOT 05 DIAS'), 'BOLETO');
+  assert.equal(L.chaveDoPagamento('SOLICITAR BOLETO FATURAMENTO'), 'BOLETO');
+  assert.equal(L.chaveDoPagamento('Pix'), 'PIX');
+  assert.equal(L.chaveDoPagamento('a combinar'), 'A COMBINAR');
+  assert.equal(L.chaveDoPagamento('xyz'), 'OUTRO');
+  assert.equal(L.chaveDoPagamento(''), '');
+  assert.equal(L.pagaComBoleto({ forma_pagamento: 'BOLEOT 05 DIAS' }), true);
 });

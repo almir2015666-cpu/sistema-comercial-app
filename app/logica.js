@@ -46,12 +46,17 @@
   L.dinheiro = (v) =>
     (Number(v) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
-  // "1.234,56" -> 1234.56 ; "1234.56" -> 1234.56 ; "1500" -> 1500 ; lixo -> 0
+  // A MESMA REGRA DO dinheiro.py DO COMPUTADOR:
+  //   "1.234,56" -> 1234.56 ; "1.500" -> 1500 (ponto de milhar) ;
+  //   "1234.56" -> 1234.56 ; "0.750" -> 0.75 (zero na frente: decimal) ;
+  //   lixo -> 0.
+  // Antes, "1.500" virava 1,5: o ponto sozinho era sempre decimal, e mil e
+  // quinhentos reais digitados no celular entravam como um real e meio.
   L.lerDinheiro = (texto) => {
-    let s = String(texto ?? '').trim().replace(/[R$\s]/g, '');
+    let s = String(texto ?? '').trim().replace(/[R$\s ]/g, '');
     if (!s) return 0;
     if (s.includes(',')) s = s.replace(/\./g, '').replace(',', '.');
-    else if ((s.match(/\./g) || []).length > 1) s = s.replace(/\./g, '');
+    else if (/^[1-9]\d{0,2}(\.\d{3})+$/.test(s)) s = s.replace(/\./g, '');
     const n = Number(s);
     return Number.isFinite(n) ? Math.round(n * 100) / 100 : 0;
   };
@@ -160,13 +165,16 @@
     };
   };
 
-  L.SETORES = ['Administrativo', 'Assistencial', 'Comercial', 'Direção', 'Faturamento',
-    'Financeiro', 'Recepção', 'Segurança', 'SESMT', 'T.I.'];
+  L.SETORES = ['Administrativo', 'Assistencial', 'Comercial', 'Contabilidade', 'Direção',
+    'Faturamento', 'Financeiro', 'Recepção', 'Segurança', 'SESMT', 'T.I.'];
 
+  // "Diretor médico" é o cargo que o servidor procura (homol_eh_medico)
+  // para dar o parecer na Homologação: escrito igual ao do computador.
   L.CARGOS = ['Assistente administrativo', 'Auxiliar administrativo', 'Auxiliar de enfermagem',
-    'Auxiliar de serviços gerais', 'CEO', 'Consultor comercial', 'Coordenador administrativo',
+    'Auxiliar de serviços gerais', 'CEO', 'Consultor comercial', 'Contabilidade',
+    'Coordenador administrativo',
     'Coordenador assistencial', 'Coordenador comercial', 'Coordenador de enfermagem',
-    'Coordenador do SESMT', 'Diretor', 'Diretor técnico', 'Encarregado de dados (DPO)',
+    'Coordenador do SESMT', 'Diretor', 'Diretor médico', 'Diretor técnico', 'Encarregado de dados (DPO)',
     'Enfermeiro', 'Enfermeiro responsável técnico', 'Estagiário', 'Faturamento',
     'Gerente administrativo', 'Gerente assistencial', 'Gerente comercial', 'Gerente da unidade',
     'Médico coordenador do PCMSO', 'Médico examinador', 'Motorista', 'Recepcionista',
@@ -177,15 +185,55 @@
   L.MODULOS = [
     ['orcamentos', 'Orçamentos'], ['documentos', 'Documentos'], ['agenda', 'Agenda dos médicos'],
     ['agendamento', 'Agendamento'], ['prospeccao', 'Prospecção'], ['pgr', 'PGR'], ['pcmso', 'PCMSO'],
-    ['treinamento', 'Treinamentos'], ['pop', 'POP'], ['chat', 'Chat'], ['financeiro', 'Financeiro'],
+    ['treinamento', 'Treinamentos'], ['homologacao', 'Homologação'], ['pop', 'POP'],
+    ['chat', 'Chat'], ['financeiro', 'Financeiro'],
     ['receber', 'Contas a receber'], ['compromissos', 'Compromissos'], ['diario', 'Diário de Bordo'],
-    ['chamados', 'Chamados T.I.'], ['tarefas', 'Tarefas'],
+    ['chamados', 'Chamados T.I.'], ['almoxarifado', 'Almoxarifado'],
   ];
-  L.BOTOES = [['relatorios', 'Relatórios'], ['empresas', 'Empresas'], ['conferencia', 'Conferência']];
-  L.DENTRO = [['orcamentos:configuracoes', 'orcamentos', 'Configurações do Orçamentos']];
+  // Como no computador: o que abre pelo Menu (Tarefas e Solicitar material)
+  // fica no bloco dos botões, e não entre os módulos. `admin` só o
+  // administrador tem; `tema` é de todos.
+  L.BOTOES = [['relatorios', 'Relatórios'], ['empresas', 'Empresas'], ['conferencia', 'Conferência'],
+    ['tarefas', 'Tarefas'], ['pedir_material', 'Solicitar material']];
+  L.DENTRO = [
+    ['orcamentos:configuracoes', 'orcamentos', 'Configurações'],
+    ['homologacao:contratos', 'homologacao', 'Contratos assinados'],
+    ['homologacao:gerar', 'homologacao', 'Gerar login'],
+    ['homologacao:acessos', 'homologacao', 'Acessos criados'],
+    ['homologacao:senha', 'homologacao', 'Senha'],
+    ['homologacao:editar', 'homologacao', 'Editar e desligar'],
+    ['homologacao:colaboradores', 'homologacao', 'Colaboradores'],
+    ['financeiro:ver', 'financeiro', 'Ver (somente leitura)'],
+    ['financeiro:lancar', 'financeiro', 'Lançar contas'],
+    ['financeiro:baixar', 'financeiro', 'Dar baixa'],
+    ['financeiro:cadastros', 'financeiro', 'Cadastros'],
+    ['financeiro:apagar', 'financeiro', 'Apagar'],
+    ['almoxarifado:atender', 'almoxarifado', 'Entregar pedidos'],
+    ['almoxarifado:movimentar', 'almoxarifado', 'Movimentar o estoque'],
+    ['almoxarifado:catalogo', 'almoxarifado', 'Cadastrar itens'],
+  ];
+
+  // TODAS AS CHAVES QUE ESTE APP SABE DESENHAR NO CADASTRO. Qualquer outra
+  // que já esteja gravada (de uma versão nova do computador, por exemplo)
+  // é PRESERVADA ao salvar: ver L.juntarModulos.
+  L.CHAVES_CONHECIDAS = () => [...L.MODULOS, ...L.BOTOES].map(([k]) => k)
+    .concat(L.DENTRO.map(([k]) => k));
+
+  // O que se grava em orc_usuarios.modulos ao salvar o cadastro pelo app.
+  //
+  // O APP APAGAVA PERMISSÃO. Ele gravava só os vistos que desenhava, e a
+  // chave que ele não conhecia (almoxarifado, homologação, financeiro:...)
+  // sumia do cadastro sem ninguém ter tirado. Agora: o que o app desenha,
+  // vale o que está marcado; o que ele não desenha, fica como estava.
+  L.juntarModulos = (gravados, marcados) => {
+    const conhecidas = new Set(L.CHAVES_CONHECIDAS());
+    const mantidos = (gravados || []).filter((k) => !conhecidas.has(k));
+    return [...new Set([...mantidos, ...(marcados || [])])];
+  };
 
   // O que este app sabe abrir. A chave e a mesma do cadastro.
-  L.NO_CELULAR = ['chat', 'tarefas', 'compromissos', 'chamados', 'conferencia', 'diario'];
+  L.NO_CELULAR = ['chat', 'tarefas', 'compromissos', 'chamados', 'conferencia', 'diario',
+    'almoxarifado', 'pedir_material', 'homologacao', 'financeiro', 'receber'];
 
   /* ------------------------------------------------------------- chat */
 
@@ -427,14 +475,29 @@
   };
   L.total = (linhas) => linhas.reduce((s, l) => s + (Number(l.valor) || 0), 0);
 
-  const ORDEM_PAGAMENTO = ['BOLETO', 'PIX', 'CARTÃO DE CRÉDITO', 'DINHEIRO', 'TRANSFERÊNCIA', 'FATURADO', 'CORTESIA', 'COORDENAÇÃO', 'A COMBINAR'];
+  // A FORMA PELA PALAVRA QUE APARECE NO MEIO DA FRASE, na mesma ordem e com
+  // as mesmas escritas do computador (conferencia_nucleo.FORMA_PELA_PALAVRA).
+  // Antes o app olhava só a primeira palavra do nome da forma: "A COMBINAR"
+  // virava a letra "A" e casava com quase tudo, e "BOLEOT 05 DIAS" (escrito
+  // assim na planilha) deixava de ser boleto.
+  const FORMA_PELA_PALAVRA = [
+    ['BOLETO', ['BOLETO', 'BOLET', 'BOLEOT']],
+    ['PIX', ['PIX']],
+    ['CARTÃO DE CRÉDITO', ['CARTAO', 'CREDITO', 'CRED']],
+    ['DINHEIRO', ['DINHEIRO', 'DINH', 'ESPECIE']],
+    ['TRANSFERÊNCIA', ['TRANSFER', 'DEPOSITO']],
+    ['FATURADO', ['FATURA', 'FATUR', 'FAT']],
+    ['CORTESIA', ['CORTESIA', 'SEM CUSTO', 'GRATUITO', 'GRATIS']],
+    ['COORDENAÇÃO', ['COORDENA', 'COODERNA']],
+    ['A COMBINAR', ['COMBINAR', 'CONFIRMAR', 'DEFINIR', 'AGUARD', 'A PAGAR']],
+  ];
   L.chaveDoPagamento = (forma) => {
-    const f = L.semAcento(forma).toUpperCase();
-    for (const p of ORDEM_PAGAMENTO) {
-      const chave = L.semAcento(p).split(' ')[0];
-      if (f.includes(chave)) return p;
+    const limpo = ` ${L.semAcento(forma).toUpperCase().replace(/[^A-Z0-9 ]+/g, ' ')} `;
+    if (!limpo.trim()) return '';
+    for (const [rotulo, palavras] of FORMA_PELA_PALAVRA) {
+      if (palavras.some((p) => limpo.includes(p))) return rotulo;
     }
-    return f ? 'OUTRO' : '';
+    return 'OUTRO';
   };
   L.eACobrarPorNota = (l) => ['BOLETO', 'FATURADO'].includes(L.chaveDoPagamento(l.forma_pagamento));
 
@@ -474,20 +537,60 @@
     return saida;
   };
 
-  // Quem assina o que, antes de salvar (regras da tela do computador).
+  // Quem assina o que, antes de salvar. A MESMA regra do computador
+  // (conferencia_nucleo.quem_assina e quem_faturou).
   L.assinar = (antes, depois, nome, admin) => {
     const d = { ...depois };
+    const vazio = (v) => !String(v ?? '').trim();
     // Apagar o nome de quem liberou zera a data correspondente.
     for (const [por, em] of [['liberado_por', 'liberado_em'], ['pgr_liberado_por', 'pgr_liberado_em']]) {
       if (antes[por] && !d[por]) d[em] = null;
     }
-    if (admin) return d; // o administrador escreve esses campos a mao
     const mudou = (k) => (d[k] || null) !== (antes[k] || null);
-    if ((d.liberado_em || d.situacao_sesmt) && (!d.liberado_por || mudou('liberado_em') || mudou('situacao_sesmt'))) d.liberado_por = nome;
+    // FATURADO: sem a data, sem nome; a data mudou, assina quem salvou.
+    // Anexar a nota ou o boleto numa linha já faturada e SEM nome também
+    // assina (é quem provou o faturamento); nome de outra pessoa não se
+    // troca. O administrador que deixa o campo vazio também assina.
+    const faturou = () => {
+      if (!d.faturado_em) return null;
+      if (mudou('faturado_em')) return nome;
+      if (vazio(d.faturado_por)) {
+        for (const arq of ['nf_arquivo', 'boleto_arquivo']) {
+          if (!vazio(d[arq]) && String(d[arq]).trim() !== String(antes[arq] ?? '').trim()) return nome;
+        }
+        if (admin) return nome;
+      }
+      return d.faturado_por || null;
+    };
+    if (admin) {
+      // o administrador escreve os nomes à mão; só o vazio é preenchido
+      if (d.faturado_em && vazio(d.faturado_por)) d.faturado_por = nome;
+      if (!d.faturado_em) d.faturado_por = null;
+      return d;
+    }
+    // LIBERADO (SESMT): apagar de propósito é apagar. Antes, esvaziar o nome
+    // com a situação ainda marcada fazia o app assinar de novo com quem
+    // salvou, e o nome apagado reaparecia.
+    if (antes.liberado_por && vazio(d.liberado_por)) d.liberado_por = null;
+    else if ((d.liberado_em || d.situacao_sesmt) && (vazio(d.liberado_por) || mudou('liberado_em') || mudou('situacao_sesmt'))) d.liberado_por = nome;
     if (!d.liberado_em && !d.situacao_sesmt) d.liberado_por = d.liberado_por || null;
-    if (mudou('faturado_em')) d.faturado_por = d.faturado_em ? nome : null;
+    d.faturado_por = faturou();
     if (mudou('pgr_liberado_em')) d.pgr_liberado_por = d.pgr_liberado_em ? nome : null;
     return d;
+  };
+
+  // O cliente paga este serviço por boleto? Sai da forma de pagamento,
+  // agrupada ("BOLETO 5 DIAS" e "SOLICITAR BOLETO" são o mesmo).
+  L.pagaComBoleto = (l) => L.chaveDoPagamento(l?.forma_pagamento) === 'BOLETO';
+
+  // O que falta anexar para poder marcar faturado; "" quando não falta
+  // nada. A NOTA vale para todos; pagando por boleto, o BOLETO também.
+  // (conferencia_nucleo.falta_comprovante, com as mesmas frases)
+  L.faltaComprovante = (l) => {
+    if (!l?.faturado_em) return '';
+    if (!String(l.nf_arquivo ?? '').trim()) return 'Anexe a NOTA FISCAL para marcar como faturado. É ela que prova o faturamento: a data sozinha diz quando, e não se.';
+    if (L.pagaComBoleto(l) && !String(l.boleto_arquivo ?? '').trim()) return 'Este serviço é pago por boleto: anexe também o BOLETO. (Se o cliente mudou a forma de pagamento, corrija o campo Forma de pagamento antes.)';
+    return '';
   };
 
   // O que mudou, para o log: "prazo: 01/06/2026 -> 15/06/2026 · valor: R$ 1,00 -> R$ 2,00"
@@ -528,7 +631,17 @@
     const d = {};
     for (const [chave, rotulo, tipo] of campos) {
       let v = bruto?.[chave];
-      if (tipo === 'dinheiro') { v = typeof v === 'number' ? v : L.lerDinheiro(v); if (!(v > 0)) return { ok: false, erro: `${rotulo}: informe um valor.` }; }
+      // Como o diario_nucleo: vazio ou "abc" recusa; ZERO vale (cortesia,
+      // atendimento sem cobrança). Antes o app exigia valor maior que zero.
+      if (tipo === 'dinheiro') {
+        if (typeof v !== 'number') {
+          const t = String(v ?? '').trim();
+          if (!t) return { ok: false, erro: `${rotulo}: informe um valor.` };
+          if (!/\d/.test(t) || /[a-z]/i.test(t.replace(/R\$/i, ''))) return { ok: false, erro: `${rotulo}: não entendi o número "${t}".` };
+          v = L.lerDinheiro(t);
+        }
+        if (v < 0) return { ok: false, erro: `${rotulo}: o valor não pode ser negativo.` };
+      }
       else if (tipo === 'data') { v = L.lerData(v); if (!v) return { ok: false, erro: `${rotulo}: data inválida (use dd/mm/aaaa).` }; }
       else { v = L.achatar(v); if (!v) return { ok: false, erro: `${rotulo}: preencha.` }; }
       d[chave] = v;

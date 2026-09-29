@@ -20,8 +20,18 @@ migrados para o Supabase pelo SistemaCMH).
 - **Primeira versão:** Chat, Tarefas, Compromissos, Chamados T.I.,
   Conferência, Diário de Bordo e Administração (usuários, log, máquinas).
   Os módulos cifrados ponta a ponta (Orçamentos, Documentos, Empresas,
-  Agenda, Agendamento, PGR/PCMSO, Financeiro) ficam para depois: exigem
-  carregar a chave da clínica no aparelho.
+  Agenda, Agendamento, PGR/PCMSO) ficam para depois: exigem carregar a
+  chave da clínica no aparelho.
+- **Versão 2.1 (29/09/2026):** entram **Almoxarifado** (Solicitar material
+  no nome de quem pede; a fila do almoxarife para aceitar, entregar e
+  recusar; o estoque), **Homologação** (os atestados e o parecer do Diretor
+  médico), **Financeiro** (contas a pagar, baixa com comprovante, nova conta
+  de fornecedor; os dados do prestador continuam só no computador) e
+  **Contas a receber**. E os sete antigos foram igualados ao computador:
+  compromisso realizado, presença, histórico e espera dos chamados,
+  checklist e desfazer das tarefas, boleto e PGR na conferência, busca no
+  chat, empresas e CNPJ no diário. O cadastro de usuário do app deixou de
+  apagar as permissões que ele não desenha (`L.juntarModulos`).
 
 ## Como funciona
 
@@ -45,6 +55,7 @@ npm test          # as regras (situação da conferência, fila, ranking…)
 npm run build     # monta www/
 npm run previa    # serve www/ em http://127.0.0.1:8791
 npm run telas     # telas + erros de JS (com USUARIO e SENHA no ambiente entra de verdade)
+npm run telas:simulado   # TODOS os módulos com o servidor de mentira (sem senha, sem banco)
 npm run sync      # build + cap sync ios (+ conserta as barras do Package.swift)
 ```
 

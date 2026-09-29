@@ -50,44 +50,153 @@
     return u;
   }
 
+  // Quantas pessoas cada sala tem, como o chat_nucleo.setores(): conta o
+  // setor de cada pessoa (a coluna aceita varios, por virgula) e eu tambem,
+  // porque a view orc_chat_pessoas me deixa de fora. Chave em minusculas
+  // porque o app junta "SESMT" e "Sesmt" numa sala so (L.salasDeSetor).
+  function gentePorSala(gente) {
+    const n = {};
+    for (const p of [...gente, eu()]) for (const s of new Set(L.meusSetores(p))) n[s] = (n[s] || 0) + 1;
+    return n;
+  }
+
+  // Copiar para a area de transferencia. O clipboard do navegador pode
+  // recusar (permissao do WebView); o jeito antigo com textarea cobre.
+  async function copiar(texto) {
+    try { await navigator.clipboard.writeText(texto); return true; } catch { /* tenta o antigo */ }
+    try {
+      const t = document.createElement('textarea');
+      t.value = texto; t.setAttribute('readonly', ''); t.style.position = 'fixed'; t.style.opacity = '0';
+      document.body.appendChild(t); t.select();
+      const ok = document.execCommand('copy');
+      t.remove();
+      return ok;
+    } catch { return false; }
+  }
+
+  // A foto aberta dentro do app, como o "Ver imagem" do computador. O botao
+  // de abrir fora fica para quem quer salvar ou mandar para outro lugar.
+  async function verImagem(m) {
+    const f = UI.folha(`<div class="centro"><img id="vi-img" alt="${esc(m.arquivo_nome || '')}" style="max-width:100%;max-height:70vh;border-radius:12px" src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=="></div>
+      <div class="text-muted pequeno centro mt8">${esc(m.arquivo_nome || '')} · ${esc(L.tamanhoLegivel(m.arquivo_tamanho))}</div>
+      <div class="modal-ft"><button class="btn btn-ghost" type="button" id="vi-fora">Abrir fora do app</button></div>`, { titulo: 'Imagem' });
+    try { $('#vi-img', f.caixa).src = await urlDe(m.arquivo); } catch (e) { toast(N.recado(e), 'err'); }
+    $('#vi-fora', f.caixa).onclick = async () => { try { await UI.abrirFora(await urlDe(m.arquivo)); } catch (e) { toast(N.recado(e), 'err'); } };
+  }
+
+  // PROCURAR NO HISTORICO, como a JanelaBusca do computador: procura em tudo
+  // o que eu posso ver. Quem corta o que nao e meu e a RLS do orc_chat, nao
+  // este filtro. Tocar num achado abre a conversa dele.
+  async function procurarNoHistorico() {
+    const gente = await pessoas().catch(() => []);
+    const nomes = Object.fromEntries(gente.map((p) => [p.id, p.nome]));
+    nomes[eu().id] = eu().nome;
+    const f = UI.folha(`<form id="ph-form"><div class="busca">${ICONES.busca}<input id="ph-termo" placeholder="Palavra ou frase" autocomplete="off" enterkeyhint="search"></div></form>
+      <div class="text-muted pequeno mt8" id="ph-conta"></div><div id="ph-lista" class="mt8"></div>`, { titulo: 'Procurar no histórico' });
+    const campo = $('#ph-termo', f.caixa);
+    setTimeout(() => campo.focus(), 50);
+    $('#ph-form', f.caixa).onsubmit = async (e) => {
+      e.preventDefault();
+      const termo = String(campo.value || '').trim();
+      const conta = $('#ph-conta', f.caixa), lista = $('#ph-lista', f.caixa);
+      lista.innerHTML = '';
+      if (termo.length < 2) { conta.textContent = 'Escreva ao menos duas letras para procurar.'; return; }
+      conta.textContent = 'Procurando…';
+      const { data, error } = await N.sb.from('orc_chat').select(COLUNAS).ilike('texto', `%${termo}%`).order('id', { ascending: false }).limit(100);
+      if (error) { conta.textContent = 'Não consegui procurar agora.'; return; }
+      const achados = data || [];
+      conta.textContent = `${achados.length} mensage${achados.length === 1 ? 'm encontrada' : 'ns encontradas'}`;
+      lista.innerHTML = achados.length ? `<div class="lista">${achados.map((m) => {
+        const onde = m.setor ? `sala ${m.setor}` : 'conversa privada';
+        const quando = `${L.dataBr(String(m.criado_em).slice(0, 10))} ${L.horaBr(m.criado_em)}`;
+        return `<button class="linha" type="button" data-id="${m.id}"><div class="linha__corpo"><div class="linha__sub">${esc(nomes[m.de] || 'alguém')} · ${esc(onde)} · ${esc(quando)}</div><div class="linha__titulo"><span class="t" style="white-space:normal">${esc(m.apagada_em ? L.APAGADA : m.texto)}</span></div></div>${ICONES.seta}</button>`;
+      }).join('')}</div>` : '';
+      $$('[data-id]', lista).forEach((b) => { b.onclick = () => {
+        const m = achados.find((x) => x.id === Number(b.dataset.id)); if (!m) return;
+        const chave = L.chaveDaLinha(m, eu().id);
+        const nome = m.setor || nomes[L.alvoDaChave(chave)] || 'Conversa';
+        f.fechar(); UI.ir(telaConversa(chave, nome));
+      }; });
+    };
+  }
+  const botaoProcurar = (dir) => { dir.innerHTML = ''; dir.appendChild(UI.botaoTopo(ICONES.busca, () => procurarNoHistorico(), 'Procurar no histórico')); };
+
   /* --------------------------------------------------------- lista */
   const telaLista = {
     titulo: 'Chat',
+    aoTopo: botaoProcurar,
     async desenhar(el) {
-      el.innerHTML = `<div class="text-muted centro pequeno">Carregando…</div>`;
-      let vivo = true;
+      // O campo de procura e a caixa "so as que esperam resposta" ficam FORA
+      // do pedaco redesenhado a cada 8 s; senao o relogio apagaria o que a
+      // pessoa esta digitando.
+      el.innerHTML = `<div class="busca">${ICONES.busca}<input id="cl-busca" placeholder="Setor ou pessoa" autocomplete="off"></div>
+        <div class="chips mt8" id="cl-resp" hidden></div>
+        <div id="cl-corpo"><div class="text-muted centro pequeno">Carregando…</div></div>`;
+      const corpo = $('#cl-corpo', el), caixaResp = $('#cl-resp', el), busca = $('#cl-busca', el);
+      let vivo = true, dados = null, soResponder = false;
+
+      const pintar = () => {
+        if (!vivo || !dados) return;
+        const { gente, mk, fx, cx } = dados;
+        const naoLidas = L.contarNaoLidas(cx, eu().id, mk);
+        const aResponder = new Set(L.salasAResponder(cx, eu().id, mk));
+        const total = Object.values(naoLidas).reduce((a, b) => a + b, 0);
+        APP.contagens.chat = total; UI.badgeAba('chat', total);
+
+        // A caixa so existe enquanto houver o que responder (chat_tela
+        // _mostrar_caixa_de_responder); sem nenhuma, desliga sozinha.
+        if (!aResponder.size) soResponder = false;
+        caixaResp.hidden = !aResponder.size;
+        caixaResp.innerHTML = aResponder.size ? `<button type="button" class="chip vermelho ${soResponder ? 'on' : ''}" id="cl-so">${aResponder.size > 1 ? `só as ${aResponder.size} que esperam resposta` : 'só a que espera resposta'}</button>` : '';
+        const bSo = $('#cl-so', caixaResp); if (bSo) bSo.onclick = () => { soResponder = !soResponder; pintar(); };
+
+        // Um campo so para setor E pessoa; na pessoa vale o nome ou o setor.
+        const procura = String(busca.value || '').trim().toLowerCase();
+        const serve = (t) => !procura || String(t || '').toLowerCase().includes(procura);
+        const porSala = gentePorSala(gente);
+        const itens = [
+          ...L.salasDeSetor(gente, eu()).filter((s) => serve(s)).map((s) => {
+            const q = porSala[s.toLowerCase()] || 0;
+            // "ninguem ainda" diz melhor que "0 pessoas": a sala existe vazia
+            return { chave: L.chaveSetor(s), nome: s, sub: q ? `${q} pessoa${q !== 1 ? 's' : ''}` : 'ninguém ainda', setor: true, online: false };
+          }),
+          ...gente.filter((p) => serve(p.nome) || serve(p.setor)).map((p) => ({ chave: L.chavePessoa(p.id), nome: p.nome, sub: [p.cargo, p.setor].filter(Boolean).join(' · '), online: L.estaAgora(p.ultimo_acesso) })),
+        ].filter((i) => !soResponder || aResponder.has(i.chave))
+          .map((i) => ({ ...i, fixa: fx.has(i.chave), n: naoLidas[i.chave] || 0, pendencia: naoLidas[i.chave] ? 0 : aResponder.has(i.chave) ? 1 : 2 }));
+        const ordenados = L.ordenarConversas(itens);
+        const fixas = ordenados.filter((i) => i.fixa), setores = ordenados.filter((i) => !i.fixa && i.setor), gentes = ordenados.filter((i) => !i.fixa && !i.setor);
+        // "3 de 9 agora" e informacao de trabalho; "9" e so cadastro.
+        const ligadas = gentes.filter((i) => i.online).length;
+        const secoes = [[`Fixadas · ${fixas.length}`, fixas], [`Setores · ${setores.length}`, setores], [`Pessoas · ${ligadas ? `${ligadas} de ${gentes.length} agora` : gentes.length}`, gentes]];
+        const filtrando = !!procura || soResponder;
+        corpo.innerHTML = (eu().admin ? `<div class="aviso info pequeno">Como administrador, você lê todas as salas e conversas, e as pessoas sabem disso.</div>` : '') +
+          (secoes.filter(([, l]) => l.length).map(([t, l]) => `<div class="secao">${esc(t)}</div><div class="lista">${l.map((i) => `
+            <button class="linha" type="button" data-chave="${esc(i.chave)}" data-nome="${esc(i.nome)}">
+              ${i.setor ? `<span class="avatar av-40" style="background:linear-gradient(135deg,var(--teal),#2dd4bf)">#</span>` : UI.avatar(i.nome, 40, i.online)}
+              <div class="linha__corpo"><div class="linha__titulo"><span class="t">${esc(i.nome)}</span>${i.fixa ? '<span class="text-muted">📌</span>' : ''}</div><div class="linha__sub">${esc(i.sub)}${i.pendencia === 1 ? ' · esperando resposta' : ''}</div></div>
+              ${i.n ? `<span class="chat-badge">${i.n}</span>` : ''}${ICONES.seta}
+            </button>`).join('')}</div>`).join('') ||
+          (filtrando ? UI.vazio('Ninguém com esse nome') : UI.vazio('Ninguém por aqui ainda', 'As pessoas aparecem quando o administrador libera o Chat para elas.')));
+        $$('.linha', corpo).forEach((b) => {
+          b.onclick = () => UI.ir(telaConversa(b.dataset.chave, b.dataset.nome));
+          let t;
+          b.addEventListener('touchstart', () => { t = setTimeout(() => menuConversa(b.dataset.chave, fx.has(b.dataset.chave), desenharLista), 550); }, { passive: true });
+          b.addEventListener('touchend', () => clearTimeout(t)); b.addEventListener('touchmove', () => clearTimeout(t));
+          b.oncontextmenu = (e) => { e.preventDefault(); menuConversa(b.dataset.chave, fx.has(b.dataset.chave), desenharLista); };
+        });
+      };
+
       const desenharLista = async () => {
         if (!vivo || document.hidden) return;
         try {
           const [gente, mk, fx, cx] = await Promise.all([pessoas(), marcas(), fixadas(), caixa()]);
           if (!vivo) return;
-          const naoLidas = L.contarNaoLidas(cx, eu().id, mk);
-          const aResponder = new Set(L.salasAResponder(cx, eu().id, mk));
-          const salas = L.salasDeSetor(gente, eu());
-          const itens = [
-            ...salas.map((s) => ({ chave: L.chaveSetor(s), nome: s, sub: 'Sala do setor', setor: true, online: false })),
-            ...gente.map((p) => ({ chave: L.chavePessoa(p.id), nome: p.nome, sub: [p.cargo, p.setor].filter(Boolean).join(' · '), online: L.estaAgora(p.ultimo_acesso) })),
-          ].map((i) => ({ ...i, fixa: fx.has(i.chave), n: naoLidas[i.chave] || 0, pendencia: naoLidas[i.chave] ? 0 : aResponder.has(i.chave) ? 1 : 2 }));
-          const ordenados = L.ordenarConversas(itens);
-          const secoes = [['Fixadas', ordenados.filter((i) => i.fixa)], ['Setores', ordenados.filter((i) => !i.fixa && i.setor)], ['Pessoas', ordenados.filter((i) => !i.fixa && !i.setor)]];
-          const total = Object.values(naoLidas).reduce((a, b) => a + b, 0);
-          APP.contagens.chat = total; UI.badgeAba('chat', total);
-          el.innerHTML = (eu().admin ? `<div class="aviso info pequeno">Como administrador, você lê todas as salas e conversas — e as pessoas sabem disso.</div>` : '') +
-            secoes.filter(([, l]) => l.length).map(([t, l]) => `<div class="secao">${t}</div><div class="lista">${l.map((i) => `
-              <button class="linha" type="button" data-chave="${esc(i.chave)}" data-nome="${esc(i.nome)}">
-                ${i.setor ? `<span class="avatar av-40" style="background:linear-gradient(135deg,var(--teal),#2dd4bf)">#</span>` : UI.avatar(i.nome, 40, i.online)}
-                <div class="linha__corpo"><div class="linha__titulo"><span class="t">${esc(i.nome)}</span>${i.fixa ? '<span class="text-muted">📌</span>' : ''}</div><div class="linha__sub">${esc(i.sub)}${i.pendencia === 1 ? ' · esperando resposta' : ''}</div></div>
-                ${i.n ? `<span class="chat-badge">${i.n}</span>` : ''}${ICONES.seta}
-              </button>`).join('')}</div>`).join('') || UI.vazio('Ninguém por aqui ainda', 'As pessoas aparecem quando o administrador libera o Chat para elas.');
-          $$('.linha', el).forEach((b) => {
-            b.onclick = () => UI.ir(telaConversa(b.dataset.chave, b.dataset.nome));
-            let t;
-            b.addEventListener('touchstart', () => { t = setTimeout(() => menuConversa(b.dataset.chave, fx.has(b.dataset.chave), desenharLista), 550); }, { passive: true });
-            b.addEventListener('touchend', () => clearTimeout(t)); b.addEventListener('touchmove', () => clearTimeout(t));
-            b.oncontextmenu = (e) => { e.preventDefault(); menuConversa(b.dataset.chave, fx.has(b.dataset.chave), desenharLista); };
-          });
-        } catch (e) { if (vivo) el.innerHTML = `<div class="aviso erro">${esc(N.recado(e))}</div>`; }
+          dados = { gente, mk, fx, cx };
+          pintar();
+        } catch (e) { if (vivo) corpo.innerHTML = `<div class="aviso erro">${esc(N.recado(e))}</div>`; }
       };
+      // filtrar nao vai ao servidor: repinta com o que ja veio
+      busca.oninput = () => pintar();
       await desenharLista();
       const relogio = setInterval(desenharLista, 8000);
       return () => { vivo = false; clearInterval(relogio); };
@@ -109,6 +218,8 @@
   function telaConversa(chave, nome) {
     const ehSala = L.eSetor(chave);
     let mensagens = [], ultimoId = 0, respondendo = null, vivo = true, nomes = {}, reacoes = {}, vistoAte = 0;
+    // gente: a lista de pessoas (para o "Quem já viu"); quemLeu: {usuario: ate_id}
+    let gente = [], quemLeu = {};
 
     async function carregar(depoisDe) {
       let q = N.sb.from('orc_chat').select(COLUNAS);
@@ -129,8 +240,26 @@
     async function carregarVisto() {
       if (!ehSala) return;
       const { data } = await N.sb.from('orc_chat_lido').select('usuario,ate_id').eq('conversa', chave).limit(500);
+      quemLeu = Object.fromEntries((data || []).filter((v) => v.usuario).map((v) => [v.usuario, Number(v.ate_id) || 0]));
       const minhaUltima = [...mensagens].reverse().find((m) => m.de === eu().id);
       vistoAte = minhaUltima ? (data || []).filter((v) => v.usuario !== eu().id && v.ate_id >= minhaUltima.id).length : 0;
+    }
+
+    // QUEM JA VIU, como chat_tela._quem_ja_viu: so em sala de setor e so das
+    // minhas mensagens (na conversa de duas pessoas a marca continua
+    // privada). Quem leu ate um id maior ou igual ao desta mensagem, viu.
+    async function quemJaViu(m) {
+      try { await carregarVisto(); } catch { /* usa o que ja tinha */ }
+      const viram = [], faltam = [];
+      for (const p of gente) {
+        if (p.id === eu().id) continue;
+        ((quemLeu[p.id] || 0) >= m.id ? viram : faltam).push(p.nome || 'alguém');
+      }
+      const ordem = (a, b) => a.localeCompare(b, 'pt-BR');
+      viram.sort(ordem); faltam.sort(ordem);
+      UI.folha(`<div class="secao">Já viram (${viram.length})</div><div class="pequeno mt8 mb12">${esc(viram.join(', ') || 'ninguém ainda')}</div>
+        ${faltam.length ? `<div class="secao">Ainda não (${faltam.length})</div><div class="pequeno mt8 mb12">${esc(faltam.join(', '))}</div>` : ''}
+        <div class="text-muted pequeno">A marca é de quem abriu a sala até aqui. Abrir não garante que leu.</div>`, { titulo: 'Quem já viu' });
     }
 
     function bolha(m) {
@@ -169,11 +298,18 @@
         if (dia !== diaAnterior) { html += `<div class="chat-dia">${esc(UI.diaPorExtenso(dia))}</div>`; diaAnterior = dia; }
         html += bolha(m);
       }
-      if (ehSala && vistoAte) html += `<div class="chat-visto">Visto por ${vistoAte}</div>`;
+      if (ehSala && vistoAte) html += `<div class="chat-visto" id="chat-visto" role="button">Visto por ${vistoAte} · ver quem</div>`;
       caixa.innerHTML = html || `<div class="vazio"><strong>Nenhuma mensagem ainda</strong>Escreva a primeira.</div>`;
       if (rolar || noFim) caixa.scrollTop = caixa.scrollHeight;
+      const visto = $('#chat-visto', caixa);
+      if (visto) visto.onclick = () => { const minha = [...mensagens].reverse().find((m) => m.de === eu().id); if (minha) quemJaViu(minha); };
       $$('[data-arq]', caixa).forEach((a) => {
-        if (a.tagName === 'IMG') urlDe(a.dataset.arq).then((u) => { a.src = u; }).catch(() => {});
+        if (a.tagName === 'IMG') {
+          urlDe(a.dataset.arq).then((u) => { a.src = u; }).catch(() => {});
+          // foto abre por cima, dentro do app; o "abrir fora" fica no botao
+          a.onclick = (e) => { e.preventDefault(); const m = mensagens.find((x) => x.arquivo === a.dataset.arq); if (m) verImagem(m); };
+          return;
+        }
         a.onclick = async (e) => { e.preventDefault(); try { await UI.abrirFora(await urlDe(a.dataset.arq)); } catch (err) { toast(err.message, 'err'); } };
       });
       $$('.chat-bubble', caixa).forEach((b) => {
@@ -187,13 +323,21 @@
     function menuMensagem(id) {
       const m = mensagens.find((x) => x.id === id); if (!m) return;
       const minha = m.de === eu().id;
-      const f = UI.folha(`
-        ${m.apagada_em ? '' : `<div class="chat-emojis">${L.EMOJIS.map((e) => `<button type="button" data-e="${esc(e)}">${esc(e)}</button>`).join('')}</div>`}
+      // O MESMO MENU DO COMPUTADOR (chat_tela._menu_no_balao). Numa mensagem
+      // apagada nao ha texto para copiar nem anexo, entao nada se oferece.
+      // O "Apagar do banco" do administrador NAO mora aqui: no computador
+      // ele tambem nao aparece no chat.
+      const item = (id, rotulo, perigo) => `<button class="linha" type="button" id="${id}"><div class="linha__corpo"><div class="linha__titulo"><span class="t"${perigo ? ' style="color:var(--red)"' : ''}>${rotulo}</span></div></div></button>`;
+      const f = UI.folha(m.apagada_em ? `<div class="text-muted pequeno centro">(mensagem apagada)</div>` : `
+        <div class="chat-emojis">${L.EMOJIS.map((e) => `<button type="button" data-e="${esc(e)}">${esc(e)}</button>`).join('')}</div>
         <div class="lista" style="border:none">
-          ${m.apagada_em ? '' : `<button class="linha" type="button" id="mm-resp"><div class="linha__corpo"><div class="linha__titulo"><span class="t">Responder</span></div></div></button>`}
-          ${m.apagada_em ? '' : `<button class="linha" type="button" id="mm-enc"><div class="linha__corpo"><div class="linha__titulo"><span class="t">Encaminhar</span></div></div></button>`}
-          ${minha && !m.apagada_em ? `<button class="linha" type="button" id="mm-apagar"><div class="linha__corpo"><div class="linha__titulo"><span class="t" style="color:var(--red)">Apagar para todos</span></div></div></button>` : ''}
-          ${eu().admin ? `<button class="linha" type="button" id="mm-del"><div class="linha__corpo"><div class="linha__titulo"><span class="t" style="color:var(--red)">Apagar do banco (administrador)</span></div></div></button>` : ''}
+          ${item('mm-resp', 'Responder')}
+          ${item('mm-enc', 'Encaminhar')}
+          ${m.texto ? item('mm-copiar', 'Copiar texto') : ''}
+          ${m.arquivo && L.eImagem(m.arquivo_nome) ? item('mm-ver', 'Ver imagem') : ''}
+          ${m.arquivo ? item('mm-arq', 'Abrir arquivo') : ''}
+          ${minha && ehSala ? item('mm-viu', 'Quem já viu') : ''}
+          ${minha ? item('mm-apagar', 'Apagar para todos', true) : ''}
         </div>`, { titulo: 'Mensagem' });
       $$('.chat-emojis button', f.caixa).forEach((b) => { b.onclick = async () => {
         const minhaReacao = (reacoes[id] || []).find((r) => r.usuario === eu().id);
@@ -211,10 +355,17 @@
         if (error) return toast(error.code === '42501' ? 'Só quem escreveu pode apagar a própria mensagem.' : N.recado(error), 'err');
         f.fechar(); await recarregarTudo();
       };
-      const bDel = $('#mm-del', f.caixa); if (bDel) bDel.onclick = async () => {
-        if (!await UI.confirmar('Apagar do banco, sem volta?', { ok: 'Apagar', perigo: true })) return;
-        try { await N.apagar('orc_chat', { id }); f.fechar(); await recarregarTudo(); } catch (e) { toast(N.recado(e), 'err'); }
+      const bCop = $('#mm-copiar', f.caixa); if (bCop) bCop.onclick = async () => {
+        f.fechar();
+        const ok = await copiar(String(m.texto || ''));
+        toast(ok ? 'Texto copiado.' : 'Não consegui copiar.', ok ? 'ok' : 'err');
       };
+      const bVer = $('#mm-ver', f.caixa); if (bVer) bVer.onclick = () => { f.fechar(); verImagem(m); };
+      const bArq = $('#mm-arq', f.caixa); if (bArq) bArq.onclick = async () => {
+        f.fechar();
+        try { await UI.abrirFora(await urlDe(m.arquivo)); } catch (e) { toast(N.recado(e), 'err'); }
+      };
+      const bViu = $('#mm-viu', f.caixa); if (bViu) bViu.onclick = () => { f.fechar(); quemJaViu(m); };
     }
 
     async function encaminhar(m) {
@@ -284,6 +435,7 @@
 
     return {
       titulo: nome, classe: 'chat',
+      aoTopo: botaoProcurar,
       async desenhar(el) {
         el.innerHTML = `<div class="chat-thread">
           <div class="chat-messages" id="chat-msgs"><div class="text-muted centro pequeno">Carregando…</div></div>
@@ -298,7 +450,7 @@
         $('#chat-enviar', el).onclick = async () => { const t = txt.value; txt.value = ''; txt.style.height = 'auto'; await enviar(t, null); };
         $('#chat-anexo', el).onclick = async () => { const f = await UI.escolherArquivo('*/*'); if (f) await enviar(txt.value, f); txt.value = ''; };
         try {
-          const gente = await pessoas();
+          gente = await pessoas();
           for (const p of gente) nomes[p.id] = p.nome;
           nomes[eu().id] = eu().nome;
           await recarregarTudo();
