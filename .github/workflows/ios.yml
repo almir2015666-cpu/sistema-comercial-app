@@ -81,7 +81,7 @@ jobs:
           # Ligar invalida os perfis antigos; o fetch abaixo cria um novo.
           BID=$(app-store-connect bundle-ids list --bundle-id-identifier "$BUNDLE_ID" --strict-match-identifier --json | python3 -c 'import json,sys; print(json.load(sys.stdin)[0]["id"])')
           echo "App ID: $BID"
-          app-store-connect bundle-ids enable-capabilities "$BID" --capability PUSH_NOTIFICATIONS || echo "push ja ligado"
+          app-store-connect bundle-ids enable-capabilities "$BID" --capability "Push Notifications" || echo "push ja ligado"
           app-store-connect fetch-signing-files "$BUNDLE_ID" \
             --type IOS_APP_STORE \
             --certificate-key=@env:CERTIFICATE_PRIVATE_KEY \
