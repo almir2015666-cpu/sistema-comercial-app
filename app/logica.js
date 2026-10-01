@@ -165,12 +165,12 @@
     };
   };
 
-  L.SETORES = ['Administrativo', 'Assistencial', 'Comercial', 'Contabilidade', 'Direção',
+  L.SETORES = ['Administrativo', 'Almoxarifado', 'Assistencial', 'Comercial', 'Contabilidade', 'Direção',
     'Faturamento', 'Financeiro', 'Recepção', 'Segurança', 'SESMT', 'T.I.'];
 
   // "Diretor médico" é o cargo que o servidor procura (homol_eh_medico)
   // para dar o parecer na Homologação: escrito igual ao do computador.
-  L.CARGOS = ['Assistente administrativo', 'Auxiliar administrativo', 'Auxiliar de enfermagem',
+  L.CARGOS = ['Almoxarife', 'Assistente administrativo', 'Auxiliar administrativo', 'Auxiliar de enfermagem',
     'Auxiliar de serviços gerais', 'CEO', 'Consultor comercial', 'Contabilidade',
     'Coordenador administrativo',
     'Coordenador assistencial', 'Coordenador comercial', 'Coordenador de enfermagem',
@@ -211,6 +211,7 @@
     ['almoxarifado:atender', 'almoxarifado', 'Entregar pedidos'],
     ['almoxarifado:movimentar', 'almoxarifado', 'Movimentar o estoque'],
     ['almoxarifado:catalogo', 'almoxarifado', 'Cadastrar itens'],
+    ['almoxarifado:nota', 'almoxarifado', 'Entrada por nota (usa o certificado da clínica)'],
   ];
 
   // TODAS AS CHAVES QUE ESTE APP SABE DESENHAR NO CADASTRO. Qualquer outra

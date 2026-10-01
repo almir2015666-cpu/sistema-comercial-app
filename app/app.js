@@ -152,7 +152,7 @@
         $('#pf-tema', el).onclick = () => { UI.trocarTema(); UI.redesenhar(); };
         $('#pf-sair', el).onclick = async () => {
           if (!await UI.confirmar('Sair da conta neste aparelho?', { ok: 'Sair', perigo: true })) return;
-          await N.sair(); pararRelogios(); mostrarPasso('entrar');
+          await AVISOS.esquecer(); await N.sair(); pararRelogios(); mostrarPasso('entrar');
         };
       },
     };
@@ -247,6 +247,7 @@
     montarAbas();
     ligarRelogios();
     await UI.raiz(telaInicio, 'inicio');
+    AVISOS.ligar();          // os alertas do servidor, mesmo com o app fechado
   }
 
   async function boot() {

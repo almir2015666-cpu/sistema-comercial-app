@@ -20,6 +20,9 @@
       "backgroundColor": "#0a0e1a",
       "showSpinner": false
     },
+    "PushNotifications": {
+      "presentationOptions": ["badge", "sound", "alert"]
+    },
     "Keyboard": {
       "resize": "native",
       "resizeOnFullScreen": true
