@@ -57,6 +57,27 @@ const TABELAS = {
   orc_alm_saldo: [{ item_id: 1, deposito_id: 1, quantidade: 12 }, { item_id: 2, deposito_id: 1, quantidade: 2 }],
   orc_alm_requisicao: [{ id: 7, setor: 'Recepção', deposito_id: 1, de: 'outra', de_nome: 'Maria Souza', situacao: 'aberta', criado_em: new Date().toISOString(), atualizado_em: new Date().toISOString() }],
   orc_alm_requisicao_item: [{ id: 70, requisicao_id: 7, item_id: 1, pedida: 3 }],
+  // o Controle de e-mails: uma empresa esperando a nossa resposta e uma
+  // ainda não enviada
+  orc_emails_prospeccao: [
+    { id: 1, empresa: 'Sodexo do Brasil', contato: 'João', emails: 'joao@sodexo.com', situacao: 'Respondeu', data: '2026-10-27',
+      enviado_em: '2026-10-27T12:00:00+00:00', respondido_em: '2026-10-27T15:00:00+00:00', resposta_de: 'joao@sodexo.com',
+      resposta_resumo: 'Quer marcar uma reunião', sugestao_resposta: 'Prezado João,\n\nObrigado pelo retorno.' },
+    { id: 2, empresa: 'Grupo Verzani & Sandrini', emails: 'rh@verzani.com.br', situacao: 'Não enviado', data: '2026-10-27' },
+  ],
+  orc_emails_conversa: [
+    { id: 1, registro_id: 1, direcao: 'enviado', quando: '2026-10-27T12:00:00+00:00', texto: 'Proposta de parceria…', enviado_por: 'Pessoa de Teste' },
+    { id: 2, registro_id: 1, direcao: 'recebido', quando: '2026-10-27T15:00:00+00:00', de: 'joao@sodexo.com', texto: 'Temos interesse.' },
+  ],
+  // a pesquisa do site: uma resposta ruim (o site manda "1 – Muito ruim")
+  orc_retornos_site: [
+    { id: 1, formulario: 'pesquisa', situacao: 'Nova', empresa: 'Alfa Ltda', recebido_em: new Date().toISOString(),
+      respostas: [{ campo: 'experiencia', rotulo: 'Experiência geral', valor: 'Insatisfatória' },
+        { campo: 'notaEspera', rotulo: 'Nota: agilidade no atendimento', valor: '1 – Muito ruim' },
+        { campo: 'interesse', rotulo: 'Interesse em conversar', valor: 'Sim' }] },
+    { id: 2, formulario: 'ouvidoria', situacao: 'Em andamento', nome: 'Maria', assunto: 'Reclamação', mensagem: 'Demorou muito.',
+      recebido_em: new Date().toISOString(), respostas: [] },
+  ],
 };
 
 async function simular(ctx) {
@@ -84,7 +105,7 @@ async function simular(ctx) {
 }
 
 // ------------------------------------------------------------- os passos
-const MODULOS = ['chat', 'tarefas', 'compromissos', 'chamados', 'almoxarifado', 'conferencia', 'homologacao', 'financeiro', 'receber', 'diario', 'admin'];
+const MODULOS = ['chat', 'tarefas', 'compromissos', 'chamados', 'emails', 'pesquisa', 'almoxarifado', 'conferencia', 'homologacao', 'financeiro', 'receber', 'diario', 'admin'];
 
 async function entrar(pg) {
   await pg.locator('#usuario').fill('teste');
@@ -114,6 +135,27 @@ PASSOS.push(['20-novo-pedido', async (pg) => {
   await pg.locator('.np-mais').first().click();
   await pg.waitForTimeout(300);
 }]);
+// a conversa e a resposta sugerida abrem sem erro
+PASSOS.push(['22-emails-responder', async (pg) => {
+  await pg.evaluate(() => window.MODULOS.emails.abrir());
+  await pg.waitForTimeout(1200);
+  await pg.locator('#palco .linha').first().click();
+  await pg.waitForTimeout(900);
+  const ficha = await pg.locator('#folha-caixa').innerText();
+  if (!ficha.includes('Temos interesse')) throw new Error('a conversa não apareceu na ficha');
+  await pg.locator('#ed-responder').click();
+  await pg.waitForTimeout(900);
+  const texto = await pg.locator('#er-texto').inputValue();
+  if (!texto.includes('Prezado João')) throw new Error('a sugestão da IA não veio para a resposta');
+}]);
+PASSOS.push(['23-pesquisa-detalhe', async (pg) => {
+  await pg.evaluate(() => window.MODULOS.pesquisa.abrir());
+  await pg.waitForTimeout(1200);
+  const lista = await pg.locator('#palco').innerText();
+  if (!lista.includes('nota baixa')) throw new Error('a nota "1 – Muito ruim" não virou alerta');
+  await pg.locator('#palco .linha').first().click();
+  await pg.waitForTimeout(700);
+}]);
 PASSOS.push(['21-cadastro-de-usuario', async (pg) => {
   await pg.evaluate(() => window.MODULOS.admin.abrir());
   await pg.waitForTimeout(900);
@@ -121,7 +163,7 @@ PASSOS.push(['21-cadastro-de-usuario', async (pg) => {
   if (await usuarios.count()) { await usuarios.first().click(); await pg.waitForTimeout(900); await pg.locator('#topo-dir button').first().click(); await pg.waitForTimeout(700); }
   // o cadastro tem de oferecer as permissões novas do computador
   const ficha = await pg.locator('#folha-caixa').innerText();
-  for (const t of ['Almoxarifado', 'Homologação', 'Solicitar material', 'Almoxarifado: Entregar pedidos', 'Financeiro: Dar baixa', 'Contabilidade']) {
+  for (const t of ['Almoxarifado', 'Homologação', 'Solicitar material', 'Reclamações', 'Almoxarifado: Entregar pedidos', 'Financeiro: Dar baixa', 'Contabilidade']) {
     if (!ficha.includes(t)) throw new Error(`o cadastro não oferece "${t}"`);
   }
 }]);

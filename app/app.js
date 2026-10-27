@@ -10,7 +10,7 @@
   const { $, $$, esc, toast, ICONES } = UI;
   window.MODULOS = window.MODULOS || {};
 
-  const ORDEM = ['chat', 'tarefas', 'compromissos', 'chamados', 'almoxarifado', 'conferencia', 'homologacao', 'financeiro', 'receber', 'diario', 'admin'];
+  const ORDEM = ['chat', 'tarefas', 'compromissos', 'chamados', 'emails', 'pesquisa', 'almoxarifado', 'conferencia', 'homologacao', 'financeiro', 'receber', 'diario', 'admin'];
   const contagens = {};
   let relogioContagens = null;
   let relogioPonto = null;

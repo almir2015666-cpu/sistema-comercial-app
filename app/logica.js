@@ -194,7 +194,9 @@
   // fica no bloco dos botões, e não entre os módulos. `admin` só o
   // administrador tem; `tema` é de todos.
   L.BOTOES = [['relatorios', 'Relatórios'], ['empresas', 'Empresas'], ['conferencia', 'Conferência'],
-    ['tarefas', 'Tarefas'], ['pedir_material', 'Solicitar material']];
+    ['tarefas', 'Tarefas'], ['pedir_material', 'Solicitar material'],
+    // Reclamações das empresas (e, com elas, a Pesquisa e Ouvidoria do site)
+    ['reclamacoes', 'Reclamações']];
   L.DENTRO = [
     ['orcamentos:configuracoes', 'orcamentos', 'Configurações'],
     ['homologacao:contratos', 'homologacao', 'Contratos assinados'],
@@ -717,6 +719,184 @@
       if (nome.includes(t) || (digitos.length >= 3 && cnpj.includes(digitos))) saida.push({ ...d, atividade: r.atividade, data: r.data });
     }
     return saida;
+  };
+
+  /* ================================================================
+     CONTROLE DE E-MAILS DA PROSPECÇÃO — as regras do computador
+     (prospeccao_nucleo.py, 1.10.22): o modelo "Proposta de parceria",
+     as marcas que a IA preenche e de quem é a vez na conversa.
+     ================================================================ */
+  L.SITUACOES_EMAIL = ['Enviado', 'Não enviado', 'Respondeu', 'Sem interesse', 'Virou cliente', 'E-mail voltou'];
+  L.MODELO_PARCERIA = 'Proposta de parceria';
+  // O MESMO TEXTO de prospeccao_nucleo.MODELOS_PADRAO[0]. Os modelos que a
+  // equipe salvou (orc_emails_modelos) passam na frente, pelo nome.
+  L.MODELOS_EMAIL = [{
+    nome: L.MODELO_PARCERIA,
+    assunto: 'Proposta de Parceria | Saúde Ocupacional e SST – {empresa_nome}',
+    corpo: 'Prezados Senhores,\n\n{saudacao}\n\n'
+      + 'A **Clínica Medicina Humana (CMH)** vem manifestar seu interesse em estabelecer uma parceria comercial com {artigo_}**{empresa_nome}**, visando à prestação de serviços especializados em Saúde e Segurança do Trabalho.\n\n'
+      + 'Considerando a atuação {da_empresa} nos segmentos de {segmentos}, nossa instituição dispõe de estrutura para atender às demandas ocupacionais de suas equipes, especialmente em processos de admissão, acompanhamento periódico e gestão da saúde dos colaboradores.\n\n'
+      + 'Oferecemos soluções integradas que contribuem para a eficiência operacional e o cumprimento das exigências legais, contemplando:\n\n'
+      + '- **Atendimento ocupacional:** exames admissionais, periódicos, demissionais, de retorno ao trabalho, ASO e exames complementares;\n'
+      + '- **Programas e laudos técnicos:** PCMSO, PGR, LTCAT, PCA, PPR e AET;\n'
+      + '- **Serviços especializados:** Fit Test, fichas de EPI, ordens de serviço e treinamentos de NR;\n'
+      + '- **Gestão ocupacional:** eSocial, PPP e acompanhamento das obrigações relacionadas à SST.\n\n'
+      + 'Como diferencial, destacamos nossa **estrutura com unidades próprias em Camaçari, Candeias e Salvador, além de unidades móveis de atendimento ocupacional**, possibilitando atender grandes volumes de colaboradores distribuídos em diferentes contratos e municípios da Bahia, com maior agilidade, praticidade e redução dos deslocamentos das equipes.\n\n'
+      + 'Temos interesse em apresentar nossa estrutura e avaliar a possibilidade de **credenciamento da CMH como prestadora de serviços {da_empresa}**, especialmente para atendimento das operações na Bahia. Colocamo-nos à disposição para agendar uma breve reunião de apresentação institucional e discutir possíveis oportunidades de parceria.\n\n'
+      + 'Atenciosamente,\n\n**Equipe Comercial**\nClínica Medicina Humana – CMH\nUnidades: Camaçari | Candeias | Salvador – BA\n\n'
+      + 'Comercial | Telefone/WhatsApp: (71) 99301-0103\n\nDiretoria Geral | José Carlos Correia\nContato direto: (71) 99628-4982\n\nSite: www.clinicamedicinahumana.com.br',
+  }];
+
+  L.saudacao = (agora = new Date()) => {
+    const h = agora.getHours();
+    return h >= 5 && h < 12 ? 'Bom dia!' : h >= 12 && h < 18 ? 'Boa tarde!' : 'Boa noite!';
+  };
+  L.contracaoDe = (artigo) => ({ o: 'do', a: 'da' }[String(artigo || '').trim().toLowerCase()] || 'de');
+  L.faltaIa = (r) => !String(r?.ia_segmentos || '').trim();
+
+  // preencher_modelo do computador: {empresa}, {contato}, {meu_nome} e as
+  // marcas da Proposta de parceria, com o que a IA identificou
+  L.preencherModelo = (texto, r, meuNome = '', agora = new Date()) => {
+    const contato = String(r?.contato || '').trim();
+    const empresa = String(r?.empresa || '').trim() || 'sua empresa';
+    const artigo = String(r?.ia_artigo || '').trim().toLowerCase();
+    const nome = String(r?.ia_nome || '').trim() || empresa;
+    const curto = String(r?.ia_nome_curto || '').trim() || nome;
+    let s = String(texto || '');
+    if (!contato) s = s.replace(/,?\s*\{contato\}\s*,?/g, ',').replace('Olá,,', 'Olá,').replace(', ,', ',');
+    return s.split('{contato}').join(contato).split('{empresa}').join(empresa)
+      .split('{meu_nome}').join(String(meuNome || '').trim())
+      .split('{saudacao}').join(L.saudacao(agora))
+      .split('{artigo_}').join(artigo ? `${artigo} ` : '')
+      .split('{empresa_nome}').join(nome)
+      .split('{da_empresa}').join(`${L.contracaoDe(artigo)} ${curto}`)
+      .split('{segmentos}').join(String(r?.ia_segmentos || '').trim());
+  };
+
+  // **negrito** e "- " tópico, para a prévia no celular (o e-mail de
+  // verdade sai em HTML, montado pela orc-email)
+  L.marcacaoEmHtml = (texto, esc) => String(texto || '').split('\n').map((linha) => {
+    const topico = /^\s*[-•]\s+/.test(linha);
+    const corpo = esc(linha.replace(/^\s*[-•]\s+/, '')).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
+    return topico ? `<div style="padding-left:18px;text-indent:-12px">•&nbsp; ${corpo}</div>` : `<div>${corpo || '&nbsp;'}</div>`;
+  }).join('');
+
+  // "nos" = a última mensagem é da empresa; "empresa" = a última é nossa
+  L.vezDeQuem = (r) => {
+    const chegou = String(r?.respondido_em || '');
+    if (!chegou) return '';
+    const nos = String(r?.respondemos_em || '');
+    return !nos || chegou.slice(0, 19) > nos.slice(0, 19) ? 'nos' : 'empresa';
+  };
+
+  L.emailsDe = (texto) => {
+    const saida = [];
+    for (const p of String(texto || '').split(/[,;\s]+/)) {
+      const e = p.trim().toLowerCase();
+      if (e && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e) && !saida.includes(e)) saida.push(e);
+    }
+    return saida;
+  };
+
+  /* ================================================================
+     PESQUISA DE SATISFAÇÃO E OUVIDORIA DO SITE (retornos_nucleo.py)
+     ================================================================ */
+  L.RET_SITUACOES = ['Nova', 'Em andamento', 'Concluída', 'Arquivada'];
+  L.RET_ABERTAS = ['Nova', 'Em andamento'];
+  L.ASPECTOS = [
+    ['notaEncaminhar', 'Facilidade para encaminhar os colaboradores'],
+    ['notaEspera', 'Agilidade no atendimento e tempo de espera'],
+    ['notaEmissao', 'Agilidade na liberação e emissão do ASO'],
+    ['notaPrazos', 'Cumprimento dos prazos para liberação do ASO'],
+    ['notaAcesso', 'Facilidade para receber e acessar o ASO'],
+    ['notaEquipe', 'Atendimento e comunicação com a equipe'],
+    ['notaResolucao', 'Agilidade na resolução de dúvidas e problemas'],
+    ['notaPrecos', 'Preços e condições comerciais'],
+  ];
+  L.EXPERIENCIAS = ['Muito insatisfatória', 'Insatisfatória', 'Regular', 'Satisfatória', 'Muito satisfatória'];
+  const EXP_RUIM = ['Muito insatisfatória', 'Insatisfatória'];
+
+  L.camposDaResposta = (r) => {
+    const s = {};
+    for (const i of r?.respostas || []) if (i && i.campo) s[i.campo] = String(i.valor ?? '').trim();
+    return s;
+  };
+  // O SITE MANDA "5 – Muito bom": vale o algarismo do começo
+  L.notasDaResposta = (r) => {
+    const s = {};
+    for (const [k, v] of Object.entries(L.camposDaResposta(r))) {
+      const m = /^\s*([1-5])\b/.exec(v);
+      if (k.startsWith('nota') && m) s[k] = Number(m[1]);
+    }
+    return s;
+  };
+  L.mediaDaResposta = (r) => {
+    const n = Object.values(L.notasDaResposta(r));
+    return n.length ? Math.round((n.reduce((a, b) => a + b, 0) / n.length) * 10) / 10 : null;
+  };
+  L.motivosDoAlerta = (r) => {
+    if (r?.formulario === 'ouvidoria') return ['mensagem da ouvidoria'];
+    const c = L.camposDaResposta(r), n = L.notasDaResposta(r), m = [];
+    if (EXP_RUIM.includes(c.experiencia)) m.push(`experiência ${c.experiencia.toLowerCase()}`);
+    const ruins = L.ASPECTOS.filter(([k]) => (n[k] ?? 99) <= 2).map(([, rot]) => rot.toLowerCase());
+    if (ruins.length) m.push(`nota baixa em ${ruins.join(', ')}`);
+    if (String(c.dificuldade || '').endsWith('com frequência')) m.push('dificuldade com frequência');
+    if (String(c.outrasClinicas || '').includes('maior parte')) m.push('manda a maior parte dos exames para outra clínica');
+    if (/^(Muito insatisf|Insatisf)/.test(c.condicoes || '')) m.push(`condições comerciais ${c.condicoes.toLowerCase()}`);
+    return m;
+  };
+  L.querConversar = (r) => { const v = L.camposDaResposta(r).interesse || ''; return v === 'Sim' || v.startsWith('Talvez'); };
+  L.quemRespondeu = (r) => r?.empresa || r?.nome || r?.email || '(sem nome)';
+
+  L.filtrarRetornos = (linhas, mostrar = 'abertas', busca = '') => {
+    let s = (linhas || []).slice();
+    if (mostrar === 'abertas') s = s.filter((r) => L.RET_ABERTAS.includes(r.situacao));
+    else if (mostrar === 'alerta') s = s.filter((r) => L.RET_ABERTAS.includes(r.situacao) && L.motivosDoAlerta(r).length);
+    else if (mostrar === 'conversar') s = s.filter(L.querConversar);
+    const t = L.semAcento(busca).toLowerCase().trim();
+    if (t) {
+      s = s.filter((r) => L.semAcento([r.empresa, r.nome, r.email, r.assunto, r.mensagem, r.responsavel, r.tratativa,
+        ...(r.respostas || []).map((i) => i?.valor)].join(' ')).toLowerCase().includes(t));
+    }
+    return s.sort((a, b) => String(b.recebido_em || '').localeCompare(String(a.recebido_em || '')));
+  };
+
+  L.resumoPesquisa = (linhas) => {
+    const p = (linhas || []).filter((r) => r.formulario === 'pesquisa');
+    const todas = [];
+    const aspectos = L.ASPECTOS.map(([k, rot]) => {
+      const dadas = p.map((r) => L.notasDaResposta(r)[k]).filter((n) => n != null);
+      todas.push(...dadas);
+      const ruins = dadas.filter((n) => n <= 2).length;
+      return { rotulo: rot, media: dadas.length ? Math.round((dadas.reduce((a, b) => a + b, 0) / dadas.length) * 10) / 10 : null,
+        notas: dadas.length, ruins, pctRuins: dadas.length ? Math.round((100 * ruins) / dadas.length) : null };
+    });
+    const exp = Object.fromEntries(L.EXPERIENCIAS.map((e) => [e, 0]));
+    for (const r of p) { const e = L.camposDaResposta(r).experiencia; if (e in exp) exp[e] += 1; }
+    return {
+      respostas: p.length,
+      mediaGeral: todas.length ? Math.round((todas.reduce((a, b) => a + b, 0) / todas.length) * 10) / 10 : null,
+      aspectos, experiencia: exp,
+      comAlerta: p.filter((r) => L.motivosDoAlerta(r).length).length,
+      querem: p.filter(L.querConversar),
+      ouvidoria: (linhas || []).filter((r) => r.formulario === 'ouvidoria').length,
+    };
+  };
+
+  // O texto que a IA lê para o estudo (retornos_nucleo.texto_para_estudo)
+  L.textoParaEstudo = (linhas, teto = 100000) => {
+    const novas = (linhas || []).slice().sort((a, b) => String(b.recebido_em || '').localeCompare(String(a.recebido_em || '')));
+    const ord = novas.filter((r) => r.formulario === 'pesquisa').concat(novas.filter((r) => r.formulario !== 'pesquisa'));
+    const blocos = []; let total = 0;
+    for (const r of ord) {
+      const linhasR = [`### ${r.formulario === 'pesquisa' ? 'Pesquisa' : 'Ouvidoria'} — ${L.quemRespondeu(r)} (${L.dataHoraBr(r.recebido_em)})`];
+      for (const i of r.respostas || []) if (i) linhasR.push(`${i.rotulo || i.campo}: ${String(i.valor ?? '').trim() || '-'}`);
+      if (r.mensagem) linhasR.push(`${r.formulario === 'pesquisa' ? 'Sugestões, críticas ou observações' : 'Mensagem'}: ${r.mensagem}`);
+      const b = linhasR.join('\n');
+      if (total + b.length > teto) break;
+      blocos.push(b); total += b.length;
+    }
+    return blocos.join('\n\n');
   };
 
   raiz.L = L;

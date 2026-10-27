@@ -285,3 +285,37 @@ test('forma de pagamento pela palavra, como o conferencia_nucleo', () => {
   assert.equal(L.chaveDoPagamento(''), '');
   assert.equal(L.pagaComBoleto({ forma_pagamento: 'BOLEOT 05 DIAS' }), true);
 });
+
+test('e-mails: a proposta de parceria sai como no computador (o/a, do/da, segmentos)', () => {
+  const r = { empresa: 'SODEXO SA', ia_artigo: 'a', ia_nome: 'Sodexo do Brasil', ia_nome_curto: 'Sodexo', ia_segmentos: 'alimentação coletiva e facilities' };
+  const m = L.MODELOS_EMAIL[0];
+  const corpo = L.preencherModelo(m.corpo, r, 'Ana', new Date(2026, 9, 27, 9));
+  assert.ok(corpo.includes('Bom dia!'));
+  assert.ok(corpo.includes('parceria comercial com a **Sodexo do Brasil**'));
+  assert.ok(corpo.includes('a atuação da Sodexo nos segmentos de alimentação coletiva e facilities'));
+  assert.ok(!/\{\w+\}/.test(corpo), 'sobrou marca sem trocar');
+  assert.equal(L.preencherModelo(m.assunto, r), 'Proposta de Parceria | Saúde Ocupacional e SST – Sodexo do Brasil');
+  assert.equal(L.contracaoDe('o'), 'do');
+  assert.equal(L.faltaIa({}), true);
+});
+
+test('e-mails: de quem é a vez na conversa', () => {
+  assert.equal(L.vezDeQuem({}), '');
+  assert.equal(L.vezDeQuem({ respondido_em: '2026-10-27T15:00:00+00:00' }), 'nos');
+  assert.equal(L.vezDeQuem({ respondido_em: '2026-10-27T15:00:00+00:00', respondemos_em: '2026-10-27T16:00:00+00:00' }), 'empresa');
+  assert.equal(L.vezDeQuem({ respondido_em: '2026-10-27T17:00:00+00:00', respondemos_em: '2026-10-27T16:00:00+00:00' }), 'nos');
+});
+
+test('pesquisa: "1 – Muito ruim" é nota 1, e vira alerta (retornos_nucleo)', () => {
+  const r = { formulario: 'pesquisa', respostas: [
+    { campo: 'experiencia', valor: 'Insatisfatória' }, { campo: 'notaEspera', valor: '1 – Muito ruim' },
+    { campo: 'notaPrecos', valor: '4 – Bom' }, { campo: 'notaEquipe', valor: 'N/A' }, { campo: 'interesse', valor: 'Talvez, gostaria' }] };
+  assert.deepEqual(L.notasDaResposta(r), { notaEspera: 1, notaPrecos: 4 });
+  assert.equal(L.mediaDaResposta(r), 2.5);
+  assert.equal(L.motivosDoAlerta(r).length, 2);
+  assert.equal(L.querConversar(r), true);
+  assert.deepEqual(L.motivosDoAlerta({ formulario: 'ouvidoria' }), ['mensagem da ouvidoria']);
+  const s = L.resumoPesquisa([r]);
+  assert.equal(s.respostas, 1);
+  assert.equal(s.aspectos.find((a) => a.rotulo.startsWith('Agilidade no atendimento')).pctRuins, 100);
+});
