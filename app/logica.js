@@ -772,6 +772,8 @@
       .split('{artigo_}').join(artigo ? `${artigo} ` : '')
       .split('{empresa_nome}').join(nome)
       .split('{da_empresa}').join(`${L.contracaoDe(artigo)} ${curto}`)
+      // "pelo **Grupo X**" / "pela **Sodexo**" (os modelos do computador)
+      .split('{pela_empresa}').join(`${({ o: 'pelo', a: 'pela' }[artigo] || 'por')} **${nome}**`)
       .split('{segmentos}').join(String(r?.ia_segmentos || '').trim());
   };
 

@@ -319,3 +319,8 @@ test('pesquisa: "1 – Muito ruim" é nota 1, e vira alerta (retornos_nucleo)', 
   assert.equal(s.respostas, 1);
   assert.equal(s.aspectos.find((a) => a.rotulo.startsWith('Agilidade no atendimento')).pctRuins, 100);
 });
+
+test('e-mails: {pela_empresa} faz a contração como no computador', () => {
+  assert.equal(L.preencherModelo('agradece {pela_empresa}', { empresa: 'X', ia_artigo: 'a', ia_nome: 'RI Engenharia' }), 'agradece pela **RI Engenharia**');
+  assert.equal(L.preencherModelo('{pela_empresa}', { empresa: 'X', ia_artigo: 'o', ia_nome: 'Grupo Liderança' }), 'pelo **Grupo Liderança**');
+});

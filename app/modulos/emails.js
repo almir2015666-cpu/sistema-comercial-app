@@ -354,7 +354,8 @@
   // da lista quando foi para todas.
   function abrirRascunho(ra, lista, depois) {
     const regs = (ra.registros || []).map((id) => lista.find((r) => r.id === id)).filter(Boolean);
-    const usaIa = /\{(segmentos|artigo_|da_empresa|empresa_nome)\}/.test(`${ra.assunto}${ra.corpo}`);
+    // só a {segmentos} trava: os outros modelos usam nome e artigo, que têm reserva
+    const usaIa = /\{segmentos\}/.test(`${ra.assunto}${ra.corpo}`);
     const prontos = regs.filter((r) => !NAO_MANDA.includes(r.situacao) && L.emailsDe(r.emails).length && !(usaIa && L.faltaIa(r)));
     const fora = regs.filter((r) => !prontos.includes(r));
     const primeiro = prontos[0] || regs[0] || {};
