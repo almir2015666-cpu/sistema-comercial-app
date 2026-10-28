@@ -69,6 +69,10 @@ const TABELAS = {
     { id: 1, registro_id: 1, direcao: 'enviado', quando: '2026-10-27T12:00:00+00:00', texto: 'Proposta de parceria…', enviado_por: 'Pessoa de Teste' },
     { id: 2, registro_id: 1, direcao: 'recebido', quando: '2026-10-27T15:00:00+00:00', de: 'joao@sodexo.com', texto: 'Temos interesse.' },
   ],
+  orc_emails_rascunhos: [
+    { id: 9, titulo: 'GRUPO VERZANI', assunto: 'Proposta de Parceria | {empresa_nome}', corpo: '{saudacao}\n\nTexto para **{empresa_nome}**.',
+      registros: [2], anexos: [], criado_por_nome: 'Pessoa de Teste', atualizado_em: new Date().toISOString() },
+  ],
   // a pesquisa do site: uma resposta ruim (o site manda "1 – Muito ruim")
   orc_retornos_site: [
     { id: 1, formulario: 'pesquisa', situacao: 'Nova', empresa: 'Alfa Ltda', recebido_em: new Date().toISOString(),
@@ -147,6 +151,17 @@ PASSOS.push(['22-emails-responder', async (pg) => {
   await pg.waitForTimeout(900);
   const texto = await pg.locator('#er-texto').inputValue();
   if (!texto.includes('Prezado João')) throw new Error('a sugestão da IA não veio para a resposta');
+}]);
+PASSOS.push(['24-emails-rascunho', async (pg) => {
+  await pg.evaluate(() => window.MODULOS.emails.abrir());
+  await pg.waitForTimeout(1000);
+  await pg.locator('#palco .tab', { hasText: 'Rascunhos' }).click();
+  await pg.waitForTimeout(900);
+  await pg.locator('#palco .linha').first().click();
+  await pg.waitForTimeout(700);
+  const ficha = await pg.locator('#folha-caixa').innerText();
+  // a Verzani do exemplo ainda não foi identificada pela IA: fica de fora
+  if (!ficha.includes('Ficam de fora')) throw new Error('o rascunho não avisou da empresa sem os segmentos');
 }]);
 PASSOS.push(['23-pesquisa-detalhe', async (pg) => {
   await pg.evaluate(() => window.MODULOS.pesquisa.abrir());

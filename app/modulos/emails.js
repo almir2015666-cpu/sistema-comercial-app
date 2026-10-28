@@ -51,7 +51,21 @@
     return L.MODELOS_EMAIL[0];
   }
 
-  const VISTAS = [['responder', 'A responder'], ['aguardando', 'Aguardando'], ['nao', 'Não enviados'], ['todos', 'Todos']];
+  // O CARTÃO DA CLÍNICA guardado pela equipe (79-controle-emails-cartao.sql)
+  async function lerCartao() {
+    try {
+      const { data, error } = await N.sb.from('orc_emails_cartoes').select('*').eq('nome', 'Cartão da clínica').limit(1);
+      if (error || !data?.length) return null;
+      return { nome: data[0].arquivo, tipo: data[0].tipo, base64: data[0].base64, foto: true, cartao: true };
+    } catch { return null; }
+  }
+  // o formato que a orc-email espera (prospeccao_nucleo.enviar)
+  const anexosParaEnvio = (lista) => (lista || []).map((a) => ({ nome: a.nome, tipo: a.tipo, base64: a.base64, no_corpo: !!a.foto }));
+
+  // NOME DA EMPRESA SEMPRE EM MAIÚSCULAS, como no computador
+  const nomeEmpresa = (s) => String(s || '').split(/\s+/).filter(Boolean).join(' ').toUpperCase();
+
+  const VISTAS = [['responder', 'A responder'], ['aguardando', 'Aguardando'], ['nao', 'Não enviados'], ['rascunhos', 'Rascunhos'], ['todos', 'Todos']];
 
   function filtrar(lista, vista, busca) {
     let s = lista;
@@ -75,9 +89,21 @@
         if (!vivo) return;
         try {
           if (reler) lista = await listar();
+          const abas = `<div class="tabs">${VISTAS.map(([k, r]) => `<button class="tab ${k === vista ? 'on' : ''}" data-v="${k}">${esc(r)}</button>`).join('')}</div>`;
+          if (vista === 'rascunhos') {
+            const rascs = await lerRascunhos();
+            el.innerHTML = `${abas}${rascs.length ? `<div class="lista">${rascs.map((ra) => `<button class="linha" type="button" data-ra="${ra.id}">
+              <div class="linha__corpo"><div class="linha__titulo"><span class="t">📝 ${esc(ra.titulo)}</span><span class="badge b-gray">${(ra.registros || []).length} empresa(s)</span></div>
+              <div class="linha__sub">${esc(ra.assunto)}</div>
+              <div class="linha__sub">${esc(ra.criado_por_nome || '')} · ${esc(L.dataHoraBr(ra.atualizado_em))}${(ra.anexos || []).length ? ` · ${(ra.anexos || []).length} anexo(s)` : ''}</div></div>${ICONES.seta}</button>`).join('')}</div>`
+              : UI.vazio('Nenhum rascunho', 'No computador ou aqui, "Salvar rascunho" guarda o e-mail para enviar depois.')}`;
+            $$('.tab', el).forEach((b) => { b.onclick = () => { vista = b.dataset.v; desenhar(false); }; });
+            $$('.linha[data-ra]', el).forEach((b) => { b.onclick = () => abrirRascunho(rascs.find((x) => x.id === Number(b.dataset.ra)), lista, desenhar); });
+            return;
+          }
           const achados = filtrar(lista, vista, busca);
           APP.contagens.emails = lista.filter((r) => r.situacao === 'Respondeu' && L.vezDeQuem(r) === 'nos').length;
-          el.innerHTML = `<div class="tabs">${VISTAS.map(([k, r]) => `<button class="tab ${k === vista ? 'on' : ''}" data-v="${k}">${esc(r)}</button>`).join('')}</div>
+          el.innerHTML = `${abas}
             <div class="busca">${ICONES.busca}<input id="em-busca" placeholder="Procurar empresa, contato, e-mail" value="${esc(busca)}"></div>
             <button class="btn btn-ghost mt12" id="em-conferir" type="button">Conferir respostas na caixa</button>
             ${achados.length ? `<div class="lista">${achados.map((r) => {
@@ -85,7 +111,7 @@
               const sinal = vez === 'nos' ? '💬 ' : vez === 'empresa' ? '✔ ' : '';
               return `<button class="linha" type="button" data-id="${r.id}">
                 ${UI.avatar(r.empresa || r.contato, 40)}
-                <div class="linha__corpo"><div class="linha__titulo"><span class="t">${esc(sinal + (r.empresa || r.contato || '?'))}</span><span class="badge ${SELO[r.situacao] || 'b-gray'}">${esc(r.situacao)}</span></div>
+                <div class="linha__corpo"><div class="linha__titulo"><span class="t">${esc(sinal + (nomeEmpresa(r.empresa) || r.contato || '?'))}</span><span class="badge ${SELO[r.situacao] || 'b-gray'}">${esc(r.situacao)}</span></div>
                 <div class="linha__sub">${esc(r.emails || 'sem e-mail')}</div>
                 ${r.resposta_resumo || r.resposta_de ? `<div class="linha__sub">${esc(UI.quando(r.respondido_em))} · ${esc(r.resposta_resumo || r.resposta_de)}</div>` : ''}</div>${ICONES.seta}</button>`;
             }).join('')}</div>` : UI.vazio(vista === 'responder' ? 'Nenhuma empresa esperando resposta' : 'Nada aqui', vista === 'responder' ? 'Quando uma empresa responder, ela aparece aqui com a resposta sugerida.' : '')}`;
@@ -149,7 +175,7 @@
         <button class="btn btn-ghost" id="ed-situacao" type="button">Mudar situação</button>
       </div>
       <div class="mt16"><div class="pequeno text-muted" style="font-weight:700">CONVERSA</div><div id="ed-conversa" class="text-muted pequeno">lendo…</div></div>`,
-    { titulo: r.empresa || r.contato || 'Empresa' });
+    { titulo: nomeEmpresa(r.empresa) || r.contato || 'Empresa' });
     lerConversa(r.id).then((msgs) => { const c = $('#ed-conversa', f.caixa); if (c) { c.className = ''; c.innerHTML = htmlConversa(msgs, r); } });
     const on = (id, fn) => { const b = $(id, f.caixa); if (b) b.onclick = fn; };
     on('#ed-responder', () => { f.fechar(); responder(r, depois); });
@@ -223,10 +249,19 @@
         <div class="fg"><label>Nome da empresa no texto</label><input id="ep-nome" value="${esc(r.ia_nome || r.empresa || '')}"></div>
         <div class="fg"><label>Nome curto (as outras vezes)</label><input id="ep-curto" value="${esc(r.ia_nome_curto || '')}"></div>
         <div class="fg"><label>Segmentos em que atua</label><textarea id="ep-seg" rows="3">${esc(r.ia_segmentos || '')}</textarea><div class="dica">Ex.: terceirização de mão de obra, limpeza e conservação e facilities.</div></div>
+        <label class="mt12" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="ep-cartao"> 🖼 Incluir o cartão da clínica no fim</label>
         <div class="pequeno text-muted mt12" style="font-weight:700">COMO A EMPRESA VAI RECEBER</div>
         <div id="ep-previa" class="mt12" style="border:1px solid var(--line, #dfe6ee);border-radius:10px;padding:12px;line-height:1.5;font-size:14px"></div>
-        <div class="modal-ft"><button class="btn btn-ok" type="submit">Enviar para ${L.emailsDe(r.emails).length} endereço(s)</button></div>
-      </form>`, { titulo: `Proposta para ${r.empresa || r.contato}` });
+        <div class="modal-ft"><button class="btn btn-ghost" id="ep-rascunho" type="button">📝 Salvar rascunho</button><button class="btn btn-ok" type="submit">Enviar para ${L.emailsDe(r.emails).length} endereço(s)</button></div>
+      </form>`, { titulo: `Proposta para ${nomeEmpresa(r.empresa) || r.contato}` });
+    // o cartão guardado pela equipe: marcado de saída quando existe
+    let cartao = null;
+    lerCartao().then((c) => {
+      cartao = c;
+      const caixa = $('#ep-cartao', f.caixa);
+      if (!caixa) return;
+      if (c) { caixa.checked = true; previa(); } else { caixa.disabled = true; caixa.parentElement.title = 'Nenhum cartão guardado: guarde pelo computador (Trocar cartão…).'; }
+    });
     const campos = () => {
       const art = $('#ep-artigo', f.caixa).value;
       return { ...r, ia_artigo: art === '(nenhum)' ? '' : art, ia_nome: $('#ep-nome', f.caixa).value.trim(),
@@ -234,8 +269,14 @@
     };
     const previa = () => {
       const c = campos();
-      $('#ep-previa', f.caixa).innerHTML = `<div style="font-weight:800;margin-bottom:8px">${esc(L.preencherModelo(modelo.assunto, c, eu().nome))}</div>${L.marcacaoEmHtml(L.preencherModelo(modelo.corpo, c, eu().nome), esc)}`;
+      const comCartao = cartao && $('#ep-cartao', f.caixa)?.checked;
+      $('#ep-previa', f.caixa).innerHTML = `<div style="font-weight:800;margin-bottom:8px">${esc(L.preencherModelo(modelo.assunto, c, eu().nome))}</div>${L.marcacaoEmHtml(L.preencherModelo(modelo.corpo, c, eu().nome), esc)}`
+        + (comCartao ? `<img alt="Cartão da clínica" style="max-width:100%;border-radius:6px;margin-top:12px" src="data:${esc(cartao.tipo)};base64,${cartao.base64}">` : '');
     };
+    const anexosEscolhidos = () => (cartao && $('#ep-cartao', f.caixa).checked ? [cartao] : []);
+    // a correção da equipe fica gravada no registro, como no computador
+    const gravarIa = (c) => N.mudar(T, { id: r.id }, { ia_artigo: c.ia_artigo, ia_nome: c.ia_nome || null,
+      ia_nome_curto: c.ia_nome_curto || null, ia_segmentos: c.ia_segmentos, atualizado_por: eu().nome });
     $$('input,select,textarea', f.caixa).forEach((i) => { i.oninput = previa; i.onchange = previa; });
     previa();
     const aviso = $('#ep-aviso', f.caixa);
@@ -253,6 +294,22 @@
       } catch (e) { aviso.className = 'aviso atencao'; aviso.textContent = `${e.message} Escreva os segmentos à mão.`; }
     } else aviso.textContent = 'Identificada pela IA. Confira antes de enviar.';
 
+    // GUARDAR PARA DEPOIS: o texto vai com as marcas ({segmentos}...) e a
+    // identificação fica no registro — o rascunho serve no computador também
+    $('#ep-rascunho', f.caixa).onclick = async () => {
+      const c = campos();
+      const titulo = await UI.perguntar('Nome do rascunho', { valor: nomeEmpresa(r.empresa), ok: 'Salvar rascunho' });
+      if (!titulo) return;
+      UI.carregando(true, 'Salvando o rascunho…');
+      try {
+        if (!L.faltaIa(c)) await gravarIa(c);
+        await salvarRascunho({ titulo, assunto: modelo.assunto, corpo: modelo.corpo, registros: [r.id], anexos: anexosEscolhidos() });
+        toast('Rascunho salvo. Está na aba Rascunhos para enviar quando quiser.', 'ok', 5000);
+        f.fechar(); depois();
+      } catch (err) { toast(N.recado(err), 'err'); }
+      finally { UI.carregando(false); }
+    };
+
     $('#ep-form', f.caixa).onsubmit = async (e) => {
       e.preventDefault();
       const c = campos();
@@ -260,11 +317,10 @@
       if (!(await UI.confirmar(`Enviar a proposta para ${L.emailsDe(r.emails).join(', ')}?`, { ok: 'Enviar' }))) return;
       UI.carregando(true, 'Enviando…');
       try {
-        // a correção da equipe fica gravada no registro, como no computador
-        await N.mudar(T, { id: r.id }, { ia_artigo: c.ia_artigo, ia_nome: c.ia_nome || null, ia_nome_curto: c.ia_nome_curto || null,
-          ia_segmentos: c.ia_segmentos, atualizado_por: eu().nome });
+        await gravarIa(c);
         const resp = await funcaoEmail({ acao: 'prospeccao', id: r.id, assunto: L.preencherModelo(modelo.assunto, c, eu().nome),
-          mensagem: L.preencherModelo(modelo.corpo, c, eu().nome), cobranca: false, dias_cobrar: 7 });
+          mensagem: L.preencherModelo(modelo.corpo, c, eu().nome), cobranca: false, dias_cobrar: 7,
+          anexos: anexosParaEnvio(anexosEscolhidos()) });
         toast(resp.falharam?.length ? `Enviado, mas não foi para ${resp.falharam.join(', ')}.` : 'Proposta enviada.', resp.falharam?.length ? 'err' : 'ok', 5000);
         f.fechar(); depois();
       } catch (err) { toast(err.message, 'err'); }
@@ -272,10 +328,77 @@
     };
   }
 
+  /* ------------------------------------------------------ rascunhos */
+  async function lerRascunhos() {
+    try {
+      const { data, error } = await N.sb.from('orc_emails_rascunhos').select('*').order('atualizado_em', { ascending: false });
+      if (error) throw error;
+      return data || [];
+    } catch { return []; }      // sem o SQL 79: nenhum rascunho
+  }
+
+  async function salvarRascunho({ titulo, assunto, corpo, registros, anexos, ident = null }) {
+    const linha = { titulo: String(titulo || 'Rascunho').slice(0, 120), assunto, corpo, registros,
+      anexos: (anexos || []).map((a) => ({ nome: a.nome, tipo: a.tipo, base64: a.base64, foto: !!a.foto, cartao: !!a.cartao })),
+      cobranca: false, dias_cobrar: 7, atualizado_em: new Date().toISOString() };
+    if (ident) return N.mudar('orc_emails_rascunhos', { id: ident }, linha);
+    const { data, error } = await N.sb.from('orc_emails_rascunhos')
+      .insert({ ...linha, criado_por: eu().id, criado_por_nome: eu().nome }).select();
+    if (error) throw error;
+    return data?.[0];
+  }
+
+  // Enviar um rascunho: o texto de cada empresa sai do texto guardado,
+  // trocando as marcas pelo que a IA identificou dela. Empresa sem os
+  // segmentos fica de fora (o texto sairia com buraco), e o rascunho só sai
+  // da lista quando foi para todas.
+  function abrirRascunho(ra, lista, depois) {
+    const regs = (ra.registros || []).map((id) => lista.find((r) => r.id === id)).filter(Boolean);
+    const usaIa = /\{(segmentos|artigo_|da_empresa|empresa_nome)\}/.test(`${ra.assunto}${ra.corpo}`);
+    const prontos = regs.filter((r) => !NAO_MANDA.includes(r.situacao) && L.emailsDe(r.emails).length && !(usaIa && L.faltaIa(r)));
+    const fora = regs.filter((r) => !prontos.includes(r));
+    const primeiro = prontos[0] || regs[0] || {};
+    const f = UI.folha(`
+      <div class="pequeno text-muted">${esc(ra.criado_por_nome || '')} · salvo em ${esc(L.dataHoraBr(ra.atualizado_em))}</div>
+      <div class="mt12"><b>Vai para ${prontos.length} empresa(s):</b> ${esc(prontos.map((r) => nomeEmpresa(r.empresa)).join(', ') || 'nenhuma')}</div>
+      ${fora.length ? `<div class="aviso atencao mt12">Ficam de fora: ${esc(fora.map((r) => `${nomeEmpresa(r.empresa)} (${NAO_MANDA.includes(r.situacao) ? r.situacao.toLowerCase() : !L.emailsDe(r.emails).length ? 'sem e-mail' : 'sem os segmentos — identifique no envio'})`).join('; '))}</div>` : ''}
+      ${(ra.anexos || []).length ? `<div class="pequeno text-muted mt12">${(ra.anexos || []).map((a) => `${a.cartao ? '🖼 cartão da clínica' : a.foto ? '🖼' : '📎'} ${esc(a.cartao ? '' : a.nome)}`).join(' · ')}</div>` : ''}
+      <div class="pequeno text-muted mt16" style="font-weight:700">COMO ${esc(nomeEmpresa(primeiro.empresa) || 'A EMPRESA')} VAI RECEBER</div>
+      <div class="mt12" style="border:1px solid var(--line, #dfe6ee);border-radius:10px;padding:12px;line-height:1.5;font-size:14px">
+        <div style="font-weight:800;margin-bottom:8px">${esc(L.preencherModelo(ra.assunto, primeiro, eu().nome))}</div>${L.marcacaoEmHtml(L.preencherModelo(ra.corpo, primeiro, eu().nome), esc)}</div>
+      <div class="modal-ft"><button class="btn btn-ghost" id="ra-apagar" type="button">Apagar rascunho</button>${prontos.length ? `<button class="btn btn-ok" id="ra-enviar" type="button">Enviar para ${prontos.length}</button>` : ''}</div>`,
+    { titulo: `📝 ${ra.titulo}` });
+    $('#ra-apagar', f.caixa).onclick = async () => {
+      if (!(await UI.confirmar('Apagar este rascunho?', { ok: 'Apagar', perigo: true }))) return;
+      try { await N.apagar('orc_emails_rascunhos', { id: ra.id }); toast('Rascunho apagado.', 'ok'); f.fechar(); depois(); }
+      catch (e) { toast(N.recado(e), 'err'); }
+    };
+    const b = $('#ra-enviar', f.caixa);
+    if (b) b.onclick = async () => {
+      if (!(await UI.confirmar(`Enviar para ${prontos.length} empresa(s)? Sai da caixa da prospecção e não tem como desfazer.`, { ok: 'Enviar' }))) return;
+      let foram = 0; const erros = [];
+      for (const [i, r] of prontos.entries()) {
+        UI.carregando(true, `Enviando ${i + 1} de ${prontos.length}: ${nomeEmpresa(r.empresa)}…`);
+        try {
+          await funcaoEmail({ acao: 'prospeccao', id: r.id, assunto: L.preencherModelo(ra.assunto, r, eu().nome),
+            mensagem: L.preencherModelo(ra.corpo, r, eu().nome), cobranca: !!ra.cobranca, dias_cobrar: ra.dias_cobrar || 7,
+            anexos: anexosParaEnvio(ra.anexos) });
+          foram += 1;
+        } catch (e) { erros.push(`${nomeEmpresa(r.empresa)}: ${e.message}`); }
+        // devagar de propósito, como no computador: rajada parece spam
+        if (i < prontos.length - 1) await UI.esperar(1500);
+      }
+      UI.carregando(false);
+      if (!erros.length && !fora.length) { try { await N.apagar('orc_emails_rascunhos', { id: ra.id }); } catch { /* fica */ } }
+      toast(erros.length ? `${foram} enviado(s); com erro: ${erros.join(' · ')}` : `${foram} enviado(s).`, erros.length ? 'err' : 'ok', 7000);
+      f.fechar(); depois();
+    };
+  }
+
   /* ---------------------------------------------- cadastrar empresa */
   function novaEmpresa() {
     const f = UI.folha(`<form id="ne">
-      <div class="fg"><label>Empresa</label><input id="ne-empresa" maxlength="160" required></div>
+      <div class="fg"><label>Empresa</label><input id="ne-empresa" maxlength="160" autocapitalize="characters" required></div>
       <div class="fg"><label>Contato</label><input id="ne-contato" maxlength="120"></div>
       <div class="fg"><label>E-mails</label><input id="ne-emails" inputmode="email" autocapitalize="off" placeholder="rh@empresa.com, sesmt@empresa.com"><div class="dica">Vários: separe por vírgula.</div></div>
       <div class="fg"><label>Telefones</label><input id="ne-fones" inputmode="tel"></div>
@@ -297,7 +420,7 @@
           if (ja && !(await UI.confirmar(`${ja.empresa || 'Esta empresa'} já recebeu e-mail (${ja.situacao}). Cadastrar mesmo assim?`, { ok: 'Cadastrar' }))) return;
         }
         const { data, error } = await N.sb.from(T).insert({
-          empresa: v('#ne-empresa'), contato: v('#ne-contato') || null, emails: emails.join(', ') || null,
+          empresa: nomeEmpresa(v('#ne-empresa')), contato: v('#ne-contato') || null, emails: emails.join(', ') || null,
           telefones: v('#ne-fones') || null, cnpj: cnpj || null, data: L.hojeISO(), situacao: 'Não enviado',
           criado_por: eu().id, criado_por_nome: eu().nome, atualizado_por: eu().nome,
         }).select();
