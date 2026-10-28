@@ -195,8 +195,10 @@
   // administrador tem; `tema` é de todos.
   L.BOTOES = [['relatorios', 'Relatórios'], ['empresas', 'Empresas'], ['conferencia', 'Conferência'],
     ['tarefas', 'Tarefas'], ['pedir_material', 'Solicitar material'],
-    // Reclamações das empresas (e, com elas, a Pesquisa e Ouvidoria do site)
-    ['reclamacoes', 'Reclamações']];
+    // Reclamações das empresas
+    ['reclamacoes', 'Reclamações'],
+    // os dois itens novos do Menu, cada um com o seu visto (80-vistos-emails-e-pesquisa.sql)
+    ['controle_emails', 'Controle de e-mails'], ['pesquisa_site', 'Pesquisa e Ouvidoria']];
   L.DENTRO = [
     ['orcamentos:configuracoes', 'orcamentos', 'Configurações'],
     ['homologacao:contratos', 'homologacao', 'Contratos assinados'],

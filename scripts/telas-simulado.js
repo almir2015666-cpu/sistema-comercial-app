@@ -45,7 +45,7 @@ function jwt() {
 const EU = {
   id: UID, usuario: 'teste', nome: 'Pessoa de Teste', cargo: 'Diretor médico', profissao: null, registro: null,
   setor: 'Almoxarifado', admin: true, ativo: true, trocar_senha: false, ultimo_acesso: new Date().toISOString(),
-  modulos: ['chat', 'tarefas', 'pedir_material', 'almoxarifado', 'almoxarifado:atender'],
+  modulos: ['chat', 'tarefas', 'pedir_material', 'almoxarifado', 'almoxarifado:atender', 'controle_emails', 'pesquisa_site'],
 };
 const TABELAS = {
   orc_usuarios: [EU],
@@ -178,7 +178,7 @@ PASSOS.push(['21-cadastro-de-usuario', async (pg) => {
   if (await usuarios.count()) { await usuarios.first().click(); await pg.waitForTimeout(900); await pg.locator('#topo-dir button').first().click(); await pg.waitForTimeout(700); }
   // o cadastro tem de oferecer as permissões novas do computador
   const ficha = await pg.locator('#folha-caixa').innerText();
-  for (const t of ['Almoxarifado', 'Homologação', 'Solicitar material', 'Reclamações', 'Almoxarifado: Entregar pedidos', 'Financeiro: Dar baixa', 'Contabilidade']) {
+  for (const t of ['Almoxarifado', 'Homologação', 'Solicitar material', 'Reclamações', 'Controle de e-mails', 'Pesquisa e Ouvidoria', 'Almoxarifado: Entregar pedidos', 'Financeiro: Dar baixa', 'Contabilidade']) {
     if (!ficha.includes(t)) throw new Error(`o cadastro não oferece "${t}"`);
   }
 }]);

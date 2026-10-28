@@ -10,7 +10,7 @@
      com o comercial, e o estudo que a IA escreve das respostas do período.
 
    Quem grava as respostas é o site; o app lê e trata. Mesmo visto do
-   computador: Reclamações.
+   computador: Pesquisa e Ouvidoria.
    ===================================================================== */
 (() => {
   'use strict';
@@ -160,8 +160,8 @@
 
   MODULOS.pesquisa = {
     chave: 'pesquisa', nome: 'Pesquisa e Ouvidoria', sub: 'O que as empresas respondem', icone: ICONES.pesquisa,
-    // o mesmo visto do computador (76-retornos-site.sql): Reclamações
-    precisa: (u) => L.temModulo(u, 'reclamacoes'),
+    // visto próprio, o mesmo do computador (80-vistos-emails-e-pesquisa.sql)
+    precisa: (u) => L.temModulo(u, 'pesquisa_site'),
     abrir: () => UI.ir(tela),
     contar,
   };

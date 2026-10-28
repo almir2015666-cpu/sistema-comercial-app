@@ -10,7 +10,7 @@
      do computador.
 
    Quem manda, lê a caixa e chama a IA é a orc-email, no servidor — o app
-   só pede. Mesmo visto do computador: Prospecção.
+   só pede. Visto próprio: Controle de e-mails.
    ===================================================================== */
 (() => {
   'use strict';
@@ -443,8 +443,8 @@
 
   MODULOS.emails = {
     chave: 'emails', nome: 'E-mails', sub: 'Prospecção: respostas e propostas', icone: ICONES.emails,
-    // o mesmo visto do computador: o Controle de e-mails é da Prospecção
-    precisa: (u) => L.temModulo(u, 'prospeccao'),
+    // visto próprio, o mesmo do computador (80-vistos-emails-e-pesquisa.sql)
+    precisa: (u) => L.temModulo(u, 'controle_emails'),
     abrir: () => UI.ir(tela),
     contar,
   };
