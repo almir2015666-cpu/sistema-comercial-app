@@ -125,6 +125,7 @@
               const partes = [];
               if (r.responderam?.length) partes.push(`${r.responderam.length} empresa(s) com mensagem nova`);
               if (r.voltaram?.length) partes.push(`${r.voltaram.length} e-mail(s) voltaram`);
+              for (const a of r.automaticas || []) if (a.indicados?.length) partes.push(`${a.empresa} mandou resposta automática indicando ${a.indicados.join(', ')} (anotado na observação)`);
               if (r.sem_dono?.length) partes.push(`chegou e-mail de ${r.sem_dono.join(', ')}, que não bate com nenhum envio`);
               toast(partes.join(' · ') || 'Nenhuma resposta nova.', partes.length ? 'ok' : 'info', 6000);
             } catch (e) { toast(e.message, 'err'); }
