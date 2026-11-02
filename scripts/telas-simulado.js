@@ -70,7 +70,9 @@ const TABELAS = {
     { id: 2, registro_id: 1, direcao: 'recebido', quando: '2026-10-27T15:00:00+00:00', de: 'joao@sodexo.com', texto: 'Temos interesse.' },
   ],
   orc_emails_rascunhos: [
-    { id: 9, titulo: 'GRUPO VERZANI', assunto: 'Proposta de Parceria | {empresa_nome}', corpo: '{saudacao}\n\nTexto para **{empresa_nome}**.',
+    // com a {segmentos}: desde a 2.6 só ela segura o rascunho de quem a IA
+    // ainda não identificou (o passo 24 confere o aviso)
+    { id: 9, titulo: 'GRUPO VERZANI', assunto: 'Proposta de Parceria | {empresa_nome}', corpo: '{saudacao}\n\nTexto para **{empresa_nome}**, que atua em {segmentos}.',
       registros: [2], anexos: [], criado_por_nome: 'Pessoa de Teste', atualizado_em: new Date().toISOString() },
   ],
   // a pesquisa do site: uma resposta ruim (o site manda "1 – Muito ruim")
@@ -96,7 +98,19 @@ async function simular(ctx) {
     if (url.pathname.startsWith('/auth/v1/user')) return json({ id: UID, aud: 'authenticated', role: 'authenticated', email: 'teste@x', factors: [] });
     if (url.pathname.startsWith('/auth/v1/factors')) return json({ totp: [], all: [] });
     if (url.pathname.startsWith('/auth/v1')) return json({});
-    if (url.pathname.startsWith('/functions/v1')) return json({});
+    if (url.pathname.startsWith('/functions/v1')) {
+      // a orc-email nova (02/11/2026): o "sugerir" devolve o `modo` e o
+      // texto, que diz o que recebeu — o passo confere que o pedido, o tom
+      // e o texto da caixa chegaram
+      let corpo = {};
+      try { corpo = JSON.parse(req.postData() || '{}'); } catch { /* vazio */ }
+      if (corpo.acao === 'sugerir') {
+        const texto = corpo.base ? `AJUSTADO [${corpo.ajuste}] ${corpo.base}` : `NOVO [${(corpo.tons || []).join(',') || 'livre'}] [${corpo.ajuste || ''}]`;
+        return json({ ok: true, modo: corpo.base ? 'ajustar' : corpo.ajuste ? 'pedido' : 'opcoes', sugestao_resposta: texto,
+          opcoes: [{ tom: 'x', titulo: 'X', texto }] });
+      }
+      return json({});
+    }
     if (url.pathname.startsWith('/storage/v1')) return json([]);
     if (url.pathname.startsWith('/rest/v1/rpc/')) return json(null);
     const tabela = url.pathname.replace('/rest/v1/', '');
@@ -151,6 +165,22 @@ PASSOS.push(['22-emails-responder', async (pg) => {
   await pg.waitForTimeout(900);
   const texto = await pg.locator('#er-texto').inputValue();
   if (!texto.includes('Prezado João')) throw new Error('a sugestão da IA não veio para a resposta');
+  // ✨ PEDIR À IA: o pedido e o tom vão para a orc-email...
+  await pg.locator('#er-pedido').fill('dizer que atendemos sábado');
+  await pg.locator('#er-tons .chip', { hasText: 'Cordial' }).click();
+  await pg.locator('#er-escrever').click();
+  await pg.waitForTimeout(900);
+  const escrito = await pg.locator('#er-texto').inputValue();
+  if (escrito !== 'NOVO [cordial] [dizer que atendemos sábado]') throw new Error(`escrever de novo não levou o pedido e o tom: "${escrito}"`);
+  // ...ajustar leva o texto da caixa...
+  await pg.locator('#er-pedido').fill('mais curta');
+  await pg.locator('#er-ajustar').click();
+  await pg.waitForTimeout(900);
+  const ajustado = await pg.locator('#er-texto').inputValue();
+  if (!ajustado.startsWith('AJUSTADO [mais curta] NOVO [cordial]')) throw new Error(`ajustar não levou o texto da caixa: "${ajustado}"`);
+  // ...e desfazer volta ao de antes
+  await pg.locator('#er-desfazer').click();
+  if (await pg.locator('#er-texto').inputValue() !== escrito) throw new Error('desfazer não voltou ao texto de antes');
 }]);
 PASSOS.push(['24-emails-rascunho', async (pg) => {
   await pg.evaluate(() => window.MODULOS.emails.abrir());
@@ -199,6 +229,8 @@ PASSOS.push(['21-cadastro-de-usuario', async (pg) => {
       await pg.waitForTimeout(800);
       await entrar(pg);
       await agir(pg);
+      // FOTOS=<pasta>: uma foto de cada passo, para conferir o desenho
+      if (process.env.FOTOS) await pg.screenshot({ path: path.join(process.env.FOTOS, `${nome}.png`) });
     } catch (e) { erros.push('PASSO: ' + String(e.message).split('\n')[0]); }
     let texto = '';
     try { texto = (await pg.locator('#palco').innerText()).replace(/\s+/g, ' ').trim(); } catch { /* morreu */ }

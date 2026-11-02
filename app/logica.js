@@ -793,6 +793,24 @@
     return !nos || chegou.slice(0, 19) > nos.slice(0, 19) ? 'nos' : 'empresa';
   };
 
+  // ✨ PEDIR À IA na resposta, como no computador (JanelaResponder e
+  // prospeccao_nucleo.EmailsProspeccao.sugerir). O tom é um só no celular;
+  // '' = "do seu jeito". Só o pedido, sem tom: uma versão que cumpre o
+  // pedido. Com a `base` (o texto da caixa) e o pedido: a IA AJUSTA esse
+  // texto, mexendo só no que foi pedido. Sem pedido nem tom: a sugestão
+  // única de sempre. `ajuste` é o nome que a orc-email lê desde 30/10.
+  L.TONS_RESPOSTA = [['', 'Do seu jeito'], ['assertiva', 'Assertiva'], ['enfatica', 'Enfática'],
+    ['cordial', 'Cordial'], ['curta', 'Curta'], ['consultiva', 'Consultiva'], ['objecao', 'Contornar objeção']];
+  L.corpoSugerir = (id, { pedido = '', tom = '', base = '' } = {}) => {
+    const p = String(pedido || '').trim().slice(0, 1000);
+    const t = L.TONS_RESPOSTA.some(([k]) => k && k === tom) ? tom : '';
+    const corpo = { acao: 'sugerir', id: Number(id) };
+    if (p || t) { corpo.tons = t ? [t] : []; corpo.ajuste = p; }
+    const b = String(base || '').trim();
+    if (p && b) corpo.base = b.slice(0, 8000);
+    return corpo;
+  };
+
   L.emailsDe = (texto) => {
     const saida = [];
     for (const p of String(texto || '').split(/[,;\s]+/)) {

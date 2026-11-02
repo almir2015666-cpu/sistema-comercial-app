@@ -306,6 +306,24 @@ test('e-mails: de quem é a vez na conversa', () => {
   assert.equal(L.vezDeQuem({ respondido_em: '2026-10-27T17:00:00+00:00', respondemos_em: '2026-10-27T16:00:00+00:00' }), 'nos');
 });
 
+test('pedir a IA na resposta: o mesmo pedido do computador a orc-email', () => {
+  // sem pedido nem tom: a sugestao unica de sempre
+  assert.deepEqual(L.corpoSugerir(5), { acao: 'sugerir', id: 5 });
+  // so o pedido: uma versao "do seu jeito"
+  assert.deepEqual(L.corpoSugerir(5, { pedido: ' dizer que atendemos sabado ' }),
+    { acao: 'sugerir', id: 5, tons: [], ajuste: 'dizer que atendemos sabado' });
+  // tom escolhido, com e sem pedido; tom que nao existe nao vai
+  assert.deepEqual(L.corpoSugerir(5, { tom: 'cordial', pedido: 'mais curta' }),
+    { acao: 'sugerir', id: 5, tons: ['cordial'], ajuste: 'mais curta' });
+  assert.deepEqual(L.corpoSugerir(5, { tom: 'cordial' }), { acao: 'sugerir', id: 5, tons: ['cordial'], ajuste: '' });
+  assert.deepEqual(L.corpoSugerir(5, { tom: 'grosseira' }), { acao: 'sugerir', id: 5 });
+  // AJUSTAR: o texto da caixa vai junto do pedido; sem pedido, nao sai do aparelho
+  assert.equal(L.corpoSugerir(5, { pedido: 'mais curta', base: '  Prezada Ana,\n\nTexto.  ' }).base, 'Prezada Ana,\n\nTexto.');
+  assert.equal('base' in L.corpoSugerir(5, { tom: 'curta', base: 'Prezada Ana' }), false);
+  // os tons sao os mesmos do computador (prospeccao_nucleo.TONS_RESPOSTA), mais o "do seu jeito"
+  assert.deepEqual(L.TONS_RESPOSTA.map(([k]) => k), ['', 'assertiva', 'enfatica', 'cordial', 'curta', 'consultiva', 'objecao']);
+});
+
 test('pesquisa: "1 – Muito ruim" é nota 1, e vira alerta (retornos_nucleo)', () => {
   const r = { formulario: 'pesquisa', respostas: [
     { campo: 'experiencia', valor: 'Insatisfatória' }, { campo: 'notaEspera', valor: '1 – Muito ruim' },

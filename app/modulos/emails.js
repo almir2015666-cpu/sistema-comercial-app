@@ -201,29 +201,61 @@
   }
 
   /* -------------------------------------------- responder a empresa */
+  // ✨ PEDIR À IA: a resposta chega pronta, mas quem conhece o cliente é a
+  // equipe. Ela escreve o que a resposta precisa dizer, ou de que jeito, e
+  // escolhe: escrever de novo (no tom escolhido, cumprindo o pedido) ou
+  // ajustar o texto que já está na caixa. "Desfazer" volta ao texto de antes
+  // da IA — ajuste que ficou pior não pode custar o texto bom.
   async function responder(r, depois) {
     const base = r.resposta_assunto || 'Proposta de parceria';
+    let tom = '';
     const f = UI.folha(`
       <div id="er-conversa" class="text-muted pequeno">lendo a conversa…</div>
       <form id="er-form" class="mt16">
         <div class="fg"><label>Assunto</label><input id="er-assunto" value="${esc(/^re:/i.test(base) ? base : `Re: ${base}`)}"></div>
+        <div class="fg"><label>✨ Pedir à IA <span class="text-muted">(o que a resposta precisa dizer, ou de que jeito)</span></label>
+          <textarea id="er-pedido" rows="3" maxlength="1000" placeholder="Ex.: dizer que atendemos aos sábados; propor reunião dia 17/11 às 9h; mais curta e mais calorosa"></textarea>
+          <div class="chips mt8" id="er-tons">${L.TONS_RESPOSTA.map(([k, rot]) => `<button type="button" class="chip ${k === tom ? 'on' : ''}" data-tom="${esc(k)}">${esc(rot)}</button>`).join('')}</div>
+          <div class="acoes mt8"><button class="btn btn-ghost" id="er-escrever" type="button">✨ Escrever de novo</button><button class="btn btn-ghost" id="er-ajustar" type="button">✏ Ajustar o texto</button><button class="btn btn-ghost" id="er-desfazer" type="button" hidden>↩ Desfazer</button></div></div>
         <div class="fg"><label>Sua resposta <span class="text-muted">(sugerida pela IA — revise)</span></label>
           <textarea id="er-texto" rows="10" maxlength="8000">${esc(r.sugestao_resposta || '')}</textarea>
           <div class="dica">Sai da caixa da prospecção para ${esc(r.resposta_de || '?')}, na mesma conversa.</div></div>
-        <div class="modal-ft"><button class="btn btn-ghost" id="er-sugerir" type="button">Sugerir de novo (IA)</button><button class="btn btn-ok" type="submit">Enviar resposta</button></div>
+        <div class="modal-ft"><button class="btn btn-ok" type="submit">Enviar resposta</button></div>
       </form>`, { titulo: `Responder ${r.empresa || r.contato || ''}` });
     lerConversa(r.id).then((msgs) => { const c = $('#er-conversa', f.caixa); if (c) { c.className = ''; c.innerHTML = htmlConversa(msgs, r); } });
-    const sugerir = async () => {
-      UI.carregando(true, 'A IA está escrevendo a sugestão…');
+    $$('#er-tons .chip', f.caixa).forEach((b) => {
+      b.onclick = () => { tom = b.dataset.tom; $$('#er-tons .chip', f.caixa).forEach((x) => x.classList.toggle('on', x === b)); };
+    });
+    const caixa = () => $('#er-texto', f.caixa);
+    let anterior = null;
+    const sugerir = async (ajustar = false) => {
+      const pedido = $('#er-pedido', f.caixa).value.trim();
+      const atual = caixa().value.trim();
+      if (ajustar && !pedido) { $('#er-pedido', f.caixa).focus(); return toast('Escreva em "Pedir à IA" o que mudar no texto (ex.: mais curta; acrescente que atendemos sábado).', 'err', 5000); }
+      if (ajustar && !atual) return toast('A caixa da resposta está vazia: use "Escrever de novo".', 'err');
+      UI.carregando(true, ajustar ? 'A IA está ajustando o texto…' : 'A IA está escrevendo a resposta…');
       try {
-        const s = await funcaoEmail({ acao: 'sugerir', id: r.id });
-        Object.assign(r, s);
-        $('#er-texto', f.caixa).value = s.sugestao_resposta || '';
-        toast('Sugestão pronta. Revise antes de enviar.', 'ok');
+        const s = await funcaoEmail(L.corpoSugerir(r.id, { pedido, tom, base: ajustar ? atual : '' }));
+        const novo = s.opcoes?.[0]?.texto || s.sugestao_resposta || '';
+        if (!novo) throw new Error('A IA voltou sem o texto.');
+        anterior = caixa().value;
+        caixa().value = novo;
+        $('#er-desfazer', f.caixa).hidden = false;
+        const { opcoes: _o, modo, ...campos } = s;
+        Object.assign(r, campos);
+        // a orc-email de antes de 02/11 não devolve `modo` e ignora o pedido
+        if (pedido && !modo) toast('A função da nuvem ainda é a antiga e não seguiu o seu pedido. Avise quem publica a orc-email.', 'err', 6000);
+        else toast(ajustar ? 'Texto ajustado. Revise antes de enviar.' : 'Resposta pronta. Revise antes de enviar.', 'ok');
       } catch (e) { toast(e.message, 'err'); }
       finally { UI.carregando(false); }
     };
-    $('#er-sugerir', f.caixa).onclick = sugerir;
+    $('#er-escrever', f.caixa).onclick = () => sugerir(false);
+    $('#er-ajustar', f.caixa).onclick = () => sugerir(true);
+    $('#er-desfazer', f.caixa).onclick = () => {
+      if (anterior === null) return;
+      caixa().value = anterior; anterior = null;
+      $('#er-desfazer', f.caixa).hidden = true;
+    };
     if (!r.sugestao_resposta) sugerir();
     $('#er-form', f.caixa).onsubmit = async (e) => {
       e.preventDefault();
