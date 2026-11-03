@@ -23,7 +23,7 @@
   const T = 'orc_caixa_mensagens';
   const COLUNAS = 'id,quando,de,de_nome,para,cc,assunto,pasta,interno,automatico,encaminhamento,categoria,resumo,empresa,' +
     'prioridade,tom,precisa_resposta,classificado_em,categoria_manual,precisa_manual,corrigido_por,respondido_em,' +
-    'resposta_id,resposta_de,resposta_para,encaminhado,avaliacao_nota,avaliacao';
+    'resposta_id,resposta_de,resposta_para,encaminhado,avaliacao_nota,avaliacao,anexos';
   const SELO = { 'Sem resposta': 'b-4', 'Respondido': 'b-ok', 'Encaminhado': 'b-3', 'Não precisa': 'b-gray' };
   const NOTA = { Boa: 'b-ok', Regular: 'b-4', Fraca: 'b-err' };
   const VERMELHO = 'color:var(--err, #c0392b)';
@@ -32,13 +32,18 @@
   const LER = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 4v5h-5"/></svg>';
   const pct = (v) => (v == null ? '—' : `${v}%`);
 
-  const listar = (periodo) => {
+  const listar = async (periodo) => {
     const [de, ate] = L.cxIntervalo(periodo);
-    return N.tudo((ini, fim) => {
-      let q = N.sb.from(T).select(COLUNAS).eq('sentido', 'recebido');
+    const pedir = (colunas) => N.tudo((ini, fim) => {
+      let q = N.sb.from(T).select(colunas).eq('sentido', 'recebido');
       if (de) q = q.gte('quando', L.cxUtc(de)).lt('quando', L.cxUtc(ate));
       return q.order('quando', { ascending: false }).range(ini, fim);
     }, 30000);
+    try { return await pedir(COLUNAS); } catch (e) {
+      // sem o 83 rodado, a coluna dos anexos não existe: a lista vem sem
+      if (!/anexos/.test(String(e?.message || ''))) throw e;
+      return pedir(COLUNAS.replace(',anexos', ''));
+    }
   };
 
   // uma volta de leitura da caixa, no servidor (até uns 2 minutos)
@@ -95,7 +100,7 @@
                   : [L.CX_RESPONDIDO, L.CX_ENCAMINHADO].includes(s) ? L.duracaoUtil(L.cxTempoResposta(r)) : '';
                 const quem = [L.cxEmpresa(r), L.cxQuem(r)].filter(Boolean).join(' · ');
                 return `<button class="linha" type="button" data-id="${r.id}">
-                  <div class="linha__corpo"><div class="linha__titulo"><span class="t">${r.prioridade === 'Urgente' ? '⚠ ' : ''}${esc(r.assunto || '(sem assunto)')}</span><span class="badge ${atraso ? 'b-err' : SELO[s] || 'b-gray'}">${esc(s)}</span></div>
+                  <div class="linha__corpo"><div class="linha__titulo"><span class="t">${r.prioridade === 'Urgente' ? '⚠ ' : ''}${(L.anexosDoEmail(r) || []).length ? '📎 ' : ''}${esc(r.assunto || '(sem assunto)')}</span><span class="badge ${atraso ? 'b-err' : SELO[s] || 'b-gray'}">${esc(s)}</span></div>
                   <div class="linha__sub">${esc(UI.quando(r.quando))} · ${esc(quem)}</div>
                   <div class="linha__sub" style="${atraso ? VERMELHO : ''}">${esc(L.cxCategoria(r))}${tempo ? ` · ${esc(tempo)}` : ''}${r.avaliacao_nota ? ` · resposta ${esc(r.avaliacao_nota.toLowerCase())}` : ''}</div></div>${ICONES.seta}</button>`;
               }).join('')}</div>
@@ -182,6 +187,7 @@
       ${r.resumo ? `<div class="mt8">Resumo da IA: ${esc(r.resumo)}</div>` : ''}
       <div class="pequeno text-muted mt16" style="font-weight:700">O QUE CHEGOU</div>
       <div id="cx-texto" class="mt8" style="white-space:pre-wrap">carregando…</div>
+      <div id="cx-anexos"></div>
       <div class="pequeno text-muted mt16" style="font-weight:700">A RESPOSTA DA EQUIPE</div>
       ${resposta}
       <form id="cx-corr" class="mt16">
@@ -192,6 +198,8 @@
         <div class="modal-ft"><button class="btn btn-ok" type="submit">Salvar</button></div>
       </form>`, { titulo: r.assunto || '(sem assunto)' });
 
+    // os arquivos que vieram no e-mail: um toque abre
+    UI.anexosDoEmail($('#cx-anexos', f.caixa), r, 'comercial');
     // os textos vêm um a um: a lista chega sem eles (são o que pesa)
     (async () => {
       try {

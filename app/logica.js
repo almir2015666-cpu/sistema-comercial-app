@@ -1105,6 +1105,17 @@
   // meia-noite na Bahia, escrita em UTC
   L.cxUtc = (dia) => new Date(Date.parse(`${dia}T00:00:00Z`) - BAHIA_MS).toISOString();
 
+  // OS ARQUIVOS DE UM E-MAIL (83-anexos-dos-emails.sql), na Caixa e na
+  // conversa da prospecção: undefined = a coluna não existe (o 83 não
+  // rodou); null = ainda não procurada (e-mail lido antes do 83); [] = sem
+  // anexo. Sem `parte` é o que NÓS mandamos: só o nome.
+  L.anexosDoEmail = (r) => {
+    if (!r || !('anexos' in r)) return undefined;
+    if (r.anexos == null) return null;
+    return (r.anexos || []).filter(Boolean).map((a) => ({
+      parte: a.p || '', nome: a.n || 'anexo', tipo: a.t || '', tamanho: Number(a.b) || 0 }));
+  };
+
   raiz.L = L;
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
 })(typeof window !== 'undefined' ? window : globalThis);

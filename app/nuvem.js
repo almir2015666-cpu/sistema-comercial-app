@@ -279,6 +279,18 @@ window.N = (() => {
     return data.signedUrl;
   }
 
+  // O ARQUIVO QUE VEIO NUM E-MAIL (orc-email, ação "anexo"): sem `parte`, a
+  // lista; com `parte`, o link do arquivo, que vale 15 minutos. `caixa` é
+  // 'comercial' (Caixa do Comercial) ou 'prospeccao' (Controle de e-mails).
+  async function anexoDoEmail(caixa, id, parte = '') {
+    const { data, error } = await sb.functions.invoke('orc-email', {
+      body: { acao: 'anexo', caixa, id: Number(id), ...(parte ? { parte } : {}) } });
+    if (error) throw new Error((await lerErroFuncao(error)) || 'A função do servidor não respondeu.');
+    if (data?.error) throw new Error(data.error);
+    if (!data?.ok) throw new Error('O servidor ainda não abre os anexos: publique a orc-email nova.');
+    return data;
+  }
+
   const hex12 = () => {
     const a = new Uint8Array(6); crypto.getRandomValues(a);
     return [...a].map((b) => b.toString(16).padStart(2, '0')).join('');
@@ -287,5 +299,5 @@ window.N = (() => {
   return { sb, estado, PAGINA, recado, lerErroFuncao, onde, aparelho, registrar,
     entrar, completarSegundoFator, restaurar, recarregarUsuario, trocarSenha, sair,
     fatores, ligarSegundoFator, confirmarSegundoFator, desligarSegundoFator, nivelDaSessao,
-    tudo, mudar, apagar, funcao, subir, urlAssinada, hex12 };
+    tudo, mudar, apagar, funcao, subir, urlAssinada, hex12, anexoDoEmail };
 })();

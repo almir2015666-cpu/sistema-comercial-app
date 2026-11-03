@@ -425,3 +425,12 @@ test('caixa: situação, filtros e números como no caixa_nucleo', () => {
   assert.equal(L.cxUtc('2026-11-03'), '2026-11-03T03:00:00.000Z');
   assert.ok(L.BOTOES.some(([k2]) => k2 === 'caixa_comercial'));
 });
+
+test('anexos do e-mail: sem a coluna, ainda não procurados, nenhum, e a lista', () => {
+  assert.equal(L.anexosDoEmail({ id: 1 }), undefined);          // o 83 não rodou
+  assert.equal(L.anexosDoEmail({ id: 1, anexos: null }), null);  // lido antes do 83
+  assert.deepEqual(L.anexosDoEmail({ id: 1, anexos: [] }), []);
+  assert.deepEqual(L.anexosDoEmail({ anexos: [{ p: '2', n: 'ASO.pdf', t: 'application/pdf', b: 2048 }, { p: '', n: 'proposta.pdf' }] }),
+    [{ parte: '2', nome: 'ASO.pdf', tipo: 'application/pdf', tamanho: 2048 },
+     { parte: '', nome: 'proposta.pdf', tipo: '', tamanho: 0 }]);
+});

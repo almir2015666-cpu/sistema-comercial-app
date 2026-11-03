@@ -157,12 +157,23 @@
       return `<div class="mt12"><div class="pequeno" style="color:var(--navy);font-weight:700">Empresa (${esc(r.resposta_de)})</div>
         <div style="white-space:pre-wrap;line-height:1.5">${esc(r.resposta_texto || '(o texto da resposta não foi lido)')}</div></div>`;
     }
-    return msgs.map((m) => {
+    return msgs.map((m, i) => {
       const nos = m.direcao === 'enviado';
       return `<div class="mt12" style="${nos ? 'margin-left:24px;opacity:.85' : ''}">
         <div class="pequeno" style="font-weight:700;color:${nos ? 'var(--ok, #1f8a4c)' : 'var(--navy)'}">${nos ? `Nós${m.enviado_por ? ` (${esc(L.primeiroNome(m.enviado_por))})` : ''}` : `Empresa (${esc(m.de || '?')})`} · ${esc(L.dataHoraBr(m.quando))}</div>
-        <div style="white-space:pre-wrap;line-height:1.5">${esc(m.texto || '')}</div></div>`;
+        <div style="white-space:pre-wrap;line-height:1.5">${esc(m.texto || '')}</div>
+        <div class="cv-anexos" data-i="${i}"></div></div>`;
     }).join('');
+  }
+
+  // OS ARQUIVOS DE CADA MENSAGEM (83-anexos-dos-emails.sql): o que a
+  // empresa mandou abre num toque; o que nós mandamos aparece pelo nome.
+  // A mensagem nossa sem a lista não tem o que procurar na caixa.
+  function ligarAnexosDaConversa(el, msgs) {
+    $$('.cv-anexos', el).forEach((d) => {
+      const m = msgs[Number(d.dataset.i)];
+      if (m && !(m.direcao === 'enviado' && m.anexos == null)) UI.anexosDoEmail(d, m, 'prospeccao');
+    });
   }
 
   async function detalhe(r, depois) {
@@ -185,7 +196,7 @@
       </div>
       <div class="mt16"><div class="pequeno text-muted" style="font-weight:700">CONVERSA</div><div id="ed-conversa" class="text-muted pequeno">lendo…</div></div>`,
     { titulo: nomeEmpresa(r.empresa) || r.contato || 'Empresa' });
-    lerConversa(r.id).then((msgs) => { const c = $('#ed-conversa', f.caixa); if (c) { c.className = ''; c.innerHTML = htmlConversa(msgs, r); } });
+    lerConversa(r.id).then((msgs) => { const c = $('#ed-conversa', f.caixa); if (c) { c.className = ''; c.innerHTML = htmlConversa(msgs, r); ligarAnexosDaConversa(c, msgs); } });
     const on = (id, fn) => { const b = $(id, f.caixa); if (b) b.onclick = fn; };
     on('#ed-responder', () => { f.fechar(); responder(r, depois); });
     on('#ed-proposta', () => { f.fechar(); enviarProposta(r, depois); });
@@ -255,7 +266,7 @@
         desenharAnexos();
       } catch (e) { toast(e.message, 'err'); }
     };
-    lerConversa(r.id).then((msgs) => { const c = $('#er-conversa', f.caixa); if (c) { c.className = ''; c.innerHTML = htmlConversa(msgs, r); } });
+    lerConversa(r.id).then((msgs) => { const c = $('#er-conversa', f.caixa); if (c) { c.className = ''; c.innerHTML = htmlConversa(msgs, r); ligarAnexosDaConversa(c, msgs); } });
     $$('#er-tons .chip', f.caixa).forEach((b) => {
       b.onclick = () => { tom = b.dataset.tom; $$('#er-tons .chip', f.caixa).forEach((x) => x.classList.toggle('on', x === b)); };
     });

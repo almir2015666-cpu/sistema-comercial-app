@@ -67,7 +67,8 @@ const TABELAS = {
   ],
   orc_emails_conversa: [
     { id: 1, registro_id: 1, direcao: 'enviado', quando: '2026-10-27T12:00:00+00:00', texto: 'Proposta de parceria…', enviado_por: 'Pessoa de Teste' },
-    { id: 2, registro_id: 1, direcao: 'recebido', quando: '2026-10-27T15:00:00+00:00', de: 'joao@sodexo.com', texto: 'Temos interesse.' },
+    { id: 2, registro_id: 1, direcao: 'recebido', quando: '2026-10-27T15:00:00+00:00', de: 'joao@sodexo.com', texto: 'Temos interesse.',
+      message_id: '<m2@sodexo.com>', anexos: [{ p: '2', n: 'Ficha de cadastro.xlsx', t: 'application/vnd.ms-excel', b: 30000 }] },
   ],
   orc_emails_rascunhos: [
     // com a {segmentos}: desde a 2.6 só ela segura o rascunho de quem a IA
@@ -95,12 +96,14 @@ const TABELAS = {
       pasta: 'BETA', categoria: 'Reclamação', prioridade: 'Urgente', tom: 'Insatisfeito', precisa_resposta: true,
       classificado_em: new Date().toISOString(), interno: false, automatico: false, resposta_id: '<r2@cmh>',
       respondido_em: '2026-11-03T13:40:00+00:00', resposta_de: 'comercial@medicinahumana.com.br', resposta_para: 'dp@beta.com',
-      avaliacao_nota: 'Boa', avaliacao: 'Pediu desculpas e deu o prazo.', texto: 'O ASO do João está atrasado.' },
+      avaliacao_nota: 'Boa', avaliacao: 'Pediu desculpas e deu o prazo.', texto: 'O ASO do João está atrasado.',
+      anexos: [{ p: '2', n: 'ASO João.pdf', t: 'application/pdf', b: 160000 }] },
   ],
   orc_caixa_estado: [{ inicio: '2026-10-01', lido_em: new Date().toISOString() }],
 };
 
 const RESPOSTAS_ENVIADAS = [];
+const ANEXOS_PEDIDOS = [];
 
 async function simular(ctx) {
   await ctx.route(/supabase\.co/, async (rota) => {
@@ -127,7 +130,12 @@ async function simular(ctx) {
       }
       // a orc-email nova sabe anexar na resposta; o que a resposta levou
       // fica guardado para o passo conferir
-      if (corpo.acao === 'tipos') return json({ ok: true, acoes: ['responder', 'responder_anexos'] });
+      if (corpo.acao === 'tipos') return json({ ok: true, acoes: ['responder', 'responder_anexos', 'anexo'] });
+      // o arquivo de um e-mail: o pedido fica guardado para o passo conferir
+      if (corpo.acao === 'anexo') {
+        ANEXOS_PEDIDOS.push(corpo);
+        return json({ ok: true, url: 'about:blank', nome: 'arquivo', tipo: 'application/pdf' });
+      }
       if (corpo.acao === 'responder') {
         RESPOSTAS_ENVIADAS.push(corpo);
         return json({ ok: true, para: 'joao@sodexo.com', anexos: (corpo.anexos || []).length });
@@ -190,6 +198,8 @@ PASSOS.push(['22-emails-responder', async (pg) => {
   await pg.waitForTimeout(900);
   const ficha = await pg.locator('#folha-caixa').innerText();
   if (!ficha.includes('Temos interesse')) throw new Error('a conversa não apareceu na ficha');
+  // 📎 o arquivo que a empresa mandou aparece na conversa
+  if (!ficha.includes('Ficha de cadastro.xlsx')) throw new Error('o anexo da empresa não apareceu na conversa');
   await pg.locator('#ed-responder').click();
   await pg.waitForTimeout(900);
   const texto = await pg.locator('#er-texto').inputValue();
@@ -258,6 +268,15 @@ PASSOS.push(['25-caixa-detalhe', async (pg) => {
   const ficha = await pg.locator('#folha-caixa').innerText();
   if (!ficha.includes('levou 40 min de expediente')) throw new Error(`o tempo de resposta não veio na ficha: "${ficha.slice(0, 300)}"`);
   if (!ficha.includes('Pediu desculpas')) throw new Error('a avaliação da IA não veio na ficha');
+  // 📎 o arquivo que veio no e-mail: aparece e o toque pede à orc-email
+  if (!ficha.includes('ASO João.pdf')) throw new Error('o anexo não apareceu na ficha da Caixa');
+  const antesAnexo = ANEXOS_PEDIDOS.length;
+  await pg.locator('#cx-anexos button').first().click();
+  await pg.waitForTimeout(700);
+  const pedido = ANEXOS_PEDIDOS[antesAnexo];
+  if (!pedido || pedido.caixa !== 'comercial' || pedido.parte !== '2' || pedido.id !== 2) {
+    throw new Error(`o toque no anexo não pediu o arquivo certo: ${JSON.stringify(pedido || null)}`);
+  }
   await pg.locator('#cx-cat').selectOption('Financeiro');
   await pg.locator('#cx-corr button[type=submit]').click();
   await pg.waitForTimeout(700);

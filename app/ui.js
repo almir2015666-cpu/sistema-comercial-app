@@ -218,6 +218,41 @@ window.UI = (() => {
     window.open(url, '_blank');
   }
 
+  // OS ARQUIVOS DE UM E-MAIL, num elemento (Caixa do Comercial e conversa
+  // da prospecção): os que vieram abrem num toque, no visualizador do
+  // aparelho; os que nós mandamos aparecem só pelo nome. A lista ainda não
+  // procurada (e-mail lido antes do 83) é procurada uma vez.
+  function anexosDoEmail(el, linha, caixa) {
+    if (!el) return;
+    const lista = L.anexosDoEmail(linha);
+    if (lista === undefined) { el.innerHTML = ''; return; }
+    if (lista === null) {
+      el.innerHTML = '<div class="pequeno text-muted mt8">procurando os anexos…</div>';
+      if (linha._procurando) return;
+      linha._procurando = true;
+      N.anexoDoEmail(caixa, linha.id).then((d) => {
+        linha.anexos = (d.anexos || []).map((a) => ({ p: a.parte, n: a.nome, t: a.tipo, b: a.tamanho }));
+        anexosDoEmail(el, linha, caixa);
+      }).catch((e) => {
+        linha.anexos = [];                // não fica procurando para sempre
+        el.innerHTML = `<div class="pequeno text-muted mt8">${esc(e.message)}</div>`;
+      });
+      return;
+    }
+    el.innerHTML = lista.map((a, i) => (a.parte
+      ? `<button class="btn btn-ghost mt8 w-full" type="button" data-i="${i}" style="justify-content:flex-start;text-align:left">📎 ${esc(a.nome)} <span class="text-muted">(${esc(L.tamanhoLegivel(a.tamanho))})</span></button>`
+      : `<div class="pequeno text-muted mt8">📎 ${esc(a.nome)} — enviado</div>`)).join('');
+    $$('button[data-i]', el).forEach((b) => {
+      b.onclick = async () => {
+        const a = lista[Number(b.dataset.i)];
+        carregando(true, `Abrindo ${a.nome}…`);
+        try { await abrirFora((await N.anexoDoEmail(caixa, linha.id, a.parte)).url); }
+        catch (e) { toast(e.message, 'err', 5000); }
+        finally { carregando(false); }
+      };
+    });
+  }
+
   function temaAtual() { return document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light'; }
   function trocarTema() {
     const novo = temaAtual() === 'dark' ? 'light' : 'dark';
@@ -234,5 +269,5 @@ window.UI = (() => {
 
   return { esc, $, $$, esperar, toast, carregando, folha, fecharFolha, confirmar, perguntar,
     ir, raiz, voltar, redesenhar, telaAtual, montarAbas, badgeAba, ICONES, avatar, vazio, botaoTopo,
-    quando, diaPorExtenso, escolherArquivo, abrirFora, temaAtual, trocarTema, opcoes };
+    quando, diaPorExtenso, escolherArquivo, abrirFora, temaAtual, trocarTema, opcoes, anexosDoEmail };
 })();
