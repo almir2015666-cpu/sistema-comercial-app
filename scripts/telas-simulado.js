@@ -84,7 +84,23 @@ const TABELAS = {
     { id: 2, formulario: 'ouvidoria', situacao: 'Em andamento', nome: 'Maria', assunto: 'Reclamação', mensagem: 'Demorou muito.',
       recebido_em: new Date().toISOString(), respostas: [] },
   ],
+  // a Caixa do Comercial: um pedido sem resposta há dois dias (atrasado) e
+  // uma reclamação respondida em 40 min, com a resposta e a avaliação
+  orc_caixa_mensagens: [
+    { id: 1, sentido: 'recebido', quando: new Date(Date.now() - 2 * 86400000).toISOString(), de: 'rh@alfa.com.br', de_nome: 'Ana',
+      assunto: 'Orçamento de admissionais', pasta: 'ALFA', categoria: 'Pedido de orçamento', empresa: 'ALFA', prioridade: 'Normal',
+      tom: 'Neutro', precisa_resposta: true, classificado_em: new Date().toISOString(), interno: false, automatico: false,
+      texto: 'Bom dia, preciso do valor para 30 admissionais.' },
+    { id: 2, sentido: 'recebido', quando: '2026-11-03T13:00:00+00:00', de: 'dp@beta.com', de_nome: 'Bruno', assunto: 'Atraso no ASO',
+      pasta: 'BETA', categoria: 'Reclamação', prioridade: 'Urgente', tom: 'Insatisfeito', precisa_resposta: true,
+      classificado_em: new Date().toISOString(), interno: false, automatico: false, resposta_id: '<r2@cmh>',
+      respondido_em: '2026-11-03T13:40:00+00:00', resposta_de: 'comercial@medicinahumana.com.br', resposta_para: 'dp@beta.com',
+      avaliacao_nota: 'Boa', avaliacao: 'Pediu desculpas e deu o prazo.', texto: 'O ASO do João está atrasado.' },
+  ],
+  orc_caixa_estado: [{ inicio: '2026-10-01', lido_em: new Date().toISOString() }],
 };
+
+const RESPOSTAS_ENVIADAS = [];
 
 async function simular(ctx) {
   await ctx.route(/supabase\.co/, async (rota) => {
@@ -109,6 +125,19 @@ async function simular(ctx) {
         return json({ ok: true, modo: corpo.base ? 'ajustar' : corpo.ajuste ? 'pedido' : 'opcoes', sugestao_resposta: texto,
           opcoes: [{ tom: 'x', titulo: 'X', texto }] });
       }
+      // a orc-email nova sabe anexar na resposta; o que a resposta levou
+      // fica guardado para o passo conferir
+      if (corpo.acao === 'tipos') return json({ ok: true, acoes: ['responder', 'responder_anexos'] });
+      if (corpo.acao === 'responder') {
+        RESPOSTAS_ENVIADAS.push(corpo);
+        return json({ ok: true, para: 'joao@sodexo.com', anexos: (corpo.anexos || []).length });
+      }
+      // a leitura da Caixa do Comercial: nada novo, a caixa em dia
+      if (corpo.acao === 'caixa') {
+        return json({ ok: true, ocupado: false, lido_em: new Date().toISOString(), inicio: '2026-10-01', novas: 0,
+          pareadas: 0, classificadas: 0, avaliadas: 0, pastas_a_iniciar: 0, pastas_com_novidade: 0,
+          faltam_classificar: 0, faltam_avaliar: 0, erro: '', aviso: '' });
+      }
       return json({});
     }
     if (url.pathname.startsWith('/storage/v1')) return json([]);
@@ -123,7 +152,7 @@ async function simular(ctx) {
 }
 
 // ------------------------------------------------------------- os passos
-const MODULOS = ['chat', 'tarefas', 'compromissos', 'chamados', 'emails', 'pesquisa', 'almoxarifado', 'conferencia', 'homologacao', 'financeiro', 'receber', 'diario', 'admin'];
+const MODULOS = ['chat', 'tarefas', 'compromissos', 'chamados', 'emails', 'pesquisa', 'caixa', 'almoxarifado', 'conferencia', 'homologacao', 'financeiro', 'receber', 'diario', 'admin'];
 
 async function entrar(pg) {
   await pg.locator('#usuario').fill('teste');
@@ -181,6 +210,21 @@ PASSOS.push(['22-emails-responder', async (pg) => {
   // ...e desfazer volta ao de antes
   await pg.locator('#er-desfazer').click();
   if (await pg.locator('#er-texto').inputValue() !== escrito) throw new Error('desfazer não voltou ao texto de antes');
+  // 📎 O ANEXO DA RESPOSTA: entra na lista, vai junto e chega à orc-email
+  const [escolha] = await Promise.all([pg.waitForEvent('filechooser'), pg.locator('#er-anexar').click()]);
+  await escolha.setFiles({ name: 'proposta.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4 teste') });
+  await pg.waitForTimeout(400);
+  if (!(await pg.locator('#er-anexos').innerText()).includes('proposta.pdf')) throw new Error('o anexo não apareceu na lista da resposta');
+  const antes = RESPOSTAS_ENVIADAS.length;
+  await pg.locator('#er-form button[type=submit]').click();
+  await pg.waitForTimeout(400);
+  await pg.locator('#cf-sim').last().click();
+  await pg.waitForTimeout(1500);
+  const foi = RESPOSTAS_ENVIADAS[antes];
+  if (!foi) throw new Error(`a resposta não foi enviada (aviso: "${await pg.locator('#toast').innerText()}")`);
+  if (!(foi.anexos || []).some((a) => a.nome === 'proposta.pdf' && a.base64 && a.tipo === 'application/pdf')) {
+    throw new Error(`o anexo não foi junto com a resposta: ${JSON.stringify(foi.anexos || null).slice(0, 120)}`);
+  }
 }]);
 PASSOS.push(['24-emails-rascunho', async (pg) => {
   await pg.evaluate(() => window.MODULOS.emails.abrir());
@@ -201,6 +245,26 @@ PASSOS.push(['23-pesquisa-detalhe', async (pg) => {
   await pg.locator('#palco .linha').first().click();
   await pg.waitForTimeout(700);
 }]);
+// a Caixa do Comercial: o atrasado aparece, o detalhe traz a resposta e a
+// avaliação, e a correção da categoria grava
+PASSOS.push(['25-caixa-detalhe', async (pg) => {
+  await pg.evaluate(() => window.MODULOS.caixa.abrir());
+  await pg.waitForTimeout(1500);
+  const lista = await pg.locator('#palco').innerText();
+  if (!lista.includes('Orçamento de admissionais')) throw new Error('o e-mail sem resposta não apareceu na lista');
+  if (!/Sem resposta/.test(lista)) throw new Error('o pedido sem resposta não aparece como "Sem resposta"');
+  await pg.locator('#palco .linha', { hasText: 'Atraso no ASO' }).click();
+  await pg.waitForTimeout(900);
+  const ficha = await pg.locator('#folha-caixa').innerText();
+  if (!ficha.includes('levou 40 min de expediente')) throw new Error(`o tempo de resposta não veio na ficha: "${ficha.slice(0, 300)}"`);
+  if (!ficha.includes('Pediu desculpas')) throw new Error('a avaliação da IA não veio na ficha');
+  await pg.locator('#cx-cat').selectOption('Financeiro');
+  await pg.locator('#cx-corr button[type=submit]').click();
+  await pg.waitForTimeout(700);
+  // a aba das categorias também desenha
+  await pg.locator('#palco .tab', { hasText: 'Categorias' }).click();
+  await pg.waitForTimeout(500);
+}]);
 PASSOS.push(['21-cadastro-de-usuario', async (pg) => {
   await pg.evaluate(() => window.MODULOS.admin.abrir());
   await pg.waitForTimeout(900);
@@ -208,7 +272,7 @@ PASSOS.push(['21-cadastro-de-usuario', async (pg) => {
   if (await usuarios.count()) { await usuarios.first().click(); await pg.waitForTimeout(900); await pg.locator('#topo-dir button').first().click(); await pg.waitForTimeout(700); }
   // o cadastro tem de oferecer as permissões novas do computador
   const ficha = await pg.locator('#folha-caixa').innerText();
-  for (const t of ['Almoxarifado', 'Homologação', 'Solicitar material', 'Reclamações', 'Controle de e-mails', 'Pesquisa e Ouvidoria', 'Almoxarifado: Entregar pedidos', 'Financeiro: Dar baixa', 'Contabilidade']) {
+  for (const t of ['Almoxarifado', 'Homologação', 'Solicitar material', 'Reclamações', 'Controle de e-mails', 'Pesquisa e Ouvidoria', 'Caixa do Comercial', 'Almoxarifado: Entregar pedidos', 'Financeiro: Dar baixa', 'Contabilidade']) {
     if (!ficha.includes(t)) throw new Error(`o cadastro não oferece "${t}"`);
   }
 }]);

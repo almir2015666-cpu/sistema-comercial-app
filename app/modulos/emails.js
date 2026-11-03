@@ -61,6 +61,14 @@
   }
   // o formato que a orc-email espera (prospeccao_nucleo.enviar)
   const anexosParaEnvio = (lista) => (lista || []).map((a) => ({ nome: a.nome, tipo: a.tipo, base64: a.base64, no_corpo: !!a.foto }));
+  const TETO_ANEXOS = 10 * 1024 * 1024;     // o mesmo do computador
+  // o arquivo do aparelho em base64, sem o "data:...;base64," da frente
+  const lerBase64 = (arquivo) => new Promise((ok, falha) => {
+    const leitor = new FileReader();
+    leitor.onload = () => ok(String(leitor.result).replace(/^data:[^,]*,/, ''));
+    leitor.onerror = () => falha(new Error('Não consegui ler o arquivo.'));
+    leitor.readAsDataURL(arquivo);
+  });
 
   // NOME DA EMPRESA SEMPRE EM MAIÚSCULAS, como no computador
   const nomeEmpresa = (s) => String(s || '').split(/\s+/).filter(Boolean).join(' ').toUpperCase();
@@ -206,8 +214,10 @@
   // escolhe: escrever de novo (no tom escolhido, cumprindo o pedido) ou
   // ajustar o texto que já está na caixa. "Desfazer" volta ao texto de antes
   // da IA — ajuste que ficou pior não pode custar o texto bom.
-  async function responder(r, depois) {
-    const base = r.resposta_assunto || 'Proposta de parceria';
+  // `volta`: o que já estava escrito quando o envio falhou — a tela reabre
+  // com o texto, o assunto e os anexos, sem pedir à IA de novo
+  async function responder(r, depois, volta = null) {
+    const base = volta?.assunto || r.resposta_assunto || 'Proposta de parceria';
     let tom = '';
     const f = UI.folha(`
       <div id="er-conversa" class="text-muted pequeno">lendo a conversa…</div>
@@ -218,10 +228,33 @@
           <div class="chips mt8" id="er-tons">${L.TONS_RESPOSTA.map(([k, rot]) => `<button type="button" class="chip ${k === tom ? 'on' : ''}" data-tom="${esc(k)}">${esc(rot)}</button>`).join('')}</div>
           <div class="acoes mt8"><button class="btn btn-ghost" id="er-escrever" type="button">✨ Escrever de novo</button><button class="btn btn-ghost" id="er-ajustar" type="button">✏ Ajustar o texto</button><button class="btn btn-ghost" id="er-desfazer" type="button" hidden>↩ Desfazer</button></div></div>
         <div class="fg"><label>Sua resposta <span class="text-muted">(sugerida pela IA — revise)</span></label>
-          <textarea id="er-texto" rows="10" maxlength="8000">${esc(r.sugestao_resposta || '')}</textarea>
+          <textarea id="er-texto" rows="10" maxlength="8000">${esc(volta ? volta.texto : r.sugestao_resposta || '')}</textarea>
           <div class="dica">Sai da caixa da prospecção para ${esc(r.resposta_de || '?')}, na mesma conversa.</div></div>
+        <div class="fg"><label>Anexos <span class="text-muted">(até 10 arquivos e 10 MB)</span></label>
+          <div id="er-anexos" class="pequeno"></div>
+          <button class="btn btn-ghost mt8" id="er-anexar" type="button">📎 Anexar arquivo</button></div>
         <div class="modal-ft"><button class="btn btn-ok" type="submit">Enviar resposta</button></div>
       </form>`, { titulo: `Responder ${r.empresa || r.contato || ''}` });
+    // OS ANEXOS DA RESPOSTA (pedido do dono, 03/11/2026: "não tem onde eu
+    // colocar o arquivo"), com o teto do envio da proposta
+    const anexos = volta ? [...volta.anexos] : [];
+    const desenharAnexos = () => {
+      const alvo = $('#er-anexos', f.caixa);
+      alvo.innerHTML = anexos.length ? anexos.map((a, i) => `<div class="mt8" style="display:flex;gap:8px;align-items:center"><span class="flex1">📎 ${esc(a.nome)} <span class="text-muted">(${esc(L.tamanhoLegivel(a.tamanho))})</span></span><button class="btn-icon" type="button" data-tira="${i}" aria-label="Tirar o anexo">✕</button></div>`).join('')
+        : '<span class="text-muted">nenhum</span>';
+      $$('[data-tira]', alvo).forEach((b) => { b.onclick = () => { anexos.splice(Number(b.dataset.tira), 1); desenharAnexos(); }; });
+    };
+    desenharAnexos();
+    $('#er-anexar', f.caixa).onclick = async () => {
+      const arq = await UI.escolherArquivo('*/*');
+      if (!arq) return;
+      const total = anexos.reduce((s, a) => s + a.tamanho, 0) + arq.size;
+      if (anexos.length >= 10 || total > TETO_ANEXOS) return toast('O máximo é 10 anexos e 10 MB por e-mail.', 'err');
+      try {
+        anexos.push({ nome: arq.name, tipo: arq.type || 'application/octet-stream', base64: await lerBase64(arq), tamanho: arq.size, foto: false });
+        desenharAnexos();
+      } catch (e) { toast(e.message, 'err'); }
+    };
     lerConversa(r.id).then((msgs) => { const c = $('#er-conversa', f.caixa); if (c) { c.className = ''; c.innerHTML = htmlConversa(msgs, r); } });
     $$('#er-tons .chip', f.caixa).forEach((b) => {
       b.onclick = () => { tom = b.dataset.tom; $$('#er-tons .chip', f.caixa).forEach((x) => x.classList.toggle('on', x === b)); };
@@ -256,19 +289,37 @@
       caixa().value = anterior; anterior = null;
       $('#er-desfazer', f.caixa).hidden = true;
     };
-    if (!r.sugestao_resposta) sugerir();
+    if (!r.sugestao_resposta && !volta) sugerir();
     $('#er-form', f.caixa).onsubmit = async (e) => {
       e.preventDefault();
+      // TUDO LIDO ANTES DE CONFIRMAR: a confirmação usa a mesma folha e
+      // apaga o formulário — ler o assunto depois dela dava "Cannot read
+      // properties of null", e a resposta nunca saía (desde a 2.3)
       const texto = $('#er-texto', f.caixa).value.trim();
+      const assunto = $('#er-assunto', f.caixa).value.trim();
       if (!texto) return toast('Escreva a resposta.', 'err');
-      if (!(await UI.confirmar(`Enviar esta resposta para ${r.resposta_de}?`, { ok: 'Enviar' }))) return;
+      if (!(await UI.confirmar(`Enviar esta resposta para ${r.resposta_de}${anexos.length ? ` com ${anexos.length} anexo(s)` : ''}?`, { ok: 'Enviar' }))) {
+        return responder(r, depois, { texto, assunto, anexos });
+      }
       UI.carregando(true, 'Enviando…');
       try {
-        await funcaoEmail({ acao: 'responder', id: r.id, assunto: $('#er-assunto', f.caixa).value.trim(), mensagem: texto });
+        // a orc-email de antes de 03/11/2026 mandava a resposta SEM o anexo,
+        // calada: com arquivo, pergunta antes se ela já sabe
+        if (anexos.length) {
+          const tipos = await funcaoEmail({ acao: 'tipos' }).catch(() => ({}));
+          if (!(tipos?.acoes || []).includes('responder_anexos')) {
+            throw new Error('A função da nuvem (orc-email) ainda não manda anexo na resposta: publique a versão nova, ou envie sem o anexo.');
+          }
+        }
+        await funcaoEmail({ acao: 'responder', id: r.id, assunto, mensagem: texto,
+          ...(anexos.length ? { anexos: anexosParaEnvio(anexos) } : {}) });
         toast('Resposta enviada. Quando a empresa responder de volta, aparece na conversa.', 'ok', 5000);
-        f.fechar(); depois();
-      } catch (err) { toast(err.message, 'err'); }
-      finally { UI.carregando(false); }
+        depois();
+      } catch (err) {
+        toast(err.message, 'err', 6000);
+        // não saiu: a tela volta com o que estava escrito
+        responder(r, depois, { texto, assunto, anexos });
+      } finally { UI.carregando(false); }
     };
   }
 
@@ -446,6 +497,9 @@
       if (brutos.length !== emails.length) return toast('Algum e-mail não parece e-mail. Separe vários por vírgula.', 'err');
       const cnpj = v('#ne-cnpj').replace(/\D/g, '');
       if (cnpj && cnpj.length !== 14) return toast('CNPJ são 14 números (ou deixe em branco).', 'err');
+      // TUDO LIDO ANTES DO "JÁ RECEBEU": a confirmação usa a mesma folha e
+      // apaga o formulário — lidos depois dela, os campos davam erro
+      const empresa = v('#ne-empresa'), contato = v('#ne-contato'), fones = v('#ne-fones');
       // o aviso de "já recebeu" do computador
       try {
         if (emails.length) {
@@ -454,12 +508,12 @@
           if (ja && !(await UI.confirmar(`${ja.empresa || 'Esta empresa'} já recebeu e-mail (${ja.situacao}). Cadastrar mesmo assim?`, { ok: 'Cadastrar' }))) return;
         }
         const { data, error } = await N.sb.from(T).insert({
-          empresa: nomeEmpresa(v('#ne-empresa')), contato: v('#ne-contato') || null, emails: emails.join(', ') || null,
-          telefones: v('#ne-fones') || null, cnpj: cnpj || null, data: L.hojeISO(), situacao: 'Não enviado',
+          empresa: nomeEmpresa(empresa), contato: contato || null, emails: emails.join(', ') || null,
+          telefones: fones || null, cnpj: cnpj || null, data: L.hojeISO(), situacao: 'Não enviado',
           criado_por: eu().id, criado_por_nome: eu().nome, atualizado_por: eu().nome,
         }).select();
         if (error) throw error;
-        N.registrar('email_prospeccao_novo', `${v('#ne-empresa')} <${emails.join(', ') || 'sem e-mail'}>`);
+        N.registrar('email_prospeccao_novo', `${empresa} <${emails.join(', ') || 'sem e-mail'}>`);
         f.fechar();
         if (tela._recarregar) tela._recarregar();
         if (emails.length && data?.length && await UI.confirmar('Empresa cadastrada. Enviar a proposta de parceria agora?', { ok: 'Enviar proposta', cancelar: 'Depois' })) {

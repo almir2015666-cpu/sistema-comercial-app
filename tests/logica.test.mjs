@@ -342,3 +342,86 @@ test('e-mails: {pela_empresa} faz a contração como no computador', () => {
   assert.equal(L.preencherModelo('agradece {pela_empresa}', { empresa: 'X', ia_artigo: 'a', ia_nome: 'RI Engenharia' }), 'agradece pela **RI Engenharia**');
   assert.equal(L.preencherModelo('{pela_empresa}', { empresa: 'X', ia_artigo: 'o', ia_nome: 'Grupo Liderança' }), 'pelo **Grupo Liderança**');
 });
+
+// A Caixa do Comercial: os MESMOS casos do autoteste do caixa_nucleo.py,
+// para o celular e o computador mostrarem os mesmos números
+const naBahia = (t) => new Date(Date.parse(`${t}:00-03:00`)).toISOString();
+
+test('caixa: feriados e minutos de expediente como no caixa_nucleo', () => {
+  assert.equal(L.pascoa(2026), '2026-04-05');
+  assert.equal(L.pascoa(2027), '2027-03-28');
+  assert.ok(L.feriadosDoAno(2026).has('2026-02-16'));          // segunda de Carnaval
+  assert.ok(L.feriadosDoAno(2026).has('2026-06-04'));          // Corpus Christi
+  assert.equal(L.diaUtil('2026-11-02'), false);                // Finados
+  assert.equal(L.diaUtil('2026-11-03'), true);
+  // sexta 17h -> segunda 9h = 1h + 1h
+  assert.equal(L.minutosUteis(naBahia('2026-11-06T17:00'), naBahia('2026-11-09T09:00')), 120);
+  assert.equal(L.minutosUteis(naBahia('2026-11-03T20:00'), naBahia('2026-11-04T08:30')), 30);
+  // o feriado de 20/11 (sexta) não conta
+  assert.equal(L.minutosUteis(naBahia('2026-11-19T17:00'), naBahia('2026-11-23T08:00')), 60);
+  assert.equal(L.minutosUteis(naBahia('2026-11-09T09:00'), naBahia('2026-11-06T17:00')), 0);
+  assert.equal(L.duracaoUtil(45), '45 min');
+  assert.equal(L.duracaoUtil(130), '2h10');
+  assert.equal(L.duracaoUtil(600), '1 dia útil');
+  assert.equal(L.duracaoUtil(900), '1,5 dia útil');
+  assert.equal(L.duracaoUtil(1500), '2,5 dias úteis');
+  assert.equal(L.duracaoUtil(0), 'na hora');
+  assert.equal(L.expedienteBr(80), '1h20 de expediente');
+});
+
+test('caixa: situação, filtros e números como no caixa_nucleo', () => {
+  const agora = naBahia('2026-11-03T16:00');
+  const base = { interno: false, automatico: false, classificado_em: 'x' };
+  const pedido = { ...base, id: 1, quando: naBahia('2026-11-03T09:00'), categoria: 'Pedido de orçamento', precisa_resposta: true,
+    resposta_id: '<r1>', respondido_em: naBahia('2026-11-03T09:40'), avaliacao_nota: 'Boa', assunto: 'Orçamento admissional',
+    de: 'rh@alfa.com.br', empresa: 'ALFA' };
+  const reclama = { ...base, id: 2, quando: naBahia('2026-11-03T10:00'), categoria: 'Reclamação', precisa_resposta: true,
+    tom: 'Insatisfeito', prioridade: 'Urgente', assunto: 'Atraso no ASO', de: 'dp@beta.com', pasta: 'BETA' };
+  const encaminhado = { ...base, id: 3, quando: naBahia('2026-11-03T11:00'), categoria: 'Financeiro', precisa_resposta: true,
+    resposta_id: '<r3>', encaminhado: true, respondido_em: naBahia('2026-11-03T14:00'), avaliacao_nota: 'Regular' };
+  const propaganda = { ...base, id: 4, quando: naBahia('2026-11-03T12:00'), categoria: 'Propaganda', precisa_resposta: false };
+  const colega = { ...base, id: 5, quando: naBahia('2026-11-03T12:30'), interno: true, categoria: 'Equipe interna', precisa_resposta: true };
+  const semIa = { ...base, id: 6, quando: naBahia('2026-11-03T15:00'), classificado_em: null, categoria: null };
+  const corrigido = { ...reclama, id: 7, categoria_manual: 'Financeiro', precisa_manual: false };
+  const linhas = [pedido, reclama, encaminhado, propaganda, colega, semIa, corrigido];
+
+  assert.equal(L.cxSituacao(pedido), 'Respondido');
+  assert.equal(L.cxSituacao(reclama), 'Sem resposta');
+  assert.equal(L.cxSituacao(encaminhado), 'Encaminhado');
+  assert.equal(L.cxSituacao(propaganda), 'Não precisa');
+  assert.equal(L.cxSituacao(semIa), 'Sem resposta');
+  assert.equal(L.cxCategoria(semIa), 'Ainda sem classificação');
+  assert.equal(L.cxCategoria(corrigido), 'Financeiro');
+  assert.equal(L.cxSituacao(corrigido), 'Não precisa');
+  assert.equal(L.cxTempoResposta(pedido), 40);
+  assert.equal(L.cxEsperando(reclama, agora), 360);
+  assert.equal(L.cxAtrasado(reclama, agora), true);
+  assert.equal(L.cxEmpresa(reclama), 'BETA');
+  assert.equal(L.cxEmpresa({ pasta: 'Caixa de entrada' }), '');
+  assert.equal(L.cxEmpresa({ pasta: '0 FATURAMENTO E FINANCEIRO' }), '');
+
+  const clientes = L.cxFiltrar(linhas, 'todos', '', '', true, agora);
+  assert.deepEqual(clientes.map((r) => r.id), [1, 2, 3, 6, 7]);
+  assert.deepEqual(L.cxFiltrar(linhas, 'sem_resposta').map((r) => r.id), [2, 6]);
+  assert.deepEqual(L.cxFiltrar(linhas, 'atrasados', '', '', true, agora).map((r) => r.id), [2]);
+  assert.deepEqual(L.cxFiltrar(linhas, 'fracas').map((r) => r.id), [3]);
+  assert.deepEqual(L.cxFiltrar(linhas, 'todos', 'Financeiro').map((r) => r.id), [3, 7]);
+  assert.deepEqual(L.cxFiltrar(linhas, 'todos', '', 'orcamento alfa').map((r) => r.id), [1]);
+
+  const k = L.cxIndicadores(clientes, agora);
+  assert.equal(k.recebidos, 5); assert.equal(k.precisam, 4);
+  assert.equal(k.respondidos, 2); assert.equal(k.respondidosPct, 50);
+  assert.equal(k.semResposta, 2); assert.equal(k.atrasados, 1);
+  assert.equal(k.tempoMedio, 110); assert.equal(k.tempoMediana, 180);
+  assert.equal(k.ate4hPct, 100);
+  assert.equal(k.reclamacoes, 1); assert.equal(k.reclamacoesSem, 1);
+  assert.equal(k.avaliadas, 2); assert.equal(k.boasPct, 50);
+  const cats = L.cxPorCategoria(clientes, agora);
+  assert.equal(cats[0].categoria, 'Financeiro'); assert.equal(cats[0].recebidos, 2);
+
+  assert.deepEqual(L.cxIntervalo('hoje', '2026-11-03'), ['2026-11-03', '2026-11-04']);
+  assert.deepEqual(L.cxIntervalo('passado', '2026-11-03'), ['2026-10-01', '2026-11-01']);
+  assert.deepEqual(L.cxIntervalo('passado', '2026-01-10'), ['2025-12-01', '2026-01-01']);
+  assert.equal(L.cxUtc('2026-11-03'), '2026-11-03T03:00:00.000Z');
+  assert.ok(L.BOTOES.some(([k2]) => k2 === 'caixa_comercial'));
+});

@@ -198,7 +198,9 @@
     // Reclamações das empresas
     ['reclamacoes', 'Reclamações'],
     // os dois itens novos do Menu, cada um com o seu visto (80-vistos-emails-e-pesquisa.sql)
-    ['controle_emails', 'Controle de e-mails'], ['pesquisa_site', 'Pesquisa e Ouvidoria']];
+    ['controle_emails', 'Controle de e-mails'], ['pesquisa_site', 'Pesquisa e Ouvidoria'],
+    // só acompanha a caixa comercial@ (82-caixa-comercial.sql)
+    ['caixa_comercial', 'Caixa do Comercial']];
   L.DENTRO = [
     ['orcamentos:configuracoes', 'orcamentos', 'Configurações'],
     ['homologacao:contratos', 'homologacao', 'Contratos assinados'],
@@ -920,6 +922,188 @@
     }
     return blocos.join('\n\n');
   };
+
+  /* ================================================================
+     CAIXA DO COMERCIAL (caixa_nucleo.py) — só acompanha comercial@:
+     a situação de cada e-mail, o tempo de resposta EM HORÁRIO ÚTIL, os
+     filtros e os números. As mesmas regras do computador.
+     ================================================================ */
+  // as categorias da IA — as MESMAS da orc-email e do caixa_nucleo
+  L.CX_CATEGORIAS = ['Pedido de orçamento', 'Negociação e contrato', 'Agendamento de exames',
+    'ASO e resultados', 'Documentos de SST', 'eSocial', 'Financeiro', 'Reclamação',
+    'Dúvida ou informação', 'Fornecedor ou parceria', 'Propaganda', 'Aviso automático',
+    'Currículo', 'Equipe interna', 'Outros'];
+  L.CX_SEM_CATEGORIA = 'Ainda sem classificação';
+  const CX_FORA_DO_CLIENTE = ['Propaganda', 'Aviso automático', 'Equipe interna'];
+  L.CX_SEM_RESPOSTA = 'Sem resposta';
+  L.CX_RESPONDIDO = 'Respondido';
+  L.CX_ENCAMINHADO = 'Encaminhado';
+  L.CX_NAO_PRECISA = 'Não precisa';
+  // o expediente: das 8h às 18h, de segunda a sexta, sem feriados
+  const CX_EXPEDIENTE = [8, 18];
+  const CX_HORAS_DIA = CX_EXPEDIENTE[1] - CX_EXPEDIENTE[0];
+  L.CX_PRAZO_ALERTA = 4 * 60;           // sem resposta há mais disso: vermelho
+  const BAHIA_MS = -3 * 3600000;        // UTC-3, sem horário de verão
+
+  // os feriados nacionais, da Bahia e de Salvador, e os que andam com a Páscoa
+  const CX_FIXOS = ['01-01', '04-21', '05-01', '06-24', '07-02', '09-07', '10-12', '11-02', '11-15', '11-20', '12-08', '12-25'];
+  L.pascoa = (ano) => {
+    const a = ano % 19, b = Math.floor(ano / 100), c = ano % 100, d = Math.floor(b / 4), e = b % 4;
+    const f = Math.floor((b + 8) / 25), g = Math.floor((b - f + 1) / 3);
+    const h = (19 * a + b - d - g + 15) % 30, i = Math.floor(c / 4), k = c % 4;
+    const m = (32 + 2 * e + 2 * i - h - k) % 7, n = Math.floor((a + 11 * h + 22 * m) / 451);
+    const x = h + m - 7 * n + 114;
+    return `${ano}-${String(Math.floor(x / 31)).padStart(2, '0')}-${String((x % 31) + 1).padStart(2, '0')}`;
+  };
+  const cxFeriados = {};
+  L.feriadosDoAno = (ano) => {
+    if (!cxFeriados[ano]) {
+      const p = L.pascoa(ano);
+      cxFeriados[ano] = new Set([...CX_FIXOS.map((f) => `${ano}-${f}`),
+        L.somarDias(p, -48), L.somarDias(p, -47), L.somarDias(p, -2), L.somarDias(p, 60)]);
+    }
+    return cxFeriados[ano];
+  };
+  L.diaUtil = (iso) => {
+    const dia = new Date(`${iso}T12:00:00Z`).getUTCDay();
+    return dia !== 0 && dia !== 6 && !L.feriadosDoAno(Number(iso.slice(0, 4))).has(iso);
+  };
+
+  // Os minutos de EXPEDIENTE entre dois instantes: o que chega de noite
+  // começa a contar às 8h do dia útil seguinte
+  L.minutosUteis = (inicio, fim) => {
+    const a = Date.parse(inicio), b = Date.parse(fim);
+    if (Number.isNaN(a) || Number.isNaN(b) || b <= a) return 0;
+    const la = a + BAHIA_MS, lb = b + BAHIA_MS;   // o relógio da Bahia, como se fosse UTC
+    let total = 0;
+    for (let dia = new Date(la).toISOString().slice(0, 10); dia <= new Date(lb).toISOString().slice(0, 10); dia = L.somarDias(dia, 1)) {
+      if (!L.diaUtil(dia)) continue;
+      const abre = Date.parse(`${dia}T00:00:00Z`) + CX_EXPEDIENTE[0] * 3600000;
+      const fecha = Date.parse(`${dia}T00:00:00Z`) + CX_EXPEDIENTE[1] * 3600000;
+      const de = Math.max(la, abre), ate = Math.min(lb, fecha);
+      if (ate > de) total += (ate - de) / 60000;
+    }
+    return Math.round(total);
+  };
+
+  // 45 -> "45 min", 130 -> "2h10", 900 -> "1,5 dia útil"
+  L.duracaoUtil = (minutos) => {
+    if (minutos == null) return '';
+    const m = Math.trunc(minutos);
+    if (m < 1) return 'na hora';
+    if (m < 60) return `${m} min`;
+    const h = Math.floor(m / 60), r = m % 60;
+    if (h < CX_HORAS_DIA) return `${h}h${String(r).padStart(2, '0')}`;
+    const dias = Math.round((m / (CX_HORAS_DIA * 60)) * 10) / 10;
+    const t = dias.toFixed(1).replace('.', ',').replace(',0', '');
+    return `${t} ${dias < 2 ? 'dia útil' : 'dias úteis'}`;
+  };
+  L.expedienteBr = (minutos) => {
+    const t = L.duracaoUtil(minutos);
+    return minutos == null || minutos < 1 || minutos >= CX_HORAS_DIA * 60 ? t : `${t} de expediente`;
+  };
+
+  // a correção da equipe vale mais que a da IA
+  L.cxCategoria = (r) => r?.categoria_manual || r?.categoria || L.CX_SEM_CATEGORIA;
+  // ainda sem a IA, precisa (melhor sobrar na lista do que sumir um pedido)
+  L.cxPrecisa = (r) => {
+    if (r?.precisa_manual != null) return !!r.precisa_manual;
+    if (r?.automatico) return false;
+    return r?.precisa_resposta == null ? true : !!r.precisa_resposta;
+  };
+  L.cxSituacao = (r) => {
+    if (r?.resposta_id) return r.encaminhado ? L.CX_ENCAMINHADO : L.CX_RESPONDIDO;
+    return L.cxPrecisa(r) ? L.CX_SEM_RESPOSTA : L.CX_NAO_PRECISA;
+  };
+  L.cxTempoResposta = (r) => (r?.respondido_em ? L.minutosUteis(r.quando, r.respondido_em) : null);
+  L.cxEsperando = (r, agora = new Date().toISOString()) =>
+    (L.cxSituacao(r) === L.CX_SEM_RESPOSTA ? L.minutosUteis(r.quando, agora) : null);
+  L.cxAtrasado = (r, agora) => { const e = L.cxEsperando(r, agora); return e != null && e > L.CX_PRAZO_ALERTA; };
+  L.cxQuem = (r) => String(r?.de_nome || r?.de || '').trim();
+  // a empresa pela IA; sem ela, a pasta onde a equipe arquivou
+  const CX_PASTAS_GERAIS = ['caixa de entrada', 'itens enviados', 'itens excluídos', 'enviados', 'lixeira'];
+  L.cxEmpresa = (r) => {
+    if (r?.empresa) return r.empresa;
+    const p = String(r?.pasta || '').trim();
+    return p && !CX_PASTAS_GERAIS.includes(p.toLowerCase()) && !p.startsWith('0 ') ? p : '';
+  };
+  L.cxDoCliente = (r) => !(r?.interno || r?.automatico || CX_FORA_DO_CLIENTE.includes(L.cxCategoria(r)));
+
+  L.CX_MOSTRAR = [['todos', 'Todos'], ['sem_resposta', 'Sem resposta'], ['atrasados', 'Há mais de 4 h'],
+    ['reclamacoes', 'Reclamações'], ['urgentes', 'Urgentes'], ['respondidos', 'Respondidos'],
+    ['encaminhados', 'Encaminhados'], ['insatisfeitos', 'Insatisfeitos'], ['fracas', 'Respostas fracas'],
+    ['nao_precisa', 'Não precisam']];
+  L.cxFiltrar = (linhas, mostrar = 'todos', cat = '', busca = '', soClientes = true, agora) => {
+    const palavras = L.semAcento(busca).toLowerCase().split(/\s+/).filter(Boolean);
+    return (linhas || []).filter((r) => {
+      if (soClientes && !L.cxDoCliente(r)) return false;
+      if (cat && L.cxCategoria(r) !== cat) return false;
+      const s = L.cxSituacao(r);
+      if (mostrar === 'sem_resposta' && s !== L.CX_SEM_RESPOSTA) return false;
+      if (mostrar === 'atrasados' && !L.cxAtrasado(r, agora)) return false;
+      if (mostrar === 'respondidos' && s !== L.CX_RESPONDIDO) return false;
+      if (mostrar === 'encaminhados' && s !== L.CX_ENCAMINHADO) return false;
+      if (mostrar === 'nao_precisa' && s !== L.CX_NAO_PRECISA) return false;
+      if (mostrar === 'urgentes' && r.prioridade !== 'Urgente') return false;
+      if (mostrar === 'reclamacoes' && L.cxCategoria(r) !== 'Reclamação') return false;
+      if (mostrar === 'insatisfeitos' && r.tom !== 'Insatisfeito') return false;
+      if (mostrar === 'fracas' && !['Fraca', 'Regular'].includes(r.avaliacao_nota)) return false;
+      if (palavras.length) {
+        const alvo = L.semAcento([r.assunto, r.de, r.de_nome, r.empresa, r.pasta, r.resumo, r.categoria, r.categoria_manual].join(' ')).toLowerCase();
+        if (!palavras.every((p) => alvo.includes(p))) return false;
+      }
+      return true;
+    });
+  };
+
+  const cxPct = (parte, todo) => (todo ? Math.round((100 * parte) / todo) : null);
+  L.cxIndicadores = (linhas, agora = new Date().toISOString()) => {
+    const rs = linhas || [];
+    const precisam = rs.filter(L.cxPrecisa);
+    const respondidos = precisam.filter((r) => r.resposta_id);
+    const sem = precisam.filter((r) => !r.resposta_id);
+    const tempos = respondidos.map(L.cxTempoResposta).filter((t) => t != null).sort((a, b) => a - b);
+    const reclamacoes = rs.filter((r) => L.cxCategoria(r) === 'Reclamação');
+    const avaliadas = rs.filter((r) => r.avaliacao_nota);
+    const esperas = sem.map((r) => L.cxEsperando(r, agora));
+    return {
+      recebidos: rs.length, precisam: precisam.length, respondidos: respondidos.length,
+      respondidosPct: cxPct(respondidos.length, precisam.length), semResposta: sem.length,
+      atrasados: esperas.filter((e) => e > L.CX_PRAZO_ALERTA).length,
+      tempoMedio: tempos.length ? Math.round(tempos.reduce((a, b) => a + b, 0) / tempos.length) : null,
+      tempoMediana: tempos.length ? tempos[Math.floor(tempos.length / 2)] : null,
+      ate4hPct: cxPct(tempos.filter((t) => t <= L.CX_PRAZO_ALERTA).length, tempos.length),
+      reclamacoes: reclamacoes.length,
+      reclamacoesSem: reclamacoes.filter((r) => L.cxSituacao(r) === L.CX_SEM_RESPOSTA).length,
+      avaliadas: avaliadas.length,
+      boasPct: cxPct(avaliadas.filter((r) => r.avaliacao_nota === 'Boa').length, avaliadas.length),
+      fracas: avaliadas.filter((r) => r.avaliacao_nota === 'Fraca').length,
+    };
+  };
+  L.cxPorCategoria = (linhas, agora) => {
+    const grupos = {};
+    for (const r of linhas || []) (grupos[L.cxCategoria(r)] ||= []).push(r);
+    return Object.entries(grupos).map(([categoria, rs]) => {
+      const k = L.cxIndicadores(rs, agora);
+      return { categoria, recebidos: rs.length, semResposta: k.semResposta, atrasados: k.atrasados, tempoMedio: k.tempoMedio };
+    }).sort((a, b) => b.recebidos - a.recebidos || a.categoria.localeCompare(b.categoria));
+  };
+
+  // o período: [primeiro dia, dia seguinte ao último] em AAAA-MM-DD da Bahia
+  L.CX_PERIODOS = [['hoje', 'Hoje'], ['ontem', 'Ontem'], ['7', '7 dias'], ['30', '30 dias'], ['mes', 'Este mês'], ['passado', 'Mês passado']];
+  L.cxIntervalo = (periodo, hoje) => {
+    const h = hoje || new Date(Date.now() + BAHIA_MS).toISOString().slice(0, 10);
+    const amanha = L.somarDias(h, 1), inicioMes = `${h.slice(0, 8)}01`;
+    if (periodo === 'hoje') return [h, amanha];
+    if (periodo === 'ontem') return [L.somarDias(h, -1), h];
+    if (periodo === '7') return [L.somarDias(h, -6), amanha];
+    if (periodo === '30') return [L.somarDias(h, -29), amanha];
+    if (periodo === 'mes') return [inicioMes, amanha];
+    if (periodo === 'passado') return [`${L.somarDias(inicioMes, -1).slice(0, 8)}01`, inicioMes];
+    return [null, null];
+  };
+  // meia-noite na Bahia, escrita em UTC
+  L.cxUtc = (dia) => new Date(Date.parse(`${dia}T00:00:00Z`) - BAHIA_MS).toISOString();
 
   raiz.L = L;
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
