@@ -106,7 +106,8 @@
 
   // o formato que a orc-email espera (prospeccao_nucleo.enviar)
   const anexosParaEnvio = (lista) => (lista || []).map((a) => ({ nome: a.nome, tipo: a.tipo, base64: a.base64, no_corpo: !!a.foto }));
-  const TETO_ANEXOS = 10 * 1024 * 1024;     // o mesmo do computador
+  // quantos arquivos forem, até 20 MB somados — o mesmo do computador
+  const TETO_ANEXOS = 20 * 1024 * 1024;
   // o arquivo do aparelho em base64, sem o "data:...;base64," da frente
   const lerBase64 = (arquivo) => new Promise((ok, falha) => {
     const leitor = new FileReader();
@@ -114,12 +115,12 @@
     leitor.onerror = () => falha(new Error('Não consegui ler o arquivo.'));
     leitor.readAsDataURL(arquivo);
   });
-  // os arquivos escolhidos entram na lista até o teto (10 arquivos, 10 MB)
+  // os arquivos escolhidos entram na lista até o teto (20 MB somados)
   async function juntarArquivos(anexos) {
     const arqs = await UI.escolherArquivos('*/*');
     for (const arq of arqs) {
       const total = anexos.reduce((s, a) => s + a.tamanho, 0) + arq.size;
-      if (anexos.length >= 10 || total > TETO_ANEXOS) { toast(`Ficou de fora ${arq.name}: o máximo é 10 anexos e 10 MB por e-mail.`, 'err', 5000); continue; }
+      if (total > TETO_ANEXOS) { toast(`Ficou de fora ${arq.name}: os anexos de um e-mail somam no máximo 20 MB.`, 'err', 5000); continue; }
       try { anexos.push({ nome: arq.name, tipo: arq.type || 'application/octet-stream', base64: await lerBase64(arq), tamanho: arq.size, foto: false }); }
       catch (e) { toast(e.message, 'err'); }
     }
@@ -404,7 +405,7 @@
         <div class="fg"><label>Sua resposta <span class="text-muted">(sugerida pela IA — revise)</span></label>
           <textarea id="er-texto" rows="10" maxlength="8000">${esc(volta ? volta.texto : r.sugestao_resposta || '')}</textarea>
           <div class="dica">Sai da caixa da prospecção para ${esc(r.resposta_de || '?')}, na mesma conversa.</div></div>
-        <div class="fg"><label>Anexos <span class="text-muted">(até 10 arquivos e 10 MB)</span></label>
+        <div class="fg"><label>Anexos <span class="text-muted">(quantos quiser, até 20 MB somados)</span></label>
           <div id="er-anexos" class="pequeno"></div>
           <button class="btn btn-ghost mt8" id="er-anexar" type="button">📎 Anexar arquivos</button></div>
         <div class="modal-ft"><button class="btn btn-ok" type="submit">Enviar resposta</button></div>
@@ -610,7 +611,7 @@
       <div class="fg"><label>Texto <span class="text-muted">({empresa}, {contato}, {saudacao}… trocam por empresa)</span></label><textarea id="ev-corpo" rows="9">${esc(st.corpo)}</textarea></div>
       <div class="fg"><label>Lembrar de cobrar em (dias)</label><input id="ev-dias" type="number" inputmode="numeric" min="1" max="90" value="${esc(st.dias)}"></div>
       ${CARTAO ? `<label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="ev-cartao" ${st.cartao ? 'checked' : ''}> 🖼 Incluir o cartão da clínica no fim</label>` : ''}
-      <div class="fg mt12"><label>Anexos <span class="text-muted">(até 10 arquivos e 10 MB)</span></label><div id="ev-anexos" class="pequeno"></div>
+      <div class="fg mt12"><label>Anexos <span class="text-muted">(quantos quiser, até 20 MB somados)</span></label><div id="ev-anexos" class="pequeno"></div>
         <button class="btn btn-ghost mt8" id="ev-anexar" type="button">📎 Anexar arquivos</button></div>
       ${semIa.length ? `<div class="aviso atencao mt12">${semIa.length} empresa(s) ainda sem os segmentos em que atua(m) — o texto usa {segmentos}.
         <button class="btn btn-ghost mt8" id="ev-ia" type="button" style="width:100%">✨ Identificar com a IA (${semIa.length})</button></div>` : ''}

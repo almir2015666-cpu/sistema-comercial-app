@@ -153,7 +153,7 @@
     return data;
   }
 
-  const TETO_ANEXOS = 10 * 1024 * 1024;     // o mesmo do computador
+  const TETO_ANEXOS = 20 * 1024 * 1024;     // o mesmo do computador
   const lerBase64 = (arquivo) => new Promise((ok, falha) => {
     const leitor = new FileReader();
     leitor.onload = () => ok(String(leitor.result).replace(/^data:[^,]*,/, ''));
@@ -182,7 +182,7 @@
         <div class="fg"><label>Sua resposta <span class="text-muted">(escrita pela IA — revise)</span></label>
           <textarea id="rr-texto" rows="12" maxlength="8000">${esc(st.texto)}</textarea>
           <div class="dica">Vai para ${esc(r.email)}, do Gmail da clínica, com cópia na comercial@.</div></div>
-        <div class="fg"><label>Anexos <span class="text-muted">(até 10 arquivos e 10 MB)</span></label>
+        <div class="fg"><label>Anexos <span class="text-muted">(quantos quiser, até 20 MB somados)</span></label>
           <div id="rr-anexos" class="pequeno"></div>
           <button class="btn btn-ghost mt8" id="rr-anexar" type="button">📎 Anexar arquivos</button></div>
         <label class="mt12" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="rr-concluir" ${st.concluir ? 'checked' : ''}> Concluir depois de enviar</label>
@@ -259,7 +259,7 @@
     $('#rr-anexar', f.caixa).onclick = async () => {
       for (const arq of await UI.escolherArquivos('*/*')) {
         const total = st.anexos.reduce((s, a) => s + a.tamanho, 0) + arq.size;
-        if (st.anexos.length >= 10 || total > TETO_ANEXOS) { toast(`Ficou de fora ${arq.name}: o máximo é 10 anexos e 10 MB por e-mail.`, 'err', 5000); continue; }
+        if (total > TETO_ANEXOS) { toast(`Ficou de fora ${arq.name}: os anexos de um e-mail somam no máximo 20 MB.`, 'err', 5000); continue; }
         try { st.anexos.push({ nome: arq.name, tipo: arq.type || 'application/octet-stream', base64: await lerBase64(arq), tamanho: arq.size }); }
         catch (e) { toast(e.message, 'err'); }
       }
