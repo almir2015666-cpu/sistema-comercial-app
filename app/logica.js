@@ -1127,6 +1127,42 @@
     return blocos.join('\n\n');
   };
 
+  // RESPONDER QUEM RESPONDEU (retornos_nucleo: TONS_RETORNO, pede_melhoria,
+  // tons_padrao, assunto_da_resposta, concluir_ao_responder). A IA escreve
+  // a partir do que a pessoa disse; a equipe escolhe os tons e revisa.
+  L.TONS_RETORNO = [['agradecimento', 'Agradecimento'], ['melhorias', 'Compromisso com melhorias'],
+    ['desculpas', 'Pedido de desculpas'], ['conversa', 'Convite para conversar'], ['curta', 'Curta']];
+  // a ouvidoria que NÃO é crítica: o assunto diz
+  const OUV_SEM_CRITICA = ['elogio', 'agradec', 'duvida', 'informac'];
+  L.pedeMelhoria = (r) => {
+    if (r?.formulario === 'ouvidoria') {
+      const a = L.semAcento(r.assunto || '').toLowerCase();
+      return !OUV_SEM_CRITICA.some((p) => a.includes(p));
+    }
+    return L.motivosDoAlerta(r).length > 0;
+  };
+  L.tonsPadraoRetorno = (r) => [...(L.pedeMelhoria(r) ? ['desculpas', 'melhorias'] : ['agradecimento', 'curta']),
+    ...(L.querConversar(r) ? ['conversa'] : [])];
+  L.assuntoDoRetorno = (r) => (r?.formulario === 'ouvidoria'
+    ? 'Retorno da Ouvidoria - Clínica Medicina Humana' : 'Retorno da sua avaliação - Clínica Medicina Humana');
+  // crítica fica em andamento até a melhoria sair; elogio já conclui
+  L.concluirAoResponder = (r) => !L.pedeMelhoria(r);
+  // o pedido à orc-email (RetornosSite.sugerir_resposta): até 4 tons; com
+  // a `base` (o texto da caixa) e o pedido, a IA AJUSTA esse texto
+  L.corpoRetornoSugerir = (id, { tons = [], pedido = '', base = '' } = {}) => {
+    const validos = new Set(L.TONS_RETORNO.map(([k]) => k));
+    const p = String(pedido || '').trim().slice(0, 1000);
+    const corpo = { acao: 'retorno_sugerir', id: Number(id), tons: (tons || []).filter((t) => validos.has(t)).slice(0, 4), pedido: p };
+    const b = String(base || '').trim();
+    if (p && b) corpo.base = b.slice(0, 8000);
+    return corpo;
+  };
+  // a orc-email de antes de 05/11/2026 trata a ação desconhecida como
+  // orçamento e recusa por faltar o e-mail — sem mandar nada
+  L.recadoRetorno = (msg) => (/não parece válido/.test(String(msg || ''))
+    ? 'A função da nuvem (orc-email) ainda é a antiga e não sabe responder a pesquisa: publique a versão nova no Supabase.'
+    : String(msg || ''));
+
   /* ================================================================
      CAIXA DO COMERCIAL (caixa_nucleo.py) — só acompanha comercial@:
      a situação de cada e-mail, o tempo de resposta EM HORÁRIO ÚTIL, os

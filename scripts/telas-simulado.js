@@ -94,7 +94,8 @@ const TABELAS = {
   ],
   // a pesquisa do site: uma resposta ruim (o site manda "1 – Muito ruim")
   orc_retornos_site: [
-    { id: 1, formulario: 'pesquisa', situacao: 'Nova', empresa: 'Alfa Ltda', recebido_em: new Date().toISOString(),
+    { id: 1, formulario: 'pesquisa', situacao: 'Nova', empresa: 'Alfa Ltda', nome: 'Ana Lima', email: 'rh@alfa.com.br',
+      recebido_em: new Date().toISOString(),
       respostas: [{ campo: 'experiencia', rotulo: 'Experiência geral', valor: 'Insatisfatória' },
         { campo: 'notaEspera', rotulo: 'Nota: agilidade no atendimento', valor: '1 – Muito ruim' },
         { campo: 'interesse', rotulo: 'Interesse em conversar', valor: 'Sim' }] },
@@ -166,6 +167,17 @@ async function simular(ctx) {
       if (corpo.acao === 'responder') {
         RESPOSTAS_ENVIADAS.push(corpo);
         return json({ ok: true, para: 'joao@sodexo.com', anexos: (corpo.anexos || []).length });
+      }
+      // a resposta da pesquisa (05/11/2026): uma opção por tom, e o envio
+      // guardado para o passo conferir
+      if (corpo.acao === 'retorno_sugerir') {
+        if (corpo.base) return json({ ok: true, modo: 'ajustar', opcoes: [{ tom: 'ajustada', titulo: 'Ajustada', texto: `AJUSTADO [${corpo.pedido}] ${corpo.base}` }] });
+        return json({ ok: true, modo: 'opcoes', resumo: 'Reclamou da espera.',
+          opcoes: (corpo.tons || []).map((t) => ({ tom: t, titulo: t.toUpperCase(), texto: `Texto ${t}` })) });
+      }
+      if (corpo.acao === 'retorno_responder') {
+        RESPOSTAS_ENVIADAS.push(corpo);
+        return json({ ok: true, para: 'rh@alfa.com.br', anexos: 0, retorno_em: '2026-11-05', situacao: corpo.concluir ? 'Concluída' : 'Em andamento', erro_gravar: '' });
       }
       // a leitura da Caixa do Comercial: nada novo, a caixa em dia
       if (corpo.acao === 'caixa') {
@@ -366,6 +378,40 @@ PASSOS.push(['23-pesquisa-detalhe', async (pg) => {
   if (!lista.includes('nota baixa')) throw new Error('a nota "1 – Muito ruim" não virou alerta');
   await pg.locator('#palco .linha').first().click();
   await pg.waitForTimeout(700);
+}]);
+// ✉ RESPONDER A PESQUISA: as opções nos tons da crítica, o ajuste guarda a
+// versão de antes, e o envio leva o texto escolhido e o "concluir"
+PASSOS.push(['30-pesquisa-responder', async (pg) => {
+  await pg.evaluate(() => window.MODULOS.pesquisa.abrir());
+  await pg.waitForTimeout(1200);
+  await pg.locator('#palco .linha', { hasText: 'Alfa Ltda' }).click();
+  await pg.waitForTimeout(700);
+  await pg.locator('#pr-responder').click();
+  await pg.waitForTimeout(1200);
+  const texto = await pg.locator('#rr-texto').inputValue();
+  if (texto !== 'Texto desculpas') throw new Error(`a primeira opção não veio nos tons da crítica: "${texto}"`);
+  const opcoes = await pg.locator('#rr-opcoes').innerText();
+  if (!opcoes.includes('MELHORIAS') || !opcoes.includes('CONVERSA')) throw new Error(`faltaram as opções por tom: "${opcoes}"`);
+  if (await pg.locator('#rr-concluir').isChecked()) throw new Error('crítica veio marcada para concluir');
+  await pg.locator('#rr-pedido').fill('mais curta');
+  await pg.locator('#rr-ajustar').click(); await pg.waitForTimeout(900);
+  const ajustado = await pg.locator('#rr-texto').inputValue();
+  if (ajustado !== 'AJUSTADO [mais curta] Texto desculpas') throw new Error(`o ajuste não usou o texto da caixa: "${ajustado}"`);
+  if (!(await pg.locator('#rr-opcoes').innerText()).includes('DESCULPAS')) throw new Error('o ajuste apagou a versão de antes');
+  // cancelar a confirmação reabre com tudo (a armadilha da folha única)
+  await pg.locator('#rr-form button[type=submit]').click(); await pg.waitForTimeout(500);
+  await pg.locator('#cf-nao').click(); await pg.waitForTimeout(600);
+  if ((await pg.locator('#rr-texto').inputValue()) !== ajustado) throw new Error('cancelar o envio perdeu o texto');
+  await pg.locator('#rr-concluir').check();
+  const antes = RESPOSTAS_ENVIADAS.length;
+  await pg.locator('#rr-form button[type=submit]').click(); await pg.waitForTimeout(500);
+  if (!(await pg.locator('#folha-caixa').innerText()).includes('Concluída')) throw new Error('a confirmação não disse a situação de depois');
+  await pg.locator('#cf-sim').last().click(); await pg.waitForTimeout(1200);
+  const envio = RESPOSTAS_ENVIADAS[antes];
+  if (!envio || envio.acao !== 'retorno_responder' || envio.id !== 1 || envio.mensagem !== ajustado || envio.concluir !== true) {
+    throw new Error(`o envio não levou o que devia: ${JSON.stringify(envio || null).slice(0, 200)}`);
+  }
+  if (!/avaliação/.test(envio.assunto)) throw new Error(`o assunto padrão não veio: "${envio.assunto}"`);
 }]);
 // a Caixa do Comercial: o atrasado aparece, o detalhe traz a resposta e a
 // avaliação, e a correção da categoria grava

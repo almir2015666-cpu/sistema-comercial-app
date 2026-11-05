@@ -338,6 +338,31 @@ test('pesquisa: "1 – Muito ruim" é nota 1, e vira alerta (retornos_nucleo)', 
   assert.equal(s.aspectos.find((a) => a.rotulo.startsWith('Agilidade no atendimento')).pctRuins, 100);
 });
 
+test('pesquisa: a resposta a quem respondeu, com os mesmos casos do retornos_nucleo', () => {
+  const resp = (v) => Object.entries(v).map(([campo, valor]) => ({ campo, rotulo: campo, valor }));
+  const boa = { formulario: 'pesquisa', respostas: resp({ experiencia: 'Muito satisfatória', notaEspera: '5 – Muito bom', interesse: 'Sim' }) };
+  const ruim = { formulario: 'pesquisa', respostas: resp({ experiencia: 'Insatisfatória', notaEspera: '1', interesse: 'Não' }) };
+  const ouv = { formulario: 'ouvidoria', assunto: 'Reclamação', mensagem: 'Fui mal atendido' };
+  assert.deepEqual(L.tonsPadraoRetorno(ruim), ['desculpas', 'melhorias']);
+  assert.deepEqual(L.tonsPadraoRetorno(boa), ['agradecimento', 'curta', 'conversa']);
+  assert.equal(L.pedeMelhoria(ouv), true);
+  assert.equal(L.concluirAoResponder(ouv), false);
+  assert.equal(L.pedeMelhoria({ ...ouv, assunto: 'Elogio à equipe' }), false);
+  assert.equal(L.concluirAoResponder(boa), true);
+  assert.equal(L.concluirAoResponder(ruim), false);
+  assert.match(L.assuntoDoRetorno(ouv), /Ouvidoria/);
+  assert.match(L.assuntoDoRetorno(boa), /avaliação/);
+  const validos = new Set(L.TONS_RETORNO.map(([k]) => k));
+  assert.ok([...L.tonsPadraoRetorno(ruim), ...L.tonsPadraoRetorno(boa)].every((t) => validos.has(t)));
+  // o pedido à orc-email: tom desconhecido sai; a base só vai com o pedido
+  assert.deepEqual(L.corpoRetornoSugerir(7, { tons: ['melhorias', 'xyz'] }), { acao: 'retorno_sugerir', id: 7, tons: ['melhorias'], pedido: '' });
+  assert.equal(L.corpoRetornoSugerir(7, { pedido: 'mais curta', base: 'texto' }).base, 'texto');
+  assert.equal('base' in L.corpoRetornoSugerir(7, { tons: ['curta'], base: 'texto' }), false);
+  // a orc-email antiga recusa sem mandar nada: o recado manda publicar
+  assert.match(L.recadoRetorno('Esse e-mail não parece válido.'), /publique a versão nova/);
+  assert.equal(L.recadoRetorno('Falta o visto'), 'Falta o visto');
+});
+
 test('e-mails: {pela_empresa} faz a contração como no computador', () => {
   assert.equal(L.preencherModelo('agradece {pela_empresa}', { empresa: 'X', ia_artigo: 'a', ia_nome: 'RI Engenharia' }), 'agradece pela **RI Engenharia**');
   assert.equal(L.preencherModelo('{pela_empresa}', { empresa: 'X', ia_artigo: 'o', ia_nome: 'Grupo Liderança' }), 'pelo **Grupo Liderança**');
