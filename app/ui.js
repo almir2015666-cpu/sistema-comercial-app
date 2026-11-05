@@ -203,8 +203,18 @@ window.UI = (() => {
   function escolherArquivo(accept = '*/*') {
     return new Promise((resolve) => {
       const inp = $('#arquivo');
-      inp.value = ''; inp.accept = accept;
+      inp.value = ''; inp.accept = accept; inp.multiple = false;
       inp.onchange = () => resolve(inp.files && inp.files[0] ? inp.files[0] : null);
+      inp.click();
+    });
+  }
+  // VÁRIOS DE UMA VEZ (pedido do dono, 04/11/2026: "não consigo colocar
+  // vários de uma vez"): devolve a lista, vazia se ninguém escolheu
+  function escolherArquivos(accept = '*/*') {
+    return new Promise((resolve) => {
+      const inp = $('#arquivo');
+      inp.value = ''; inp.accept = accept; inp.multiple = true;
+      inp.onchange = () => { const l = inp.files ? [...inp.files] : []; inp.multiple = false; resolve(l); };
       inp.click();
     });
   }
@@ -269,5 +279,5 @@ window.UI = (() => {
 
   return { esc, $, $$, esperar, toast, carregando, folha, fecharFolha, confirmar, perguntar,
     ir, raiz, voltar, redesenhar, telaAtual, montarAbas, badgeAba, ICONES, avatar, vazio, botaoTopo,
-    quando, diaPorExtenso, escolherArquivo, abrirFora, temaAtual, trocarTema, opcoes, anexosDoEmail };
+    quando, diaPorExtenso, escolherArquivo, escolherArquivos, abrirFora, temaAtual, trocarTema, opcoes, anexosDoEmail };
 })();

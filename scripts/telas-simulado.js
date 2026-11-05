@@ -64,6 +64,22 @@ const TABELAS = {
       enviado_em: '2026-10-27T12:00:00+00:00', respondido_em: '2026-10-27T15:00:00+00:00', resposta_de: 'joao@sodexo.com',
       resposta_resumo: 'Quer marcar uma reunião', sugestao_resposta: 'Prezado João,\n\nObrigado pelo retorno.' },
     { id: 2, empresa: 'Grupo Verzani & Sandrini', emails: 'rh@verzani.com.br', situacao: 'Não enviado', data: '2026-10-27' },
+    // a que pode receber sem pergunta nenhuma (os passos 26 e 27)
+    { id: 3, empresa: 'Beta Ltda', emails: 'rh@beta.com.br', situacao: 'Não enviado', data: '2026-11-03' },
+  ],
+  // os clientes da casa (85): a Sodexo fatura (o grupo casa o nome)
+  orc_clientes_faturamento: [
+    { id: 1, codigo: '9AA', nome: 'SODEXO DO BRASIL COMER', grupo: 'SODEXO', faturou_2025: true, faturou_2026: true,
+      meses_2025: 9, meses_2026: 9, periodo: 'Jan-set/2025 x jan-set/2026' },
+  ],
+  // os agendados (84): a Verzani já tem envio marcado para amanhã
+  orc_emails_agendamentos: [
+    { id: 5, agendado_para: new Date(Date.now() + 86400000).toISOString(), titulo: 'Proposta de Parceria', cobranca: false,
+      situacao: 'agendado', criado_por_nome: 'Pessoa de Teste', criado_em: new Date().toISOString() },
+  ],
+  orc_emails_agendados: [
+    { id: 50, agendamento_id: 5, registro_id: 2, empresa: 'GRUPO VERZANI & SANDRINI', assunto: 'Proposta', situacao: 'agendado',
+      orc_emails_agendamentos: { agendado_para: new Date(Date.now() + 86400000).toISOString(), situacao: 'agendado', cobranca: false } },
   ],
   orc_emails_conversa: [
     { id: 1, registro_id: 1, direcao: 'enviado', quando: '2026-10-27T12:00:00+00:00', texto: 'Proposta de parceria…', enviado_por: 'Pessoa de Teste' },
@@ -104,6 +120,8 @@ const TABELAS = {
 
 const RESPOSTAS_ENVIADAS = [];
 const ANEXOS_PEDIDOS = [];
+const PROSPECCOES = [];        // o que a orc-email mandou (acao prospeccao)
+const GRAVACOES = [];          // POST/PATCH nas tabelas, para os passos conferirem
 
 async function simular(ctx) {
   await ctx.route(/supabase\.co/, async (rota) => {
@@ -130,7 +148,16 @@ async function simular(ctx) {
       }
       // a orc-email nova sabe anexar na resposta; o que a resposta levou
       // fica guardado para o passo conferir
-      if (corpo.acao === 'tipos') return json({ ok: true, acoes: ['responder', 'responder_anexos', 'anexo'] });
+      if (corpo.acao === 'tipos') return json({ ok: true, acoes: ['prospeccao', 'responder', 'responder_anexos', 'anexo', 'agendados'] });
+      // o envio de agora: guardado para o passo conferir para quem foi
+      if (corpo.acao === 'prospeccao') {
+        PROSPECCOES.push(corpo);
+        return json({ ok: true, para: ['x@y'] });
+      }
+      // a busca na internet (IA): uma construtora nova
+      if (corpo.acao === 'buscar_empresas') {
+        return json({ ok: true, empresas: [{ nome: 'ALFA CONSTRUTORA LTDA', emails: ['rh@alfacons.com.br'], cidade: 'Candeias', ramo: 'Construção' }] });
+      }
       // o arquivo de um e-mail: o pedido fica guardado para o passo conferir
       if (corpo.acao === 'anexo') {
         ANEXOS_PEDIDOS.push(corpo);
@@ -155,6 +182,11 @@ async function simular(ctx) {
     // gravações: devolve o que veio, como o "return=representation"
     let corpo = [];
     try { corpo = JSON.parse(req.postData() || '[]'); } catch { /* vazio */ }
+    GRAVACOES.push({ tabela, metodo: req.method(), corpo, busca: url.search });
+    // o lote do agendamento nasce com o número dele (os itens apontam para ele)
+    if (req.method() === 'POST' && tabela === 'orc_emails_agendamentos') {
+      return json((Array.isArray(corpo) ? corpo : [corpo]).map((c) => ({ ...c, id: 77 })), 201);
+    }
     return json(Array.isArray(corpo) ? corpo : [corpo], req.method() === 'POST' ? 201 : 200);
   });
 }
@@ -246,6 +278,86 @@ PASSOS.push(['24-emails-rascunho', async (pg) => {
   const ficha = await pg.locator('#folha-caixa').innerText();
   // a Verzani do exemplo ainda não foi identificada pela IA: fica de fora
   if (!ficha.includes('Ficam de fora')) throw new Error('o rascunho não avisou da empresa sem os segmentos');
+}]);
+// ☑ VÁRIAS DE UMA VEZ: a lista mostra 💼 e 🕒; o envio pergunta pela já
+// agendada e pela cliente da casa, e só a BETA recebe
+PASSOS.push(['26-emails-enviar-varios', async (pg) => {
+  await pg.evaluate(() => window.MODULOS.emails.abrir());
+  await pg.waitForTimeout(1200);
+  await pg.locator('#palco .tab', { hasText: 'Todos' }).click();
+  await pg.waitForTimeout(800);
+  const lista = await pg.locator('#palco').innerText();
+  if (!lista.includes('💼')) throw new Error('a cliente da casa (Sodexo) não ganhou a maleta na lista');
+  if (!/🕒 \d\d\/\d\d/.test(lista)) throw new Error('a já agendada (Verzani) não mostrou o 🕒 na lista');
+  await pg.locator('#em-selecionar').click(); await pg.waitForTimeout(400);
+  await pg.locator('#sel-todos').click(); await pg.waitForTimeout(400);
+  await pg.locator('#sel-enviar').click(); await pg.waitForTimeout(1500);
+  // um modelo sem {segmentos}, para não depender da IA
+  await pg.locator('#ev-modelo').selectOption('Primeiro contato'); await pg.waitForTimeout(900);
+  const antes = PROSPECCOES.length;
+  await pg.locator('#ev-enviar').click(); await pg.waitForTimeout(700);
+  if (!(await pg.locator('#folha-caixa').innerText()).includes('já tem envio agendado')) throw new Error('não perguntou pela já agendada');
+  await pg.locator('#folha-caixa [data-op="0"]').click(); await pg.waitForTimeout(700);
+  if (!(await pg.locator('#folha-caixa').innerText()).includes('cliente da casa')) throw new Error('não perguntou pela cliente da casa');
+  await pg.locator('#folha-caixa [data-op="0"]').click(); await pg.waitForTimeout(700);
+  await pg.locator('#cf-sim').last().click();
+  await pg.waitForTimeout(2500);
+  const foram = PROSPECCOES.slice(antes).map((c) => c.id);
+  if (JSON.stringify(foram) !== '[3]') throw new Error(`foram para ${JSON.stringify(foram)}, e não só para a BETA (3)`);
+  if (!/beta/i.test(PROSPECCOES[antes].assunto)) throw new Error(`o assunto não levou o nome: "${PROSPECCOES[antes].assunto}"`);
+}]);
+// 🕒 AGENDAR: o lote e as empresas vão para o banco, com o texto montado
+PASSOS.push(['27-emails-agendar', async (pg) => {
+  await pg.evaluate(() => window.MODULOS.emails.abrir());
+  await pg.waitForTimeout(1200);
+  await pg.locator('#palco .tab', { hasText: 'Não enviados' }).click();
+  await pg.waitForTimeout(700);
+  await pg.locator('#em-selecionar').click(); await pg.waitForTimeout(400);
+  await pg.locator('#palco .linha', { hasText: 'BETA' }).click(); await pg.waitForTimeout(400);
+  await pg.locator('#sel-enviar').click(); await pg.waitForTimeout(1500);
+  await pg.locator('#ev-modelo').selectOption('Primeiro contato'); await pg.waitForTimeout(900);
+  await pg.locator('#ev-agendar').click(); await pg.waitForTimeout(800);
+  await pg.locator('#ag-ok').click(); await pg.waitForTimeout(1800);
+  const lote = GRAVACOES.find((g) => g.tabela === 'orc_emails_agendamentos' && g.metodo === 'POST');
+  const itens = GRAVACOES.find((g) => g.tabela === 'orc_emails_agendados' && g.metodo === 'POST');
+  if (!lote) throw new Error(`o agendamento não foi gravado (aviso: "${await pg.locator('#toast').innerText()}")`);
+  if (Date.parse(lote.corpo.agendado_para) < Date.now()) throw new Error('o horário agendado ficou no passado');
+  const i = (Array.isArray(itens?.corpo) ? itens.corpo : [])[0];
+  if (!i || i.registro_id !== 3 || i.agendamento_id !== 77 || !/beta/i.test(i.mensagem)) {
+    throw new Error(`as empresas do agendamento não foram gravadas certo: ${JSON.stringify(itens?.corpo || null).slice(0, 160)}`);
+  }
+}]);
+// os agendados: o lote abre com as empresas e o cancelar grava
+PASSOS.push(['28-emails-agendados-cancelar', async (pg) => {
+  await pg.evaluate(() => window.MODULOS.emails.abrir());
+  await pg.waitForTimeout(1200);
+  await pg.locator('#palco .tab', { hasText: 'Agendados' }).click();
+  await pg.waitForTimeout(900);
+  await pg.locator('#palco .linha').first().click();
+  await pg.waitForTimeout(900);
+  if (!(await pg.locator('#folha-caixa').innerText()).includes('GRUPO VERZANI')) throw new Error('as empresas do lote não apareceram');
+  const antes = GRAVACOES.length;
+  await pg.locator('#lt-cancelar').click(); await pg.waitForTimeout(500);
+  await pg.locator('#cf-sim').last().click(); await pg.waitForTimeout(1200);
+  const g = GRAVACOES.slice(antes).find((x) => x.tabela === 'orc_emails_agendamentos' && x.metodo === 'PATCH');
+  if (!g || g.corpo.situacao !== 'cancelado') throw new Error('o cancelamento não foi gravado');
+}]);
+// 🔎 buscar empresas: a achada entra no controle como "Não enviado"
+PASSOS.push(['29-emails-buscar-empresas', async (pg) => {
+  await pg.evaluate(() => window.MODULOS.emails.abrir());
+  await pg.waitForTimeout(1200);
+  await pg.locator('#em-buscar').click(); await pg.waitForTimeout(500);
+  await pg.locator('#be-consulta').fill('construtoras em Candeias');
+  await pg.locator('#be-buscar').click(); await pg.waitForTimeout(1200);
+  if (!(await pg.locator('#folha-caixa').innerText()).includes('ALFA CONSTRUTORA')) throw new Error('a empresa achada não apareceu');
+  const antes = GRAVACOES.length;
+  await pg.locator('#be-adicionar').click(); await pg.waitForTimeout(500);
+  await pg.locator('#cf-sim').last().click(); await pg.waitForTimeout(1200);
+  const g = GRAVACOES.slice(antes).find((x) => x.tabela === 'orc_emails_prospeccao' && x.metodo === 'POST');
+  const linha = Array.isArray(g?.corpo) ? g.corpo[0] : g?.corpo;
+  if (!linha || linha.empresa !== 'ALFA CONSTRUTORA LTDA' || linha.situacao !== 'Não enviado') {
+    throw new Error(`a empresa não entrou no controle: ${JSON.stringify(g?.corpo || null).slice(0, 160)}`);
+  }
 }]);
 PASSOS.push(['23-pesquisa-detalhe', async (pg) => {
   await pg.evaluate(() => window.MODULOS.pesquisa.abrir());

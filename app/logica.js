@@ -822,6 +822,210 @@
     return saida;
   };
 
+  /* ----------------------------------------------------------------
+     O ENVIO DE VÁRIAS EMPRESAS, A COBRANÇA E O AGENDAMENTO — como no
+     computador (prospeccao_nucleo.py / JanelaEnviarEmail), para o
+     celular fazer tudo da prospecção (pedido do dono, 04/11/2026)
+     ---------------------------------------------------------------- */
+  // OS MODELOS DE FÁBRICA, iguais a prospeccao_nucleo.MODELOS_PADRAO (os que
+  // a equipe salvou em orc_emails_modelos passam na frente, pelo nome)
+  const ASSINATURA_EMAIL = 'Atenciosamente,\n\n**Equipe Comercial**\nClínica Medicina Humana – CMH\n'
+    + 'Unidades: Camaçari | Candeias | Salvador – BA\n\nComercial | Telefone/WhatsApp: (71) 99301-0103\n\n'
+    + 'Diretoria Geral | José Carlos Correia\nContato direto: (71) 99628-4982\n\nSite: www.clinicamedicinahumana.com.br';
+  L.MODELOS_EMAIL.push(
+    { nome: 'Fortalecer parceria',
+      assunto: 'Parceria em Saúde Ocupacional | Clínica Medicina Humana e {empresa_nome}',
+      corpo: 'Prezados Senhores,\n\n{saudacao}\n\n'
+        + 'A **Clínica Medicina Humana (CMH)** agradece a confiança depositada {pela_empresa} em nossos serviços de Saúde e Segurança do Trabalho e reafirma o compromisso de manter a qualidade, a agilidade e a proximidade que orientam esta parceria.\n\n'
+        + 'Com o objetivo de fortalecer ainda mais o nosso relacionamento, colocamos à disposição {da_empresa} um conjunto de soluções capazes de ampliar os resultados já alcançados, contemplando:\n\n'
+        + '- **Atendimento ocupacional:** agendamento ágil de exames admissionais, periódicos, demissionais e de retorno ao trabalho, com emissão do ASO em até 2 dias úteis, conforme os exames necessários;\n'
+        + '- **Unidades móveis:** atendimento no próprio local de trabalho, com redução de deslocamentos e afastamentos das equipes;\n'
+        + '- **Programas e laudos técnicos:** atualização do PCMSO, PGR, LTCAT, PCA, PPR e AET sempre que as operações mudarem;\n'
+        + '- **Treinamentos de NR e gestão do eSocial:** acompanhamento das obrigações legais relacionadas à SST.\n\n'
+        + 'Gostaríamos de agendar uma breve reunião de alinhamento para ouvir a avaliação {da_empresa} sobre os nossos serviços, conhecer as demandas previstas para os próximos meses e apresentar oportunidades de melhoria conjunta.\n\n'
+        + 'Permanecemos à inteira disposição.\n\n' + ASSINATURA_EMAIL },
+    { nome: 'Retomar parceria',
+      assunto: 'Retomada de parceria | Saúde Ocupacional – {empresa_nome}',
+      corpo: 'Prezados Senhores,\n\n{saudacao}\n\n'
+        + 'A **Clínica Medicina Humana (CMH)** registra com satisfação o período em que teve a oportunidade de atender {artigo_}**{empresa_nome}** e manifesta seu interesse em retomar essa parceria em Saúde e Segurança do Trabalho.\n\n'
+        + 'Desde então, ampliamos nossa estrutura para oferecer mais agilidade e comodidade às empresas parceiras, com destaque para:\n\n'
+        + '- **Unidades próprias** em Camaçari, Candeias e Salvador, além de **unidades móveis** de atendimento ocupacional em toda a Bahia;\n'
+        + '- **Emissão do ASO em até 2 dias úteis**, conforme os exames necessários;\n'
+        + '- **Programas e laudos técnicos:** PCMSO, PGR, LTCAT, PCA, PPR e AET;\n'
+        + '- **Gestão ocupacional:** eSocial, PPP, treinamentos de NR e acompanhamento das obrigações relacionadas à SST.\n\n'
+        + 'Teríamos satisfação em apresentar as novidades e compreender as necessidades atuais {da_empresa}. Colocamo-nos à disposição para agendar uma breve reunião, no formato e no horário de sua preferência.\n\n'
+        + ASSINATURA_EMAIL },
+    { nome: 'Agradecimento pela reunião',
+      assunto: 'Agradecimento pela reunião | Clínica Medicina Humana',
+      corpo: 'Prezados Senhores,\n\n{saudacao}\n\n'
+        + 'A **Clínica Medicina Humana (CMH)** agradece a atenção dispensada {pela_empresa} durante a reunião realizada, bem como a oportunidade de conhecer melhor as operações e as necessidades ocupacionais de suas equipes.\n\n'
+        + 'Conforme conversado, encaminharemos a proposta comercial com os serviços e as condições adequadas à realidade {da_empresa}, e permanecemos à disposição para esclarecer qualquer dúvida ou ajustar o que for necessário.\n\n'
+        + 'Reiteramos o nosso interesse em construir uma parceria duradoura, pautada pela qualidade técnica, pela agilidade no atendimento e pelo cumprimento das exigências legais.\n\n'
+        + ASSINATURA_EMAIL },
+    { nome: 'Pesquisa de satisfação',
+      assunto: 'Pesquisa de satisfação | Clínica Medicina Humana e {empresa_nome}',
+      corpo: 'Prezados Senhores,\n\n{saudacao}\n\n'
+        + 'Em virtude da parceria estabelecida entre a **Clínica Medicina Humana (CMH)** e {artigo_}**{empresa_nome}**, gostaríamos de conhecer a sua avaliação sobre os atendimentos prestados às suas equipes.\n\n'
+        + 'A sua opinião é fundamental para identificarmos o que está funcionando bem, as oportunidades de melhoria e as novas necessidades {da_empresa}, de modo a aprimorarmos continuamente a qualidade, a agilidade e a comunicação dos nossos serviços de Saúde e Segurança do Trabalho.\n\n'
+        + 'Para isso, pedimos a gentileza de responder à nossa **pesquisa de satisfação**, que leva poucos minutos:\n\n'
+        + '**https://clinicamedicinahumana.com.br/pesquisa-satisfacao.html**\n\n'
+        + 'As respostas são tratadas pela nossa equipe, e cada ponto de atenção recebe retorno. Desde já, agradecemos a colaboração e a confiança.\n\n'
+        + ASSINATURA_EMAIL },
+    { nome: 'Boas-vindas a novo cliente',
+      assunto: 'Boas-vindas | Clínica Medicina Humana – {empresa_nome}',
+      corpo: 'Prezados Senhores,\n\n{saudacao}\n\n'
+        + 'É com grande satisfação que a **Clínica Medicina Humana (CMH)** dá as boas-vindas à equipe {da_empresa} e agradece a confiança em nossos serviços de Saúde e Segurança do Trabalho.\n\n'
+        + 'Para que os atendimentos ocorram com agilidade desde o primeiro dia, seguem as principais orientações:\n\n'
+        + '- **Agendamentos:** pelo WhatsApp (71) 99301-0103, informando o nome do colaborador, a função e o tipo de exame;\n'
+        + '- **Unidades:** Camaçari, Candeias e Salvador, além de unidades móveis para atendimento no próprio local de trabalho;\n'
+        + '- **ASO:** emitido em até 2 dias úteis, conforme os exames necessários;\n'
+        + '- **Programas e laudos:** PCMSO, PGR e demais documentos técnicos elaborados e acompanhados pela nossa equipe.\n\n'
+        + 'Nossa equipe comercial permanece à disposição para qualquer esclarecimento e acompanhará de perto o início desta parceria.\n\n'
+        + ASSINATURA_EMAIL },
+    { nome: 'Primeiro contato',
+      assunto: 'Saúde ocupacional para a {empresa}',
+      corpo: 'Olá, {contato}, tudo bem?\n\n'
+        + 'Sou {meu_nome}, da Clínica Medicina Humana, em Camaçari. Cuidamos da saúde ocupacional de empresas da região: exames admissionais, periódicos e demissionais, ASO, PCMSO e PGR, com atendimento em Salvador, Camaçari e Candeias e unidade móvel.\n\n'
+        + 'Gostaria de apresentar uma proposta para a {empresa}. Podemos conversar esta semana?\n\n'
+        + 'Atenciosamente,\n{meu_nome}\nComercial · Clínica Medicina Humana\n(71) 99301-0103 · comercial@medicinahumana.com.br' },
+    { nome: 'Cobrança',
+      assunto: 'Re: Saúde ocupacional para a {empresa}',
+      corpo: 'Olá, {contato}, tudo bem?\n\n'
+        + 'Retomo o contato que fiz há alguns dias sobre a saúde ocupacional da {empresa}. Conseguiu ver a mensagem?\n\n'
+        + 'Se for melhor, posso ligar no horário que preferir ou enviar uma proposta direto.\n\n'
+        + 'Atenciosamente,\n{meu_nome}\nComercial · Clínica Medicina Humana\n(71) 99301-0103 · comercial@medicinahumana.com.br' });
+  L.MODELO_COBRANCA = 'Cobrança';
+  L.DIAS_COBRAR = 7;
+  L.TETO_POR_LOTE = 100;           // o Gmail bloqueia a conta passando disso
+  L.MINUTOS_MINIMOS_AGENDAR = 5;   // o relógio do servidor passa de 5 em 5
+  const MARCAS_IA = ['{segmentos}', '{artigo_}', '{da_empresa}', '{empresa_nome}', '{pela_empresa}'];
+  L.usaIa = (...textos) => textos.some((t) => MARCAS_IA.some((m) => String(t || '').includes(m)));
+  // só a {segmentos} trava: as outras marcas têm reserva (o nome do registro)
+  L.precisaSegmentos = (...textos) => textos.some((t) => String(t || '').includes('{segmentos}'));
+
+  // os modelos da equipe primeiro; os de fábrica que ela não tem, depois
+  L.juntarModelos = (daEquipe) => {
+    const nomes = new Set((daEquipe || []).map((m) => m.nome));
+    return [...(daEquipe || []), ...L.MODELOS_EMAIL.filter((m) => !nomes.has(m.nome))];
+  };
+
+  // QUEM FICA DE FORA DO ENVIO, e por quê (JanelaEnviarEmail)
+  L.motivoPular = (r, cobranca = false) => {
+    if (!L.emailsDe(r?.emails).length) return 'sem e-mail';
+    if (['Sem interesse', 'Virou cliente'].includes(r.situacao)) return r.situacao.toLowerCase();
+    if (r.situacao === 'E-mail voltou') return 'o e-mail voltou — corrija o endereço antes';
+    if (cobranca && r.situacao === 'Respondeu') return 'já respondeu';
+    if (cobranca && r.situacao === 'Não enviado') return 'ainda não recebeu o primeiro e-mail';
+    return '';
+  };
+
+  // para_cobrar do computador: o que o SISTEMA mandou e o dia de cobrar chegou
+  L.paraCobrar = (lista, hoje = L.hojeISO()) => (lista || []).filter((r) =>
+    r.situacao === 'Enviado' && r.cobrar_em && String(r.cobrar_em).slice(0, 10) <= hoje);
+
+  // A SUGESTÃO DO AGENDAMENTO: o próximo dia útil às 8h (hoje, se ainda não
+  // passou das 7h30 de um dia útil) — "AAAA-MM-DD" e "08:00"
+  L.proximoHorarioUtil = (agora = new Date(), hora = 8) => {
+    const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    let dia = iso(agora);
+    if (!(L.diaUtil(dia) && agora.getHours() * 60 + agora.getMinutes() < (hora - 1) * 60 + 30)) {
+      dia = L.somarDias(dia, 1);
+      while (!L.diaUtil(dia)) dia = L.somarDias(dia, 1);
+    }
+    return { dia, hora: `${String(hora).padStart(2, '0')}:00` };
+  };
+  // "2026-11-06" + "08:30" -> Date no relógio do aparelho, ou o recado
+  L.lerQuando = (dia, hora, agora = new Date()) => {
+    const m = /^(\d{1,2}):(\d{2})$/.exec(String(hora || '').trim());
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(dia || '')) || !m || Number(m[1]) > 23 || Number(m[2]) > 59) {
+      return { erro: 'Escolha o dia e a hora.' };
+    }
+    const [a, me, d] = dia.split('-').map(Number);
+    const quando = new Date(a, me - 1, d, Number(m[1]), Number(m[2]));
+    if (quando.getTime() < agora.getTime() + L.MINUTOS_MINIMOS_AGENDAR * 60000) {
+      return { erro: `Escolha um horário daqui a pelo menos ${L.MINUTOS_MINIMOS_AGENDAR} minutos (ou envie agora).` };
+    }
+    return { quando };
+  };
+
+  // OS JÁ AGENDADOS: {registro_id: {quando, cobranca, lote}} — o mais cedo
+  // de cada empresa, só dos lotes que ainda vão sair (agendados_pendentes)
+  L.pendentesDosAgendados = (itens) => {
+    const saida = {};
+    for (const i of itens || []) {
+      const lote = i.orc_emails_agendamentos || {};
+      if (!['agendado', 'enviando'].includes(lote.situacao)) continue;
+      const quando = lote.agendado_para || '';
+      const atual = saida[i.registro_id];
+      if (!atual || quando < atual.quando) saida[i.registro_id] = { quando, cobranca: !!lote.cobranca, lote: i.agendamento_id };
+    }
+    return saida;
+  };
+  L.agendadoCurto = (p) => {
+    if (!p || !p.quando) return '';
+    const d = new Date(p.quando);
+    if (Number.isNaN(d.getTime())) return '';
+    const dd = String(d.getDate()).padStart(2, '0'), mm = String(d.getMonth() + 1).padStart(2, '0');
+    return `🕒 ${p.cobranca ? 'cobrar ' : ''}${dd}/${mm} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  };
+  L.SITUACOES_AGENDAMENTO = { agendado: 'Agendado', enviando: 'Enviando', enviado: 'Enviado', 'com falha': 'Com falha', cancelado: 'Cancelado' };
+  L.SITUACOES_AGENDADO = { agendado: 'Aguardando', enviando: 'Enviando', enviado: 'Enviado', pulado: 'Pulado', falhou: 'Falhou', cancelado: 'Cancelado' };
+
+  /* ----------------------------------------------------------------
+     OS CLIENTES DA CASA (clientes_nucleo.py, 85-clientes-da-casa.sql):
+     quem já fatura não recebe prospecção. O casamento é pelo nome — o
+     relatório corta em 20 letras e não tem CNPJ.
+     ---------------------------------------------------------------- */
+  const CL_CORTE = 20;
+  const CL_GENERICAS = new Set(['ENGENHARIA', 'CONSTRUTORA', 'CONSTRUCOES', 'CONSTRUCAO', 'SERVICOS',
+    'SERVICO', 'COMERCIO', 'INDUSTRIA', 'MANUTENCAO', 'TRANSPORTES', 'TRANSPORTE', 'LOGISTICA', 'SOLUCOES',
+    'EMPRESA', 'GRUPO', 'BRASIL', 'BAHIA', 'NORDESTE', 'SALVADOR', 'CONSULTORIA', 'TECNOLOGIA', 'SAUDE',
+    'CLINICA', 'HOSPITAL', 'MEDICINA', 'ASSOCIACAO', 'INSTITUTO', 'CONDOMINIO', 'FAZENDA', 'AGRO', 'LTDA',
+    'ME', 'EPP', 'SA', 'EIRELI', 'MEI']);
+  L.clChave = (texto) => L.semAcento(String(texto || '')).toUpperCase().replace(/[^A-Z0-9]+/g, ' ').trim().split(/\s+/).filter(Boolean).join(' ');
+  const clCasa = (ne, nl, cortado) => {
+    if (!nl || !ne || CL_GENERICAS.has(nl)) return false;
+    if (cortado) return nl.length >= 8 && ne.startsWith(nl);
+    return ne === nl || ne.startsWith(`${nl} `);
+  };
+  L.clIndice = (cadastros, periodo = '') => {
+    const grupos = new Map(), nomes = [];
+    for (const c of cadastros || []) {
+      const grupo = c.grupo || c.nome;
+      if (!grupos.has(grupo)) grupos.set(grupo, { grupo, faturou_2026: false, faturou_2025: false, meses_2026: 0, meses_2025: 0 });
+      const g = grupos.get(grupo);
+      g.faturou_2026 = g.faturou_2026 || !!c.faturou_2026;
+      g.faturou_2025 = g.faturou_2025 || !!c.faturou_2025;
+      g.meses_2026 = Math.max(g.meses_2026, Number(c.meses_2026) || 0);
+      g.meses_2025 = Math.max(g.meses_2025, Number(c.meses_2025) || 0);
+      nomes.push([L.clChave(c.nome), String(c.nome || '').length >= CL_CORTE, grupo]);
+    }
+    nomes.sort((a, b) => b[0].length - a[0].length);
+    const chavesGrupo = [...grupos.keys()].map((g) => [L.clChave(g), g]).sort((a, b) => b[0].length - a[0].length);
+    return {
+      periodo, tamanho: nomes.length,
+      achar(...nomesDaEmpresa) {
+        for (const nome of nomesDaEmpresa) {
+          const ne = L.clChave(nome);
+          if (!ne) continue;
+          for (const [nl, cortado, grupo] of nomes) if (clCasa(ne, nl, cortado)) return { ...grupos.get(grupo), casou_com: nl };
+          for (const [cg, grupo] of chavesGrupo) if (clCasa(ne, cg, false)) return { ...grupos.get(grupo), casou_com: cg };
+        }
+        return null;
+      },
+    };
+  };
+  L.clDescricao = (c, periodo = '') => {
+    if (!c) return '';
+    const estudo = periodo ? ` do estudo ${String(periodo).toLowerCase()}` : '';
+    if (c.faturou_2026) {
+      const meses = c.meses_2026 || 0;
+      return `cliente da casa: faturou em 2026${meses ? ` (${meses} mês(es)${estudo})` : ''} — grupo ${c.grupo}`;
+    }
+    if (c.faturou_2025) return `foi cliente: faturou em 2025 e não em 2026 — grupo ${c.grupo}`;
+    return '';
+  };
+
   /* ================================================================
      PESQUISA DE SATISFAÇÃO E OUVIDORIA DO SITE (retornos_nucleo.py)
      ================================================================ */

@@ -434,3 +434,79 @@ test('anexos do e-mail: sem a coluna, ainda não procurados, nenhum, e a lista',
     [{ parte: '2', nome: 'ASO.pdf', tipo: 'application/pdf', tamanho: 2048 },
      { parte: '', nome: 'proposta.pdf', tipo: '', tamanho: 0 }]);
 });
+
+test('os oito modelos do computador, e os da equipe na frente', () => {
+  const nomes = L.MODELOS_EMAIL.map((m) => m.nome);
+  assert.deepEqual(nomes, ['Proposta de parceria', 'Fortalecer parceria', 'Retomar parceria', 'Agradecimento pela reunião',
+    'Pesquisa de satisfação', 'Boas-vindas a novo cliente', 'Primeiro contato', 'Cobrança']);
+  const juntos = L.juntarModelos([{ nome: 'Cobrança', assunto: 'X', corpo: 'Y' }, { nome: 'Meu modelo', assunto: 'A', corpo: 'B' }]);
+  assert.equal(juntos[0].assunto, 'X');                       // a da equipe vale
+  assert.equal(juntos.filter((m) => m.nome === 'Cobrança').length, 1);
+  assert.equal(juntos.length, 9);
+  // só a {segmentos} trava o envio; as outras marcas têm reserva
+  assert.equal(L.precisaSegmentos('a {segmentos} b'), true);
+  assert.equal(L.precisaSegmentos(L.MODELOS_EMAIL[1].corpo), false);
+  assert.equal(L.usaIa(L.MODELOS_EMAIL[1].corpo), true);
+});
+
+test('quem fica de fora do envio e quem está para cobrar', () => {
+  assert.equal(L.motivoPular({ emails: '' }), 'sem e-mail');
+  assert.equal(L.motivoPular({ emails: 'a@b.com', situacao: 'Virou cliente' }), 'virou cliente');
+  assert.match(L.motivoPular({ emails: 'a@b.com', situacao: 'E-mail voltou' }), /voltou/);
+  assert.equal(L.motivoPular({ emails: 'a@b.com', situacao: 'Respondeu' }), '');
+  assert.equal(L.motivoPular({ emails: 'a@b.com', situacao: 'Respondeu' }, true), 'já respondeu');
+  assert.match(L.motivoPular({ emails: 'a@b.com', situacao: 'Não enviado' }, true), /primeiro e-mail/);
+  const lista = [{ id: 1, situacao: 'Enviado', cobrar_em: '2026-11-03' }, { id: 2, situacao: 'Enviado', cobrar_em: '2026-11-10' },
+    { id: 3, situacao: 'Respondeu', cobrar_em: '2026-11-01' }, { id: 4, situacao: 'Enviado' }];
+  assert.deepEqual(L.paraCobrar(lista, '2026-11-04').map((r) => r.id), [1]);
+});
+
+test('agendar: a sugestão é o próximo dia útil às 8h, e a hora tem 5 minutos de folga', () => {
+  // terça 03/11/2026 às 7h: ainda dá hoje; às 10h, quarta; sexta 06/11 às 10h, segunda 09/11
+  assert.deepEqual(L.proximoHorarioUtil(new Date(2026, 10, 3, 7, 0)), { dia: '2026-11-03', hora: '08:00' });
+  assert.deepEqual(L.proximoHorarioUtil(new Date(2026, 10, 3, 10, 0)), { dia: '2026-11-04', hora: '08:00' });
+  assert.deepEqual(L.proximoHorarioUtil(new Date(2026, 10, 6, 10, 0)), { dia: '2026-11-09', hora: '08:00' });
+  const agora = new Date(2026, 10, 4, 10, 0);
+  assert.match(L.lerQuando('2026-11-04', '10:03', agora).erro, /5 minutos/);
+  assert.equal(L.lerQuando('2026-11-05', '08:30', agora).quando.getHours(), 8);
+  assert.ok(L.lerQuando('', '08:00', agora).erro);
+  assert.ok(L.lerQuando('2026-11-05', '25:00', agora).erro);
+});
+
+test('os já agendados: o mais cedo de cada empresa, e lote cancelado não conta', () => {
+  const p = L.pendentesDosAgendados([
+    { registro_id: 1, agendamento_id: 5, orc_emails_agendamentos: { agendado_para: '2026-11-06T11:00:00+00:00', situacao: 'agendado', cobranca: false } },
+    { registro_id: 1, agendamento_id: 6, orc_emails_agendamentos: { agendado_para: '2026-11-05T11:00:00+00:00', situacao: 'agendado', cobranca: true } },
+    { registro_id: 2, agendamento_id: 7, orc_emails_agendamentos: { agendado_para: '2026-11-05T11:00:00+00:00', situacao: 'cancelado' } },
+    { registro_id: 3, agendamento_id: 8 },                          // sem o lote junto
+  ]);
+  assert.deepEqual(Object.keys(p), ['1']);
+  assert.equal(p[1].lote, 6);
+  assert.equal(p[1].cobranca, true);
+  assert.match(L.agendadoCurto(p[1]), /^🕒 cobrar 05\/11 \d\d:00$/);
+  assert.equal(L.agendadoCurto(null), '');
+});
+
+test('clientes da casa: os mesmos casos do clientes_nucleo do computador', () => {
+  const idx = L.clIndice([
+    { codigo: '2JS', nome: '10K ENGENHARIA E MAN', grupo: '10K ENGENHARIA E MAN', faturou_2025: true, faturou_2026: false, meses_2025: 6, meses_2026: 0 },
+    { codigo: '4KU', nome: 'ATAKAREJO - LOJA 01', grupo: 'ATAKAREJO', faturou_2025: true, faturou_2026: true, meses_2025: 9, meses_2026: 9 },
+    { codigo: '4KW', nome: 'ATAKAREJO - LOJA 02', grupo: 'ATAKAREJO', faturou_2025: true, faturou_2026: true, meses_2025: 9, meses_2026: 7 },
+    { codigo: '4MP', nome: 'NPE', grupo: 'NPE', faturou_2025: true, faturou_2026: true, meses_2025: 9, meses_2026: 4 },
+    { codigo: 'X1', nome: 'ENGENHARIA', grupo: 'ENGENHARIA', faturou_2025: false, faturou_2026: true, meses_2025: 0, meses_2026: 1 },
+  ], 'Jan-set/2025 x jan-set/2026');
+  const c = idx.achar('10K Engenharia e Manutenção Ltda');
+  assert.equal(c.grupo, '10K ENGENHARIA E MAN');
+  assert.equal(c.faturou_2026, false);
+  assert.match(L.clDescricao(c), /faturou em 2025 e não em 2026/);
+  const a = idx.achar('Atakarejo Distribuidor de Alimentos');
+  assert.equal(a.grupo, 'ATAKAREJO');
+  assert.equal(a.meses_2026, 9);                                   // o maior, e não a soma
+  assert.match(L.clDescricao(a, idx.periodo), /^cliente da casa: faturou em 2026 \(9 mês\(es\) do estudo jan-set\/2025 x jan-set\/2026\)/);
+  assert.equal(idx.achar('NPE Facilities S.A.').grupo, 'NPE');
+  assert.equal(idx.achar('NPEX Comércio'), null);
+  assert.equal(idx.achar('Engenharia Alfa Ltda'), null);          // palavra genérica sozinha
+  assert.equal(idx.achar('', null), null);
+  assert.equal(idx.achar('Mercado Bom Preço', 'ATAKAREJO LOJA 07').grupo, 'ATAKAREJO');
+  assert.equal(L.clIndice([]).achar('Qualquer'), null);
+});
