@@ -23,6 +23,7 @@ window.N = (() => {
     id: null,        // auth.uid()
     eu: null,        // a minha linha de orc_usuarios
     fatorPendente: null,
+    fatoresPendentes: [],  // todos (celular e reserva): o código de qualquer um entra
     aparelho: null,  // {maquina}
     relidoEm: 0,
   };
@@ -117,22 +118,38 @@ window.N = (() => {
       throw new Error(motivo);
     }
     estado.id = data.user.id;
-    const aal = await sb.auth.mfa.getAuthenticatorAssuranceLevel();
-    if (aal.data && aal.data.nextLevel === 'aal2' && aal.data.currentLevel !== 'aal2') {
-      const fatores = await sb.auth.mfa.listFactors();
-      const totp = (fatores.data?.totp || []).find((f) => f.status === 'verified');
-      if (totp) { estado.fatorPendente = totp.id; return { fator: totp.id }; }
-    }
+    const pede = await fatoresAPedir();
+    if (pede) return pede;
     return depoisDoLogin();
   }
 
+  // MAIS DE UM AUTENTICADOR (11/11/2026): o do celular e um reserva (no
+  // computador). O código de QUALQUER um entra — como no computador.
+  async function fatoresAPedir() {
+    const aal = await sb.auth.mfa.getAuthenticatorAssuranceLevel();
+    if (!(aal.data && aal.data.nextLevel === 'aal2' && aal.data.currentLevel !== 'aal2')) return null;
+    const fatores = await sb.auth.mfa.listFactors();
+    const ids = (fatores.data?.totp || []).filter((f) => f.status === 'verified').map((f) => f.id);
+    if (!ids.length) return null;
+    estado.fatoresPendentes = ids;
+    estado.fatorPendente = ids[0];
+    return { fator: ids[0] };
+  }
+
   async function completarSegundoFator(codigo) {
-    const factorId = estado.fatorPendente;
-    const ch = await sb.auth.mfa.challenge({ factorId });
-    if (ch.error) throw new Error(recado(ch.error, 'Não deu para pedir o código.'));
-    const v = await sb.auth.mfa.verify({ factorId, challengeId: ch.data.id, code: String(codigo).trim() });
-    if (v.error) throw new Error(/invalid|Invalid/i.test(v.error.message) ? 'Código inválido. Confira o relógio do aparelho e tente de novo.' : recado(v.error));
-    estado.fatorPendente = null;
+    const ids = estado.fatoresPendentes?.length ? estado.fatoresPendentes : [estado.fatorPendente];
+    let erro = null;
+    for (const factorId of ids) {
+      const ch = await sb.auth.mfa.challenge({ factorId });
+      if (ch.error) throw new Error(recado(ch.error, 'Não deu para pedir o código.'));
+      const v = await sb.auth.mfa.verify({ factorId, challengeId: ch.data.id, code: String(codigo).trim() });
+      if (!v.error) { erro = null; break; }
+      erro = v.error;
+      // limite de tentativas: não adianta tentar o próximo
+      if (v.error.status === 429 || /rate_limit/.test(String(v.error.code || ''))) break;
+    }
+    if (erro) throw new Error(/invalid|Invalid/i.test(erro.message) ? 'Código inválido. Confira o relógio do aparelho e tente de novo.' : recado(erro));
+    estado.fatorPendente = null; estado.fatoresPendentes = [];
     return depoisDoLogin();
   }
 
@@ -152,13 +169,9 @@ window.N = (() => {
     const { data } = await sb.auth.getSession();
     if (!data?.session) return null;
     estado.id = data.session.user.id;
-    const aal = await sb.auth.mfa.getAuthenticatorAssuranceLevel();
-    if (aal.data && aal.data.nextLevel === 'aal2' && aal.data.currentLevel !== 'aal2') {
-      // A sessao voltou sem o segundo fator: pede o codigo de novo.
-      const fatores = await sb.auth.mfa.listFactors();
-      const totp = (fatores.data?.totp || []).find((f) => f.status === 'verified');
-      if (totp) { estado.fatorPendente = totp.id; return { fator: totp.id }; }
-    }
+    // A sessao voltou sem o segundo fator: pede o codigo de novo.
+    const pede = await fatoresAPedir();
+    if (pede) return pede;
     try {
       const eu = await cadastro();
       if (!eu || eu.ativo === false) { await sair(false); return null; }
@@ -197,7 +210,7 @@ window.N = (() => {
   async function sair(anotar = true) {
     if (anotar) await registrar('saiu');
     try { await sb.auth.signOut(); } catch { /* sem sessao */ }
-    estado.id = null; estado.eu = null; estado.fatorPendente = null;
+    estado.id = null; estado.eu = null; estado.fatorPendente = null; estado.fatoresPendentes = [];
   }
 
   /* ------------------------------------------------------ 2 etapas */
