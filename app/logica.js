@@ -1268,15 +1268,53 @@
     return p && !CX_PASTAS_GERAIS.includes(p.toLowerCase()) && !p.startsWith('0 ') ? p : '';
   };
   L.cxDoCliente = (r) => !(r?.interno || r?.automatico || CX_FORA_DO_CLIENTE.includes(L.cxCategoria(r)));
+  // mandado pela equipe (a comercial@, ou orçamento/contrato do sistema)
+  L.cxEnviado = (r) => r?.sentido === 'enviado';
+
+  // O nome da pasta como a equipe vê: "INBOX.Itens Exclu&AO0-dos" vira
+  // "Itens Excluídos" (UTF-7 modificado do IMAP) — o nomePasta da orc-email
+  // e o nome_pasta do caixa_nucleo.py
+  L.cxNomePasta = (imap) => {
+    const s = String(imap || '');
+    const nome = s.replace(/&([^-]*)-/g, (_m, b64) => {
+      if (!b64) return '&';
+      try {
+        const b = b64.replace(/,/g, '/');
+        const bin = atob(b + '='.repeat((4 - (b.length % 4)) % 4));
+        let saida = '';
+        for (let i = 0; i + 1 < bin.length; i += 2) saida += String.fromCharCode((bin.charCodeAt(i) << 8) | bin.charCodeAt(i + 1));
+        return saida;
+      } catch { return b64; }
+    }).replace(/^INBOX(?=[./]|$)/i, '').replace(/^[./]+/, '');
+    return nome || (s ? 'Caixa de entrada' : '');
+  };
+  // A LIXEIRA DA COMERCIAL@ (pedido do dono, 11/11/2026: "coloque lá
+  // também as coisas que estão excluindo"): a leitura da caixa acompanha o
+  // e-mail que a equipe manda para a lixeira (pasta_imap, do 83)
+  const CX_LIXEIRA = ['trash', 'lixeira', 'itens excluidos', 'excluidos', 'deleted', 'deleted items', 'deleted messages'];
+  L.cxExcluido = (r) => {
+    if (!r?.pasta_imap) return false;
+    const primeira = L.cxNomePasta(r.pasta_imap).split(/[./]/)[0];
+    return CX_LIXEIRA.includes(L.semAcento(primeira).toLowerCase().trim());
+  };
 
   L.CX_MOSTRAR = [['todos', 'Todos'], ['sem_resposta', 'Sem resposta'], ['atrasados', 'Há mais de 4 h'],
     ['reclamacoes', 'Reclamações'], ['urgentes', 'Urgentes'], ['respondidos', 'Respondidos'],
     ['encaminhados', 'Encaminhados'], ['insatisfeitos', 'Insatisfeitos'], ['fracas', 'Respostas fracas'],
-    ['nao_precisa', 'Não precisam']];
+    ['nao_precisa', 'Não precisam'], ['excluidos', 'Excluídos']];
+  // onde a busca procura: "para" e "cc" contam porque, no enviado, o
+  // cliente está no destinatário
+  const cxAchou = (r, palavras) => {
+    const alvo = L.semAcento([r.assunto, r.de, r.de_nome, r.para, r.cc, r.empresa, r.pasta, r.resumo, r.categoria, r.categoria_manual].join(' ')).toLowerCase();
+    return palavras.every((p) => alvo.includes(p));
+  };
+  const cxPalavras = (busca) => L.semAcento(busca).toLowerCase().split(/\s+/).filter(Boolean);
+  // "Excluídos" mostra TUDO o que foi apagado, propaganda inclusive
   L.cxFiltrar = (linhas, mostrar = 'todos', cat = '', busca = '', soClientes = true, agora) => {
-    const palavras = L.semAcento(busca).toLowerCase().split(/\s+/).filter(Boolean);
+    const palavras = cxPalavras(busca);
     return (linhas || []).filter((r) => {
-      if (soClientes && !L.cxDoCliente(r)) return false;
+      if (soClientes && mostrar !== 'excluidos' && !L.cxDoCliente(r)) return false;
+      if (mostrar === 'excluidos' && !L.cxExcluido(r)) return false;
       if (cat && L.cxCategoria(r) !== cat) return false;
       const s = L.cxSituacao(r);
       if (mostrar === 'sem_resposta' && s !== L.CX_SEM_RESPOSTA) return false;
@@ -1288,12 +1326,20 @@
       if (mostrar === 'reclamacoes' && L.cxCategoria(r) !== 'Reclamação') return false;
       if (mostrar === 'insatisfeitos' && r.tom !== 'Insatisfeito') return false;
       if (mostrar === 'fracas' && !['Fraca', 'Regular'].includes(r.avaliacao_nota)) return false;
-      if (palavras.length) {
-        const alvo = L.semAcento([r.assunto, r.de, r.de_nome, r.empresa, r.pasta, r.resumo, r.categoria, r.categoria_manual].join(' ')).toLowerCase();
-        if (!palavras.every((p) => alvo.includes(p))) return false;
-      }
+      if (palavras.length && !cxAchou(r, palavras)) return false;
       return true;
     });
+  };
+  // Os e-mails que a EQUIPE MANDOU, junto dos que chegaram (pedido do dono,
+  // 11/11/2026: "quando eu pesquisar quero ver também os e-mails enviados").
+  // Só na PESQUISA (com "Todos") e em "Excluídos" — são ~80 por dia; com
+  // categoria, nenhum (enviado não tem categoria)
+  L.cxFiltrarEnviados = (enviados, mostrar = 'todos', cat = '', busca = '') => {
+    const palavras = cxPalavras(busca);
+    if (cat || !['todos', 'excluidos'].includes(mostrar)) return [];
+    if (mostrar === 'todos' && !palavras.length) return [];
+    return (enviados || []).filter((r) => (mostrar !== 'excluidos' || L.cxExcluido(r)) &&
+      (!palavras.length || cxAchou(r, palavras)));
   };
 
   const cxPct = (parte, todo) => (todo ? Math.round((100 * parte) / todo) : null);

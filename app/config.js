@@ -21,6 +21,6 @@ window.CFG = {
   baldeConferencia: 'conferencia',
 
   app: 'CMH Sistema',
-  versaoBase: '3.2',
+  versaoBase: '3.3',
   whatsapp: '5571993010103',
 };

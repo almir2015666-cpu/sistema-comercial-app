@@ -433,6 +433,31 @@ test('caixa: situação, filtros e números como no caixa_nucleo', () => {
   assert.deepEqual(L.cxFiltrar(linhas, 'todos', 'Financeiro').map((r) => r.id), [3, 7]);
   assert.deepEqual(L.cxFiltrar(linhas, 'todos', '', 'orcamento alfa').map((r) => r.id), [1]);
 
+  // a lixeira (11/11/2026): o nome como o IMAP escreve, e a pasta de
+  // cliente que começa parecido não é lixeira
+  assert.equal(L.cxNomePasta('INBOX.Itens Exclu&AO0-dos'), 'Itens Excluídos');
+  assert.equal(L.cxNomePasta('INBOX.MARIANO SERVI&AMc-OS'), 'MARIANO SERVIÇOS');
+  assert.equal(L.cxNomePasta('INBOX'), 'Caixa de entrada');
+  for (const p of ['INBOX.Trash', 'Trash', 'INBOX.Lixeira', 'INBOX.Itens Exclu&AO0-dos', 'Deleted Items', 'INBOX/Trash/antigos']) {
+    assert.equal(L.cxExcluido({ pasta_imap: p }), true, p);
+  }
+  for (const p of ['INBOX', 'INBOX.EXCLUSIVA TRANSPORTES', 'INBOX.Sent', 'INBOX.LIXEIRAS BAHIA LTDA', '']) {
+    assert.equal(L.cxExcluido({ pasta_imap: p }), false, p);
+  }
+  const apagado = { ...propaganda, id: 8, pasta_imap: 'INBOX.Trash' };
+  const mandado = { id: 20, sentido: 'enviado', quando: naBahia('2026-11-03T09:40'), de: 'comercial@medicinahumana.com.br',
+    para: 'rh@alfa.com.br', assunto: 'RE: Orçamento admissional', pasta_imap: 'INBOX.Sent' };
+  const mandadoApagado = { ...mandado, id: 21, assunto: 'Proposta Gama', para: 'compras@gama.com', pasta_imap: 'INBOX.Trash' };
+  const enviados = [mandado, mandadoApagado];
+  assert.equal(L.cxEnviado(mandado), true); assert.equal(L.cxEnviado(pedido), false);
+  assert.deepEqual(L.cxFiltrar([...linhas, apagado], 'excluidos').map((r) => r.id), [8]);
+  assert.deepEqual(L.cxFiltrarEnviados(enviados, 'excluidos').map((r) => r.id), [21]);
+  assert.deepEqual(L.cxFiltrarEnviados(enviados), []);
+  assert.deepEqual(L.cxFiltrarEnviados(enviados, 'todos', '', 'alfa').map((r) => r.id), [20]);
+  assert.deepEqual(L.cxFiltrarEnviados(enviados, 'todos', '', 'gama').map((r) => r.id), [21]);
+  assert.deepEqual(L.cxFiltrarEnviados(enviados, 'sem_resposta', '', 'alfa'), []);
+  assert.deepEqual(L.cxFiltrarEnviados(enviados, 'todos', 'Financeiro', 'alfa'), []);
+
   const k = L.cxIndicadores(clientes, agora);
   assert.equal(k.recebidos, 5); assert.equal(k.precisam, 4);
   assert.equal(k.respondidos, 2); assert.equal(k.respondidosPct, 50);

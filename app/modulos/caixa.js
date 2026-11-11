@@ -12,6 +12,9 @@
      vermelho. Toque: o que chegou, a primeira resposta da equipe, quanto
      levou, a avaliação da IA — e a correção quando a IA errou;
    - CATEGORIAS: quantos de cada, quantos sem resposta e o tempo médio.
+   - na PESQUISA entram também os e-mails que a equipe mandou, e o chip
+     "Excluídos" traz o que foi para a lixeira (🗑), recebido ou enviado
+     (pedido do dono, 11/11/2026).
 
    As regras são as do computador (L.cx* em logica.js = caixa_nucleo.py).
    Visto próprio, o mesmo do computador: Caixa do Comercial.
@@ -23,7 +26,11 @@
   const T = 'orc_caixa_mensagens';
   const COLUNAS = 'id,quando,de,de_nome,para,cc,assunto,pasta,interno,automatico,encaminhamento,categoria,resumo,empresa,' +
     'prioridade,tom,precisa_resposta,classificado_em,categoria_manual,precisa_manual,corrigido_por,respondido_em,' +
-    'resposta_id,resposta_de,resposta_para,encaminhado,avaliacao_nota,avaliacao,anexos';
+    'resposta_id,resposta_de,resposta_para,encaminhado,avaliacao_nota,avaliacao,sentido,anexos,pasta_imap';
+  // o que a equipe mandou: aparece na pesquisa e em "Excluídos"
+  const COLUNAS_ENVIADOS = 'id,quando,de,de_nome,para,cc,assunto,pasta,sentido,anexos,pasta_imap';
+  // as colunas do 83 (anexos e onde está): sem ele rodado, vêm sem
+  const sem83 = (c) => c.replace(',anexos', '').replace(',pasta_imap', '');
   const SELO = { 'Sem resposta': 'b-4', 'Respondido': 'b-ok', 'Encaminhado': 'b-3', 'Não precisa': 'b-gray' };
   const NOTA = { Boa: 'b-ok', Regular: 'b-4', Fraca: 'b-err' };
   const VERMELHO = 'color:var(--err, #c0392b)';
@@ -32,19 +39,21 @@
   const LER = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 4v5h-5"/></svg>';
   const pct = (v) => (v == null ? '—' : `${v}%`);
 
-  const listar = async (periodo) => {
+  const listar = async (periodo, sentido = 'recebido', colunas = COLUNAS) => {
     const [de, ate] = L.cxIntervalo(periodo);
-    const pedir = (colunas) => N.tudo((ini, fim) => {
-      let q = N.sb.from(T).select(colunas).eq('sentido', 'recebido');
+    const pedir = (cols) => N.tudo((ini, fim) => {
+      let q = N.sb.from(T).select(cols).eq('sentido', sentido);
       if (de) q = q.gte('quando', L.cxUtc(de)).lt('quando', L.cxUtc(ate));
       return q.order('quando', { ascending: false }).range(ini, fim);
     }, 30000);
-    try { return await pedir(COLUNAS); } catch (e) {
-      // sem o 83 rodado, a coluna dos anexos não existe: a lista vem sem
-      if (!/anexos/.test(String(e?.message || ''))) throw e;
-      return pedir(COLUNAS.replace(',anexos', ''));
+    try { return await pedir(colunas); } catch (e) {
+      // sem o 83 rodado, as colunas dos anexos e da pasta não existem
+      if (!/anexos|pasta_imap/.test(String(e?.message || ''))) throw e;
+      return pedir(sem83(colunas));
     }
   };
+  // os enviados: se falharem, a tela segue só com os recebidos
+  const listarEnviados = (periodo) => listar(periodo, 'enviado', COLUNAS_ENVIADOS).catch(() => []);
 
   // uma volta de leitura da caixa, no servidor (até uns 2 minutos)
   async function lerCaixa() {
@@ -62,11 +71,12 @@
     },
     async desenhar(el) {
       let aba = 'emails', periodo = '7', mostrar = 'todos', cat = '', busca = '', soClientes = true;
-      let vivo = true, lista = [], lendo = false, estado = '', erroLeitura = '';
+      let vivo = true, lista = [], enviados = [], lendo = false, estado = '', erroLeitura = '';
       const desenhar = async (reler = true) => {
         if (!vivo) return;
         try {
-          if (reler) lista = await listar(periodo);
+          if (reler) [lista, enviados] = await Promise.all([listar(periodo), listarEnviados(periodo)]);
+          const apagados = [...lista, ...enviados].filter(L.cxExcluido).length;
           const base = soClientes ? lista.filter(L.cxDoCliente) : lista;
           const k = L.cxIndicadores(base);
           const numero = (valor, rotulo, cor = '', filtro = '') =>
@@ -82,10 +92,14 @@
               ${numero(String(k.reclamacoes), 'Reclamações', k.reclamacoesSem ? '#c0392b' : '', 'reclamacoes')}
               ${numero(pct(k.boasPct), 'Respostas boas', '', 'fracas')}
             </div>
-            <div class="pequeno text-muted mt8">${k.atrasados ? `${k.atrasados} sem resposta há mais de 4 h úteis · ` : ''}${k.tempoMediana != null ? `metade respondida em até ${esc(L.duracaoUtil(k.tempoMediana))} · ` : ''}${k.ate4hPct != null ? `${k.ate4hPct}% em até 4 h · ` : ''}horário útil (seg. a sex., 8h às 18h)</div>
+            <div class="pequeno text-muted mt8">${k.atrasados ? `${k.atrasados} sem resposta há mais de 4 h úteis · ` : ''}${k.tempoMediana != null ? `metade respondida em até ${esc(L.duracaoUtil(k.tempoMediana))} · ` : ''}${k.ate4hPct != null ? `${k.ate4hPct}% em até 4 h · ` : ''}horário útil (seg. a sex., 8h às 18h) · a equipe mandou ${enviados.length}${apagados ? ` · ${apagados} excluído(s)` : ''}</div>
             <div class="tabs mt12"><button class="tab ${aba === 'emails' ? 'on' : ''}" data-a="emails">E-mails</button><button class="tab ${aba === 'categorias' ? 'on' : ''}" data-a="categorias">Categorias</button></div>`;
           if (aba === 'emails') {
-            const achados = L.cxFiltrar(lista, mostrar, cat, busca, soClientes);
+            // os que chegaram e — na pesquisa e em "Excluídos" — os que a
+            // equipe mandou, do mais novo para o mais antigo
+            const achados = [...L.cxFiltrar(lista, mostrar, cat, busca, soClientes),
+              ...L.cxFiltrarEnviados(enviados, mostrar, cat, busca)]
+              .sort((a, b) => String(b.quando || '').localeCompare(String(a.quando || '')));
             el.innerHTML = `${topo}
               <div class="chips mt12">
                 ${cat ? `<button class="chip on" type="button" id="cx-tira-cat">${esc(cat)} ✕</button>` : ''}
@@ -94,13 +108,22 @@
               </div>
               <div class="busca">${ICONES.busca}<input id="cx-busca" placeholder="Procurar" value="${esc(busca)}"></div>
               ${achados.length ? `<div class="lista">${achados.slice(0, TETO_LISTA).map((r) => {
+                const lixo = L.cxExcluido(r) ? '🗑 ' : '';
+                const clipe = (L.anexosDoEmail(r) || []).length ? '📎 ' : '';
+                if (L.cxEnviado(r)) {
+                  const para = String(r.para || '').split(',')[0].trim();
+                  return `<button class="linha" type="button" data-id="${r.id}">
+                  <div class="linha__corpo"><div class="linha__titulo"><span class="t">${lixo}${clipe}${esc(r.assunto || '(sem assunto)')}</span><span class="badge b-3">Enviado</span></div>
+                  <div class="linha__sub">${esc(UI.quando(r.quando))} · para ${esc(para || '(sem destinatário)')}</div>
+                  <div class="linha__sub">Enviado pela equipe</div></div>${ICONES.seta}</button>`;
+                }
                 const s = L.cxSituacao(r);
                 const atraso = L.cxAtrasado(r);
                 const tempo = s === L.CX_SEM_RESPOSTA ? `há ${L.duracaoUtil(L.cxEsperando(r))}`
                   : [L.CX_RESPONDIDO, L.CX_ENCAMINHADO].includes(s) ? L.duracaoUtil(L.cxTempoResposta(r)) : '';
                 const quem = [L.cxEmpresa(r), L.cxQuem(r)].filter(Boolean).join(' · ');
                 return `<button class="linha" type="button" data-id="${r.id}">
-                  <div class="linha__corpo"><div class="linha__titulo"><span class="t">${r.prioridade === 'Urgente' ? '⚠ ' : ''}${(L.anexosDoEmail(r) || []).length ? '📎 ' : ''}${esc(r.assunto || '(sem assunto)')}</span><span class="badge ${atraso ? 'b-err' : SELO[s] || 'b-gray'}">${esc(s)}</span></div>
+                  <div class="linha__corpo"><div class="linha__titulo"><span class="t">${lixo}${r.prioridade === 'Urgente' ? '⚠ ' : ''}${clipe}${esc(r.assunto || '(sem assunto)')}</span><span class="badge ${atraso ? 'b-err' : SELO[s] || 'b-gray'}">${esc(s)}</span></div>
                   <div class="linha__sub">${esc(UI.quando(r.quando))} · ${esc(quem)}</div>
                   <div class="linha__sub" style="${atraso ? VERMELHO : ''}">${esc(L.cxCategoria(r))}${tempo ? ` · ${esc(tempo)}` : ''}${r.avaliacao_nota ? ` · resposta ${esc(r.avaliacao_nota.toLowerCase())}` : ''}</div></div>${ICONES.seta}</button>`;
               }).join('')}</div>
@@ -112,7 +135,12 @@
             $('#cx-equipe', el).onclick = () => { soClientes = !soClientes; desenhar(false); };
             const inp = $('#cx-busca', el);
             let t; inp.oninput = () => { clearTimeout(t); t = setTimeout(() => { busca = inp.value; const pos = inp.selectionStart; desenhar(false).then(() => { const i2 = $('#cx-busca', el); i2.focus(); i2.setSelectionRange(pos, pos); }); }, 300); };
-            $$('.linha[data-id]', el).forEach((b) => { b.onclick = () => detalhe(lista.find((r) => r.id === Number(b.dataset.id)), () => desenhar(false), lista); });
+            $$('.linha[data-id]', el).forEach((b) => {
+              b.onclick = () => {
+                const r = achados.find((x) => x.id === Number(b.dataset.id));
+                if (L.cxEnviado(r)) detalheEnviado(r); else detalhe(r, () => desenhar(false), lista);
+              };
+            });
           } else {
             const cats = L.cxPorCategoria(base);
             el.innerHTML = `${topo}
@@ -183,6 +211,7 @@
       <div><span class="badge ${L.cxAtrasado(r) ? 'b-err' : SELO[s] || 'b-gray'}">${esc(s)}</span></div>
       <div class="pequeno text-muted mt12">De: ${esc(L.cxQuem(r))} &lt;${esc(r.de || '')}&gt;</div>
       <div class="pequeno text-muted">Chegou em ${esc(L.dataHoraBr(r.quando))}${r.pasta ? ` · pasta ${esc(r.pasta)}` : ''}${L.cxEmpresa(r) ? ` · ${esc(L.cxEmpresa(r))}` : ''}</div>
+      ${avisoExcluido(r)}
       <div class="mt12" style="font-weight:700;${ruim ? VERMELHO : ''}">${esc(classe)}</div>
       ${r.resumo ? `<div class="mt8">Resumo da IA: ${esc(r.resumo)}</div>` : ''}
       <div class="pequeno text-muted mt16" style="font-weight:700">O QUE CHEGOU</div>
@@ -230,6 +259,37 @@
         toast('Corrigido.', 'ok'); f.fechar(); depois();
       } catch (err) { toast(N.recado(err, "Peça ao administrador o visto 'Caixa do Comercial'."), 'err'); }
     };
+  }
+
+  // o e-mail que a equipe apagou (está na lixeira da comercial@)
+  function avisoExcluido(r) {
+    return L.cxExcluido(r)
+      ? `<div class="aviso atencao mt12">🗑 Excluído pela equipe — está na pasta ${esc(L.cxNomePasta(r.pasta_imap))} da comercial@</div>`
+      : '';
+  }
+
+  // Um e-mail que a EQUIPE MANDOU: quem, para quem, o texto e os anexos.
+  // Não tem categoria, resposta nem avaliação — nem a correção.
+  function detalheEnviado(r) {
+    if (!r) return;
+    const f = UI.folha(`
+      <div><span class="badge b-3">Enviado pela equipe</span></div>
+      <div class="pequeno text-muted mt12">De: ${esc(L.cxQuem(r))} &lt;${esc(r.de || '')}&gt;</div>
+      <div class="pequeno text-muted">Para: ${esc(r.para || '—')}</div>
+      ${r.cc ? `<div class="pequeno text-muted">Cópia: ${esc(r.cc)}</div>` : ''}
+      <div class="pequeno text-muted">Enviado em ${esc(L.dataHoraBr(r.quando))}${r.pasta ? ` · pasta ${esc(r.pasta)}` : ''}</div>
+      ${avisoExcluido(r)}
+      <div class="pequeno text-muted mt16" style="font-weight:700">O QUE A EQUIPE ESCREVEU</div>
+      <div id="cx-texto" class="mt8" style="white-space:pre-wrap">carregando…</div>
+      <div id="cx-anexos"></div>`, { titulo: r.assunto || '(sem assunto)' });
+    UI.anexosDoEmail($('#cx-anexos', f.caixa), r, 'comercial');
+    (async () => {
+      const alvo = () => $('#cx-texto', f.caixa);
+      try {
+        const { data } = await N.sb.from(T).select('texto').eq('id', r.id).maybeSingle();
+        if (alvo()) alvo().textContent = (data?.texto || '').trim() || '(sem texto)';
+      } catch (e) { if (alvo()) alvo().textContent = N.recado(e); }
+    })();
   }
 
   MODULOS.caixa = {

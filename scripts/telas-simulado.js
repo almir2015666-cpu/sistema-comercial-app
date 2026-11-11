@@ -115,6 +115,10 @@ const TABELAS = {
       respondido_em: '2026-11-03T13:40:00+00:00', resposta_de: 'comercial@medicinahumana.com.br', resposta_para: 'dp@beta.com',
       avaliacao_nota: 'Boa', avaliacao: 'Pediu desculpas e deu o prazo.', texto: 'O ASO do João está atrasado.',
       anexos: [{ p: '2', n: 'ASO João.pdf', t: 'application/pdf', b: 160000 }] },
+    // o que a equipe mandou (aparece na pesquisa) e depois apagou
+    { id: 3, sentido: 'enviado', quando: '2026-11-03T13:40:00+00:00', de: 'comercial@medicinahumana.com.br', de_nome: 'Comercial',
+      para: 'dp@beta.com', assunto: 'RE: Atraso no ASO', pasta: 'BETA', pasta_imap: 'INBOX.Trash',
+      texto: 'Bruno, desculpe a demora: o ASO sai hoje.' },
   ],
   orc_caixa_estado: [{ inicio: '2026-10-01', lido_em: new Date().toISOString() }],
 };
@@ -190,6 +194,12 @@ async function simular(ctx) {
     if (url.pathname.startsWith('/storage/v1')) return json([]);
     if (url.pathname.startsWith('/rest/v1/rpc/')) return json(null);
     const tabela = url.pathname.replace('/rest/v1/', '');
+    // a Caixa pede recebidos e enviados em separado, e o texto pelo id: o
+    // "coluna=eq.valor" vale nela (no resto, a tabela inteira, como antes)
+    if ((req.method() === 'GET' || req.method() === 'HEAD') && tabela === 'orc_caixa_mensagens') {
+      const iguais = [...url.searchParams].filter(([, v]) => v.startsWith('eq.'));
+      return json(TABELAS[tabela].filter((r) => iguais.every(([k, v]) => String(r[k]) === v.slice(3))));
+    }
     if (req.method() === 'GET' || req.method() === 'HEAD') return json(TABELAS[tabela] || []);
     // gravações: devolve o que veio, como o "return=representation"
     let corpo = [];
@@ -441,6 +451,34 @@ PASSOS.push(['25-caixa-detalhe', async (pg) => {
   // a aba das categorias também desenha
   await pg.locator('#palco .tab', { hasText: 'Categorias' }).click();
   await pg.waitForTimeout(500);
+}]);
+// A Caixa (11/11/2026): a PESQUISA traz também o que a equipe mandou, e o
+// chip "Excluídos" o que foi para a lixeira — recebido ou enviado
+PASSOS.push(['25b-caixa-enviados-excluidos', async (pg) => {
+  await pg.evaluate(() => window.MODULOS.caixa.abrir());
+  await pg.waitForTimeout(1500);
+  if ((await pg.locator('#palco').innerText()).includes('RE: Atraso no ASO')) throw new Error('o enviado apareceu sem pesquisa');
+  await pg.locator('#cx-busca').fill('beta');
+  await pg.waitForTimeout(1000);
+  const achados = await pg.locator('#palco').innerText();
+  if (!achados.includes('RE: Atraso no ASO') || !achados.includes('Enviado')) throw new Error(`a pesquisa não trouxe o enviado: "${achados.slice(0, 400)}"`);
+  if (!achados.includes('Atraso no ASO')) throw new Error('a pesquisa perdeu o recebido');
+  await pg.locator('#palco .linha', { hasText: 'RE: Atraso no ASO' }).click();
+  await pg.waitForTimeout(900);
+  const ficha = await pg.locator('#folha-caixa').innerText();
+  for (const t of ['Enviado pela equipe', 'Para: dp@beta.com', 'Excluído pela equipe', 'o ASO sai hoje']) {
+    if (!ficha.includes(t)) throw new Error(`a ficha do enviado não trouxe "${t}": "${ficha.slice(0, 400)}"`);
+  }
+  if (ficha.includes('A IA ERROU')) throw new Error('o enviado ofereceu a correção da categoria');
+  await pg.locator('#folha-caixa .modal-fechar').click();
+  await pg.waitForTimeout(400);
+  await pg.locator('#cx-busca').fill('');
+  await pg.waitForTimeout(900);
+  await pg.locator('#palco .chip[data-m="excluidos"]').click();
+  await pg.waitForTimeout(700);
+  const lixo = await pg.locator('#palco').innerText();
+  if (!lixo.includes('RE: Atraso no ASO')) throw new Error('"Excluídos" não trouxe o enviado apagado');
+  if (lixo.includes('Orçamento de admissionais')) throw new Error('"Excluídos" trouxe e-mail que não foi apagado');
 }]);
 PASSOS.push(['21-cadastro-de-usuario', async (pg) => {
   await pg.evaluate(() => window.MODULOS.admin.abrir());
